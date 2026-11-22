@@ -10,10 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/tokens.css?v=20261122b">
-  <link rel="stylesheet" href="../css/base.css?v=20261122b">
-  <link rel="stylesheet" href="../css/components.css?v=20261122b">
-  <link rel="stylesheet" href="../css/pages.css?v=20261122b">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261122d">
+  <link rel="stylesheet" href="../css/base.css?v=20261122d">
+  <link rel="stylesheet" href="../css/components.css?v=20261122d">
+  <link rel="stylesheet" href="../css/pages.css?v=20261122d">
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
@@ -21,8 +21,8 @@
   <header class="topbar" id="topbar"></header>
 
   <main class="container" id="boardView">
-    <!-- Banner（9.1：230px 圆角 16 渐变 + 大字 + 期号徽章 + 纯 SVG 手绘插画） -->
-    <section class="banner" aria-label="留言板热榜横幅">
+    <!-- Banner（9.1：230px 圆角 16 渐变 + 大字 + 期号徽章 + 纯 SVG 手绘插画；标题随 tab 语义切换） -->
+    <section class="banner" aria-label="留言板热榜横幅" data-text-aria="banner.ariaHot">
       <div class="banner-left">
         <h1 class="banner-title" data-text="banner.title">留言板热榜</h1>
         <p class="banner-sub" data-text="banner.subtitle">把今天想说的话，留在榜上</p>
@@ -80,13 +80,13 @@
   <!-- 关于视图：岛内“关于”项软切换的挂载点（js/pages/about.js 惰性构建） -->
   <div id="aboutView" hidden></div>
 
-  <script src="../js/ui-text.js?v=20261122b"></script>
-  <script src="../js/mock/seed.js?v=20261122b"></script>
-  <script src="../js/mock/db.js?v=20261122b"></script>
-  <script src="../js/mock/api.js?v=20261122b"></script>
-  <script src="../js/core/util.js?v=20261122b"></script>
-  <script src="../js/components.js?v=20261122b"></script>
-  <script src="../js/pages/board.js?v=20261122b"></script>
-  <script src="../js/pages/about.js?v=20261122b"></script>
+  <script src="../js/ui-text.js?v=20261122d"></script>
+  <script src="../js/mock/seed.js?v=20261122d"></script>
+  <script src="../js/mock/db.js?v=20261122d"></script>
+  <script src="../js/mock/api.js?v=20261122d"></script>
+  <script src="../js/core/util.js?v=20261122d"></script>
+  <script src="../js/components.js?v=20261122d"></script>
+  <script src="../js/pages/board.js?v=20261122d"></script>
+  <script src="../js/pages/about.js?v=20261122d"></script>
 </body>
 </html>

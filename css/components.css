@@ -316,6 +316,12 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 }
 .peak-num--top { -webkit-text-stroke-color: var(--accent); }
 
+/* 最高区双榜（我的留言视图：周榜最高 + 新帖最高 并排两栈） */
+.peak-zone--dual { width: 112px; display: flex; justify-content: flex-end; gap: 14px; }
+.peak-stack { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.peak-zone--dual .peak-label { font-size: 10px; white-space: nowrap; }
+.peak-zone--dual .peak-num { font-size: 20px; }
+
 /* ---------- 骨架卡 ---------- */
 .skeleton-card {
   display: flex; align-items: center; gap: 16px;

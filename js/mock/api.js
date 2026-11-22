@@ -206,8 +206,11 @@
    *   2、时间修正 t = LOG(EXP(投稿时间 − 前一期统计截止时间)/86400 + 1) + 1（时间精确到秒）
    *   3、播放基数 = 新增播放 × t；得分 = 播放基数 + 新增收藏×30 + 新增点赞×3 + 新增硬币×15
    * 留言板适配（权重按本站口径：浏览 1 倍 / 评论 1 倍 / 点赞 2 倍 / 收藏 5 倍）：
-   *   1）统计范围 = 每期周榜（period），周界口径：一周 = 周日 00:00 → 周六 24:00（非周一到周日）：
-   *      留言随期次归属，stats 即本期新增互动（公示“新增”口径）
+   *   1）双榜统计范围（biliboard 式“在榜”口径，周界：一周 = 周日 00:00 → 周六 24:00）：
+   *      周榜（热榜 tab）= 全量帖子按折合分排序，不限于本期新帖；
+   *      新帖榜（最新 tab）= 所选期次（默认本周）的新帖按折合分排序。
+   *      留言随期次归属，本期帖子的 stats 即本周新增互动（公示“新增”口径），
+   *      时间修正 d 按各帖所属期次的统计起点计算
    *   2）时间修正 t = ln(e^d + 1) + 1，d = 投稿时间 − 本期统计起点（天，精确到秒）：
    *      越临近期末发布的留言累计时间越短，浏览基数按 t 外推补足；
    *      softplus 保证 t > 1 恒为正且单调；d 钳制到 [0, 7]（一个期次窗口长度，防演示数据漂移溢出）
@@ -263,6 +266,19 @@
     }
   }
 
+  /** 历史最高名次刷新：当前名次更优（数值更小）才写入，只降不升。返回是否有变更 */
+  function maintainPeak(list, field) {
+    var changed = false;
+    list.forEach(function (m, i) {
+      var cur = i + 1;
+      if (m[field] <= 0 || cur < m[field]) {
+        m[field] = cur;
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
   /* ---------------- 数据出口（6.5 字段白名单 + F6 掩码） ---------------- */
 
   function toListMessage(m) {
@@ -282,7 +298,7 @@
         comments: m.stats.comments, favorites: m.stats.favorites
       },
       heat: messageScore(m) / 10000, // 得分绝对值以“万”为展示单位（fmtHeat）→ 卡片 "X.X 万"
-      heatDelta: m.heatDelta, peakRank: m.peakRank,
+      heatDelta: m.heatDelta, peakRank: m.peakRank, peakNewRank: m.peakNewRank || 0,
       // 展示辅助（非后端契约，页面渲染用）
       no: m.no, isNew: !!m.isNew, isPublic: m.isPublic !== false, period: m.period,
       edited: !!m.edited,
@@ -439,20 +455,17 @@
       var sort = opts.sort || (opts.tab === "latest" ? "latest" : "heat");
       list.sort(boardComparator(sort));
 
-      // 历史最高排名维护（peakRank 的唯一写入口）：
-      // 仅热度榜的完整榜单视图（热度排序 + 无搜索词 + 非“我的留言”子集）名次才具榜单语义；
+      // 双榜历史最高排名维护（peakRank / peakNewRank 的唯一写入口）：
+      // 仅各自榜单的完整视图（折合分排序 + 无搜索词 + 非“我的留言”子集）名次才具榜单语义；
       // 当前名次更优（数值更小）时刷新，只降不升。
-      if (sort === "heat" && !opts.q && opts.tab !== "mine") {
-        var peakChanged = false;
-        list.forEach(function (m, i) {
-          var cur = i + 1;
-          if (m.peakRank <= 0 || cur < m.peakRank) {
-            m.peakRank = cur;
-            peakChanged = true;
-          }
-        });
-        if (peakChanged) db.saveMessages(messages);
+      // - 热榜（周榜）：全量帖子按折合分排序 → peakRank
+      // - 最新（新帖榜）：所选期次的新帖按折合分排序 → peakNewRank
+      var peakDirty = false;
+      if (sort === "heat" && !opts.q) {
+        if (opts.tab === "hot") peakDirty = maintainPeak(list, "peakRank");
+        if (opts.tab === "latest") peakDirty = maintainPeak(list, "peakNewRank");
       }
+      if (peakDirty) db.saveMessages(messages);
 
       var likedIds = [];
       if (session) {
@@ -534,7 +547,7 @@
         period: settings.currentPeriod,
         createdAt: Date.now(),
         stats: { views: 0, likes: 0, comments: 0, favorites: 0 },
-        heatDelta: 0, peakRank: 0, // heat 由出口层按周榜分数公式实时计算，不落库
+        heatDelta: 0, peakRank: 0, peakNewRank: 0, // heat 由出口层按周榜分数公式实时计算，不落库；双榜历史最高各自维护
         isNew: true
       };
       var messages = db.getMessages();

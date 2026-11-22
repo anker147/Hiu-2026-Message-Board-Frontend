@@ -61,7 +61,7 @@
       topicTag: "校园日常", isPublic: true, period: 24,
       createdAt: now - 3 * HOUR,
       stats: { views: 12000, likes: 328, comments: 46, favorites: 89 },
-      heatDelta: 12.4, peakRank: 2, isNew: true
+      heatDelta: 12.4, peakRank: 2, peakNewRank: 0, isNew: true
     },
     {
       resourceId: "a1f0b2c3-b2e1-4d94-9d02-000000000002", title: "图书馆靠窗位与耳机共享", no: "b2e1d94c",
@@ -70,7 +70,7 @@
       topicTag: "互助", isPublic: true, period: 24,
       createdAt: now - 7 * HOUR,
       stats: { views: 9840, likes: 256, comments: 38, favorites: 72 },
-      heatDelta: 5.1, peakRank: 4, isNew: false
+      heatDelta: 5.1, peakRank: 4, peakNewRank: 0, isNew: false
     },
     {
       resourceId: "a1f0b2c3-c9a2-278e-9d03-000000000003", title: "糖醋排骨回归了", no: "c9a2278e",
@@ -79,7 +79,7 @@
       topicTag: "食堂", isPublic: true, period: 24,
       createdAt: now - 8 * HOUR,
       stats: { views: 8120, likes: 198, comments: 51, favorites: 63 },
-      heatDelta: -3.8, peakRank: 1, isNew: false
+      heatDelta: -3.8, peakRank: 1, peakNewRank: 0, isNew: false
     },
     {
       resourceId: "a1f0b2c3-8e7c-c35a-9d04-000000000004", title: "助攻课推荐求真实体验", no: "8e7cc35a",
@@ -88,7 +88,7 @@
       topicTag: "求助", isPublic: true, period: 24,
       createdAt: now - 12 * HOUR,
       stats: { views: 7560, likes: 142, comments: 64, favorites: 41 },
-      heatDelta: 0, peakRank: 6, isNew: false
+      heatDelta: 0, peakRank: 6, peakNewRank: 0, isNew: false
     },
     {
       resourceId: "a1f0b2c3-dda5-e812-9d05-000000000005", title: "盲盒破冰成功", no: "dda5e812",
@@ -97,7 +97,7 @@
       topicTag: "盲盒", isPublic: true, period: 24,
       createdAt: now - 17 * HOUR,
       stats: { views: 6910, likes: 176, comments: 33, favorites: 58 },
-      heatDelta: 8.7, peakRank: 12, isNew: false
+      heatDelta: 8.7, peakRank: 12, peakNewRank: 0, isNew: false
     },
     {
       resourceId: "a1f0b2c3-ad8b-9f97-9d06-000000000006", title: "环湖散步路线推荐", no: "ad8b9f97",
@@ -106,7 +106,7 @@
       topicTag: "日常", isPublic: true, period: 24,
       createdAt: now - 19 * HOUR,
       stats: { views: 5430, likes: 121, comments: 27, favorites: 35 },
-      heatDelta: 0, peakRank: 9, isNew: false
+      heatDelta: 0, peakRank: 9, peakNewRank: 0, isNew: false
     },
     /* —— 第 23 期 2 条（期次切换可测） —— */
     {
@@ -116,7 +116,7 @@
       topicTag: "校园日常", isPublic: true, period: 23,
       createdAt: now - 6 * DAY - 3 * HOUR,
       stats: { views: 4210, likes: 96, comments: 18, favorites: 22 },
-      heatDelta: -1.2, peakRank: 5, isNew: false
+      heatDelta: -1.2, peakRank: 5, peakNewRank: 1, isNew: false
     },
     {
       resourceId: "a1f0b2c3-23a2-0002-9d08-000000000008", title: "期末小组自习室分享", no: "23a20002",
@@ -125,7 +125,7 @@
       topicTag: "互助", isPublic: true, period: 23,
       createdAt: now - 7 * DAY - 2 * HOUR,
       stats: { views: 3870, likes: 88, comments: 15, favorites: 30 },
-      heatDelta: 2.3, peakRank: 8, isNew: false
+      heatDelta: 2.3, peakRank: 8, peakNewRank: 2, isNew: false
     }
   ];
 
@@ -183,7 +183,7 @@
 
   window.HMB = window.HMB || {};
   window.HMB.SEED = {
-    VERSION: 3, // v3：期次周界改为“周日→周六”，演示留言时间锚点同步重锚 → 升版触发旧数据重置
+    VERSION: 4, // v4：双榜模型——新增 peakNewRank（新帖榜历史最高），周榜改为全量帖子 → 升版触发旧数据重置
     AVATARS: AVATARS,
     NICK_ADJ: NICK_ADJ,
     NICK_ANIMAL: NICK_ANIMAL,

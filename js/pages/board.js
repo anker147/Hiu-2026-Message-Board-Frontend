@@ -53,10 +53,10 @@
     $("publishIcon").appendChild(U.icon("pencil"));
     $("blindboxIcon").appendChild(U.icon("gift"));
 
-    // Banner 期次（留言板自有周榜期次，PRD 9.0/9.6）
-    var period = HMB.SEED.PERIODS.find(function (p) { return p.no === currentPeriod; });
-    els.issueBadge.textContent = String(currentPeriod);
-    els.issueText.textContent = t("banner.issue", { n: currentPeriod, range: period ? period.range : "" });
+    // 视图外壳随 tab 切换（banner 标题/期次徽章 + 工具栏下拉组合）
+    els.banner = document.querySelector(".banner");
+    els.bannerTitle = document.querySelector(".banner-title");
+    updateView();
 
     api.getSession().then(function (resp) {
       session = resp.data;
@@ -81,6 +81,33 @@
     }
   }
 
+  /* ---------------- 视图外壳随 tab 切换（Banner + 工具栏） ---------------- */
+
+  /** 双榜视图语义：
+   *  - 热榜（周榜）：榜身份页，标题“留言板热榜”+本期徽章，全量帖子折合分排序；
+   *  - 最新（新帖榜）：标题“本周新帖”，期次徽章随所选期次（可回看往期新帖榜）；
+   *  - 我的留言：隐藏 banner 与两个下拉（固定最新优先，无期次语义，卡片无排名显示）；
+   *  - 关于视图由 boardView 整体隐藏承接 */
+  function updateView() {
+    if (!els.banner || !els.bannerTitle) return;
+    els.banner.hidden = state.tab === "mine";
+    var latest = state.tab === "latest";
+    var key = latest ? "banner.titleNew" : "banner.title";
+    // 直接写 textContent（apply 的 querySelectorAll 不含根元素自身）；
+    // data-text 同步更新，整体 apply(document) 重注入时不会回退
+    els.bannerTitle.setAttribute("data-text", key);
+    els.bannerTitle.textContent = t(key);
+    els.banner.setAttribute("aria-label", t(latest ? "banner.ariaNew" : "banner.ariaHot"));
+    // 期次徽章：新帖榜随所选期次，其余视图显示本期
+    var periodNo = latest ? state.period : currentPeriod;
+    var period = HMB.SEED.PERIODS.find(function (p) { return p.no === periodNo; });
+    els.issueBadge.textContent = String(periodNo);
+    els.issueText.textContent = t("banner.issue", { n: periodNo, range: period ? period.range : "" });
+    // 工具栏：排序下拉在我的留言隐藏（固定最新优先）；期次下拉仅新帖榜需要
+    els.sortDropdown.hidden = state.tab === "mine";
+    els.periodDropdown.hidden = state.tab !== "latest";
+  }
+
   /* ---------------- 工具栏：下拉 + 搜索 ---------------- */
 
   function bindToolbar() {
@@ -101,7 +128,11 @@
       };
     });
     U.makeDropdown(els.periodDropdown, periodItems, String(state.period),
-      function (key) { state.period = parseInt(key, 10); loadList(); });
+      function (key) {
+        state.period = parseInt(key, 10);
+        updateView(); // 新帖榜的期次徽章随所选期次刷新
+        loadList();
+      });
 
     var debounced = U.debounce(function () {
       state.q = els.searchInput.value.trim();
@@ -206,8 +237,8 @@
     var seq = ++listReqSeq;
     api.getMessages({
       tab: state.tab,
-      sort: state.sortKey,
-      period: state.period,
+      sort: state.tab === "mine" ? "latest" : state.sortKey,            // 我的留言固定最新优先
+      period: state.tab === "latest" ? state.period : undefined,        // 期次仅作用于新帖榜；周榜=全量帖子
       q: state.q
     }).then(function (resp) {
       if (seq !== listReqSeq) return;   // 过期响应：用户已切到别的 tab
@@ -260,7 +291,8 @@
 
       list.forEach(function (m, i) {
         var card = C.renderCard(m, {
-          rank: i + 1,
+          rank: state.tab === "mine" ? null : i + 1,                        // 我的留言无排名显示
+          peakMode: state.tab === "mine" ? "dual" : (state.tab === "latest" ? "new" : "hot"),
           q: state.q,
           session: session,
           likedSet: likedSet,
@@ -290,7 +322,10 @@
       if (key === "about") return Promise.resolve(0);              // 全视口固定场景
       if (key === "mine" && !session.loggedIn) return Promise.resolve(0);  // 未登录仅一个状态框
       return api.getMessages({
-        tab: key, sort: state.sortKey, period: state.period, q: state.q
+        tab: key,
+        sort: key === "mine" ? "latest" : state.sortKey,
+        period: key === "latest" ? state.period : undefined,
+        q: state.q
       }).then(function (resp) {
         if (!resp.success || !els.boardView || !els.boardList) return Infinity;
         var n = resp.data.list.length;
@@ -302,6 +337,7 @@
       if (["hot", "latest", "mine", "about"].indexOf(key) < 0 || state.tab === key) return;
       state.tab = key;
       state._topbarTab = key;
+      updateView();
       if (key === "about") {
         listReqSeq++;                                  // 使在途列表响应过期
         if (els.boardView) els.boardView.hidden = true;

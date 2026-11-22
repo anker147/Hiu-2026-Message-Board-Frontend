@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 1; // 文案变更必须递增（?v=N 防缓存，ADR-003）
+  var VERSION = 3; // 文案变更必须递增（?v=N 防缓存，ADR-003）；v3：双榜模型（新帖 tab/本周新帖/双榜峰值标签）
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -42,7 +42,7 @@
     "common.myMessages": "我的留言",
     "common.logout": "退出登录",
     "common.hot": "热榜",
-    "common.latest": "最新",
+    "common.latest": "新帖",
     "common.mine": "我的留言",
     "common.searchPlaceholder": "搜索留言内容 / 作者 / 话题",
     "common.sort": "排序",
@@ -89,14 +89,19 @@
 
     /* —— Banner —— */
     "banner.title": "留言板热榜",
+    "banner.titleNew": "本周新帖", // 新帖榜 tab：banner 标题随视图语义切换
     "banner.subtitle": "把今天想说的话，留在榜上",
     "banner.issue": "第 {n} 期 · {range}",
+    "banner.ariaHot": "留言板热榜横幅",
+    "banner.ariaNew": "本周新帖横幅",
 
     /* —— 首页榜单 —— */
     "board.rankLabel": "历史最高",
+    "board.peakHot": "周榜最高",
+    "board.peakNew": "新帖最高",
     "board.heatLabel": "热度",
     "board.tabHot": "热榜",
-    "board.tabLatest": "最新",
+    "board.tabLatest": "新帖",
     "board.tabMine": "我的留言",
     "board.sortDeltaUp": "上升",
     "board.sortDeltaDown": "下降",

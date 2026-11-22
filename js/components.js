@@ -63,7 +63,7 @@
     pill.style.width = "0px";
     nav.appendChild(pill);
     var TAB_ICONS = { hot: "flame", latest: "clock", mine: "user", about: "info" };
-    var TAB_SUBS = { hot: "HOT", latest: "LATEST", mine: "MINE", about: "ABOUT" };
+    var TAB_SUBS = { hot: "HOT", latest: "NEW", mine: "MINE", about: "ABOUT" };
     var TAB_DEFS = [["hot", "common.hot"], ["latest", "common.latest"], ["mine", "common.mine"], ["about", "common.about"]];
     var current = activeTab;
     var switchEpoch = 0;   // 点击代际：predict 异步期间连点时，过期点击的 doSwap 作废   // 当前项的可变副本：软切换后必须同步，否则闭包旧值会把"切回加载时 tab"判为无操作
@@ -409,23 +409,38 @@
     return chip;
   }
 
+  /** 峰值栈：标签 + 空心名次数字（单榜“历史最高”与双榜“周榜最高/新帖最高”共用） */
+  function peakStack(labelKey, num) {
+    var stack = el("div", "peak-stack");
+    var label = el("div", "peak-label");
+    label.setAttribute("data-text", labelKey);
+    stack.appendChild(label);
+    var n = el("div", "peak-num" + (num <= 3 && num > 0 ? " peak-num--top" : ""));
+    n.textContent = num > 0 ? String(num < 10 ? "0" + num : num) : "—";
+    stack.appendChild(n);
+    return stack;
+  }
+
   /**
-   * ctx: { rank:int(当前列表位次), q:搜索词, session, onLike(msg, btn), onOpen(msg) }
+   * ctx: { rank:int|null(当前列表位次；null=无排名显示，我的留言视图),
+   *        peakMode:"hot"|"new"|"dual"(峰值区口径), q:搜索词, session, onLike(msg, btn), onOpen(msg) }
    */
   function renderCard(msg, ctx) {
     ctx = ctx || {};
     var card = el("article", "rank-card");
     card.dataset.id = msg.resourceId;
 
-    /* 01 排名区 */
+    /* 01 排名区（我的留言视图无排名数字，仅留 NEW 徽章；无内容时不占位） */
     var rankZone = el("div", "rank-zone");
-    var rankNum = el("div", "rank-num");
-    if (ctx.rank >= 1 && ctx.rank <= 3) rankNum.classList.add("rank-num--" + ctx.rank);
-    rankNum.textContent = String(ctx.rank >= 1 && ctx.rank <= 9 ? "0" + ctx.rank : ctx.rank);
-    rankZone.appendChild(rankNum);
+    if (ctx.rank) {
+      var rankNum = el("div", "rank-num");
+      if (ctx.rank >= 1 && ctx.rank <= 3) rankNum.classList.add("rank-num--" + ctx.rank);
+      rankNum.textContent = String(ctx.rank >= 1 && ctx.rank <= 9 ? "0" + ctx.rank : ctx.rank);
+      rankZone.appendChild(rankNum);
+    }
     var badge = rankBadge(msg.isNew);
     if (badge) rankZone.appendChild(badge);
-    card.appendChild(rankZone);
+    if (rankZone.children.length > 0) card.appendChild(rankZone);
 
     /* 02 头像区 */
     var avZone = el("div", "avatar-zone");
@@ -501,14 +516,15 @@
     heatZone.appendChild(deltaChip(msg.heatDelta));
     card.appendChild(heatZone);
 
-    /* 06 最高区 */
-    var peakZone = el("div", "peak-zone");
-    var peakLabel = el("div", "peak-label");
-    peakLabel.setAttribute("data-text", "board.rankLabel");
-    peakZone.appendChild(peakLabel);
-    var peakNum = el("div", "peak-num" + (msg.peakRank <= 3 && msg.peakRank > 0 ? " peak-num--top" : ""));
-    peakNum.textContent = msg.peakRank > 0 ? String(msg.peakRank < 10 ? "0" + msg.peakRank : msg.peakRank) : "—";
-    peakZone.appendChild(peakNum);
+    /* 06 最高区：单榜显示本榜历史最高；双榜（我的留言）并排显示周榜/新帖两榜历史最高 */
+    var peakZone = el("div", "peak-zone" + (ctx.peakMode === "dual" ? " peak-zone--dual" : ""));
+    if (ctx.peakMode === "dual") {
+      peakZone.appendChild(peakStack("board.peakHot", msg.peakRank));
+      peakZone.appendChild(peakStack("board.peakNew", msg.peakNewRank || 0));
+    } else {
+      peakZone.appendChild(peakStack("board.rankLabel",
+        ctx.peakMode === "new" ? (msg.peakNewRank || 0) : msg.peakRank));
+    }
     card.appendChild(peakZone);
 
     HMB.i18n.apply(card);
