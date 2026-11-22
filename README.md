@@ -6,11 +6,11 @@
 
 ## 快速开始
 
-无需构建、无需依赖——直接双击 `index.html`（file:// 可用），或起一个静态服务器：
+无需构建、无需依赖——直接双击 `pages/index.html`（file:// 可用），或起一个静态服务器：
 
 ```bash
 python -m http.server 8080
-# 打开 http://localhost:8080/index.html
+# 打开 http://localhost:8080/pages/index.html
 ```
 
 **演示账号**（见页面左下角 ⚙ 演示面板）：
@@ -21,11 +21,12 @@ python -m http.server 8080
 ## 目录结构
 
 ```
-index.html            P-01 首页榜单 + P-03 发布表单区（内嵌，F5 两阶段定位）
-post.html             P-03 独立发布页（Page 1 画布 03 整页呈现，与内嵌表单共享提交逻辑）
-login.html            P-05 登录          register.html   P-02 注册
-detail.html           P-04 详情/评论树    profile.html    P-06 个人中心
-about.html            关于页（biliboard.uk/about 源码逐值复刻的 3D 气泡星座）  states.html  状态与规范样张页
+pages/                全部页面（同目录互链，资源用 ../ 引用根目录的 css/js/fonts）
+  index.html          P-01 首页榜单 + P-03 发布表单区（内嵌，F5 两阶段定位）—— 入口页
+  post.html           P-03 独立发布页（Page 1 画布 03 整页呈现，与内嵌表单共享提交逻辑）
+  login.html          P-05 登录          register.html   P-02 注册
+  detail.html         P-04 详情/评论树    profile.html    P-06 个人中心
+  about.html          关于页（biliboard.uk/about 源码逐值复刻的 3D 气泡星座）  states.html  状态与规范样张页
 css/
   tokens.css          设计令牌（PRD 9.2：--blue #359EFF 等全部 CSS 变量 + reduced-motion 降级）
   base.css            重置 / grain 噪点 / 焦点环 / active scale(0.97) / 逐层进入 25ms

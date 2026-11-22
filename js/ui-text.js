@@ -304,9 +304,6 @@
     "about.teamItem5": "增长运营师 —— 成功度量与埋点漏斗",
     "about.linksTitle": "友情链接",
     "about.linksBody": "项目与参考来源（答辩可追溯）：",
-    "about.linksItem1": "GitHub：github.com/anker147/Hiu-2026-Message-Board-Frontend",
-    "about.linksItem2": "视觉参考：biliboard.uk —— 只借信息架构 / 视觉语言 / 动效机制",
-    "about.linksItem3": "秩序参考：Stella-Esports-System —— 状态语义 / 四态 / 文案集中管理",
     "about.linksNote": "严禁迁移参考站业务数据语义（视频字段 / 期次语义 / 角色立绘）",
 
     /* —— 演示控制面板 —— */
