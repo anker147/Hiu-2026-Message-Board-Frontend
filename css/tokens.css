@@ -1,0 +1,86 @@
+/* ============================================================
+ * 留言板 · 设计令牌（PRD 9.2 / Page 1 画布 20）
+ * 所有颜色、圆角、缓动必须走变量，禁止组件内硬编码色值。
+ * ============================================================ */
+:root {
+  color-scheme: light;   /* 站点为浅色设计：禁浏览器强制暗色反转 */
+  /* —— 色彩令牌（biliboard 实测四色 + 自研延展）—— */
+  --blue: #359EFF;          /* 主色：高亮 / 主按钮 / 链接 / 焦点 */
+  --blue-soft: #EAF5FF;     /* 浅蓝底 */
+  --accent: #FB7299;        /* 点缀：仅徽章 / Top1 排名描边，非主题色 */
+  /* 淡色组（色彩记忆：在原色基础上降曝光降饱和，非高亮刺激） */
+  --blue-pale: #8FC1EE;       /* 淡蓝 = --blue 天蓝柔化 */
+  --blue-pale-ink: #4E88B8;   /* 淡蓝加深：淡底上的可读文字 */
+  --pink-pale: #F6B9C9;       /* 淡粉 = --accent 柔化（仅导航点缀） */
+  --bg: #FDFCFF;            /* 背景 */
+  --card: #FFFFFF;          /* 卡片 */
+  --ink: #1E293B;           /* 主文字 */
+  --ink-2: #64748B;         /* 次文字 */
+  --ink-3: #94A3B8;         /* 弱文字 */
+  --line: #E8EEF5;          /* 边框 */
+
+  /* 涨跌色（中国习惯：涨红跌绿，独立于语义色） */
+  --up: #FF5A7A;
+  --up-soft: #FFEDF1;
+  --down: #12B886;
+  --down-soft: #E6F7F1;
+
+  /* 语义色（Stella 秩序，含义固定：成功 / 异常 / 警示） */
+  --success: #107C41;
+  --success-soft: #E7F4EC;
+  --danger: #D13438;
+  --danger-soft: #FDEEEE;
+  --warning: #D83B01;
+  --warning-soft: #FDF1E7;
+
+  /* Top3 排名描边三色（只区分名次，不代表涨跌） */
+  --rank-1: #FB7299;        /* 点缀粉 */
+  --rank-2: #5B6BE8;        /* 靛 */
+  --rank-3: #F5A623;        /* 橙 */
+  --rank-n: #B9C6D6;        /* Top4+ 中性 */
+
+  /* 头像底色（8 选 1 emoji 配套浅底） */
+  --av-1: #FCE0EB; --av-2: #E3ECFB; --av-3: #E9E2FA; --av-4: #FFE9D6;
+  --av-5: #DFEFE6; --av-6: #EFEFEA; --av-7: #E1F3E3; --av-8: #FDEFD8;
+
+  /* —— 形态令牌 —— */
+  --radius-card: 13px;
+  --radius-avatar: 14px;
+  --radius-pill: 20px;
+  --radius-btn: 6px;
+  --radius-banner: 16px;
+  --radius-input: 6px;
+
+  /* —— 阴影（Shallow-by-Default：默认近平坦，hover 才抬升）—— */
+  --shadow-card: 0 1px 2px rgba(30, 41, 59, 0.04);
+  --shadow-hover: 0 6px 18px rgba(53, 158, 255, 0.13), 0 2px 6px rgba(30, 41, 59, 0.06);
+  --shadow-pop: 0 12px 32px rgba(30, 41, 59, 0.16);
+  --glow-blue: 0 4px 14px rgba(53, 158, 255, 0.45);
+
+  /* —— 缓动 —— */
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* —— 字体 —— */
+  --font: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif;
+
+  /* —— 焦点环（主色 12% 透明）—— */
+  --focus-ring: 0 0 0 3px rgba(53, 158, 255, 0.12);
+
+  /* —— 布局 —— */
+  --w-page: 1376px;
+  --h-topbar: 60px;
+  --h-banner: 230px;
+  --h-toolbar: 42px;
+  --h-card: 104px;
+}
+
+/* reduced-motion：全量降级为纯状态切换（PRD 9.5） */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

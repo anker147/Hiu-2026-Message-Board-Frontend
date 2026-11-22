@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="light">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
+  <meta name="description" content="留言板热榜 — 把今天想说的话，留在榜上">
+  <title>留言板热榜</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="topbar" id="topbar"></header>
+
+  <main class="container" id="boardView">
+    <!-- Banner（9.1：230px 圆角 16 渐变 + 大字 + 期号徽章 + 纯 SVG 手绘插画） -->
+    <section class="banner" aria-label="留言板热榜横幅">
+      <div class="banner-left">
+        <h1 class="banner-title" data-text="banner.title">留言板热榜</h1>
+        <p class="banner-sub" data-text="banner.subtitle">把今天想说的话，留在榜上</p>
+        <div class="banner-issue">
+          <span class="issue-badge" id="issueBadge">24</span>
+          <span class="issue-text" id="issueText"></span>
+        </div>
+      </div>
+      <div class="banner-art" aria-hidden="true">
+        <svg viewBox="0 0 400 190" width="400" height="190">
+          <rect x="52" y="34" width="88" height="66" rx="22" fill="rgba(255,255,255,0.34)"/>
+          <polygon points="70,98 62,118 92,100" fill="rgba(255,255,255,0.34)"/>
+          <rect x="150" y="26" width="184" height="132" rx="36" fill="#FFFFFF"/>
+          <polygon points="226,156 214,182 258,156" fill="#FFFFFF"/>
+          <circle cx="212" cy="82" r="7" fill="#359EFF"/>
+          <circle cx="272" cy="82" r="7" fill="#359EFF"/>
+          <ellipse cx="190" cy="104" rx="12" ry="7" fill="#FFD3E1"/>
+          <ellipse cx="294" cy="104" rx="12" ry="7" fill="#FFD3E1"/>
+          <path d="M218 106 Q242 126 266 106" stroke="#FB7299" stroke-width="6" fill="none" stroke-linecap="round"/>
+          <polygon points="118,42 122,52 132,56 122,60 118,70 114,60 104,56 114,52" fill="#FFE3EE"/>
+          <polygon points="352,26 355,34 363,37 355,40 352,48 349,40 341,37 349,34" fill="#FFFFFF"/>
+          <polygon points="376,140 379,148 387,151 379,154 376,162 373,154 365,151 373,148" fill="#FFD9E6"/>
+          <polygon points="140,150 142,156 148,158 142,160 140,166 138,160 132,158 138,156" fill="#FFFFFF"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- 搜索工具栏（9.1：42px，搜索框 + 排序 / 期次两个自定义下拉） -->
+    <section class="toolbar" aria-label="搜索与筛选">
+      <div class="search-box">
+        <span class="search-icon" id="searchIcon"></span>
+        <input type="search" class="search-input" id="searchInput"
+               data-text-placeholder="common.searchPlaceholder"
+               placeholder="搜索留言内容 / 作者 / 话题" aria-label="搜索留言">
+      </div>
+      <div class="dropdown" id="sortDropdown"></div>
+      <div class="dropdown" id="periodDropdown"></div>
+    </section>
+
+    <!-- 快捷发布条（P-03 内嵌表单区入口） -->
+    <div class="quick-post" id="quickPost" role="button" tabindex="0" aria-label="展开发布留言表单">
+      <span id="quickPostIcon"></span>
+      <span data-text="board.quickPostPlaceholder">写下你想说的话，支持话题标签…</span>
+      <a class="quick-post-link" id="postPageLink" href="post.html">独立发布页 →</a>
+    </div>
+
+    <!-- 发布留言表单区（P-03：F5 无刷新提交 + 两阶段定位） -->
+    <section class="post-section" id="postSection" hidden>
+      <div class="post-form-card">
+        <div class="post-form-head">
+          <h2 class="post-form-title" data-text="post.title">发布留言</h2>
+          <span class="post-form-note" data-text="post.subtitle">无刷新提交，成功后原地定位高亮，不跳回页首</span>
+        </div>
+        <label class="field-label" for="postContent">
+          <span data-text="post.contentLabel">留言内容</span>
+          <span style="color:var(--ink-3);font-weight:400;margin-left:8px" data-text="post.contentMax">最多 500 字</span>
+        </label>
+        <textarea class="post-textarea" id="postContent" maxlength="500"
+                  data-text-placeholder="post.contentPlaceholder"
+                  placeholder="写下你想说的话，支持话题标签" aria-label="留言内容"></textarea>
+
+        <div class="post-sub-label" data-text="post.tagLabel">话题标签</div>
+        <div class="tag-select-row" id="tagRow"></div>
+
+        <div class="post-sub-label" data-text="post.privacyLabel">公开范围（独立控制）</div>
+        <div class="privacy-row" id="postPrivacyRow">
+          <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagName"><span class="switch-track"></span></span><span data-text="post.privacyName">公开姓名</span></label>
+          <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagEmail"><span class="switch-track"></span></span><span data-text="post.privacyEmail">公开邮箱</span></label>
+          <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagPhone"><span class="switch-track"></span></span><span data-text="post.privacyPhone">公开手机号</span></label>
+        </div>
+
+        <div class="field" style="margin-top:18px;max-width:320px">
+          <label class="field-label" for="postNickname" data-text="post.nicknameLabel">本次显示昵称</label>
+          <input type="text" class="field-input" id="postNickname" maxlength="20" aria-label="本次显示昵称">
+        </div>
+
+        <div class="post-actions">
+          <button class="btn btn--primary" id="postSubmitBtn" data-text="post.submit">发布留言</button>
+          <span class="post-hint" data-text="post.submittingNote">提交中防重锁 · 滚动位置保持 · scrollY 偏差不超过 2px</span>
+        </div>
+        <div class="hint-bar hint-bar--danger hint-bar--hidden post-fail-bar" id="postFailBar" role="alert"></div>
+      </div>
+    </section>
+
+    <div class="list-caption" id="listCaption" aria-live="polite"></div>
+
+    <!-- 榜单卡片列表 -->
+    <section class="board-list stagger" id="boardList" aria-label="留言榜单"></section>
+  <!-- 悬浮操作组（属于榜单视图：关于视图激活时随 boardView 一并隐藏） -->
+  <div class="float-actions">
+    <button class="float-btn float-btn--blindbox" id="blindboxBtn" type="button">
+      <span id="blindboxIcon"></span><span data-text="board.blindboxFloat">抽取今日盲盒</span>
+    </button>
+    <button class="float-btn float-btn--publish" id="publishFloatBtn" type="button">
+      <span id="publishIcon"></span><span data-text="board.publishFloat">发布一条留言</span>
+    </button>
+  </div>
+  </main>
+
+  <!-- 关于视图：岛内“关于”项软切换的挂载点（js/pages/about.js 惰性构建） -->
+  <div id="aboutView" hidden></div>
+
+  <script src="js/ui-text.js"></script>
+  <script src="js/mock/seed.js"></script>
+  <script src="js/mock/db.js"></script>
+  <script src="js/mock/api.js"></script>
+  <script src="js/core/util.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/pages/publishForm.js"></script>
+  <script src="js/pages/board.js"></script>
+  <script src="js/pages/about.js"></script>
+</body>
+</html>

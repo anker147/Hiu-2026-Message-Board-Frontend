@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="light">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
+  <title>个人中心 · 留言板</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body data-page="profile">
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="topbar" id="topbar"></header>
+
+  <main class="profile-wrap container">
+    <h1 class="profile-title" data-text="profile.title">个人中心</h1>
+
+    <div class="profile-grid">
+      <!-- 资料卡（API-08：本人完整信息） -->
+      <section class="profile-card">
+        <h2 class="profile-card-title" data-text="profile.nicknameTitle">修改昵称</h2>
+        <div class="profile-id-row">
+          <div id="profileAvatar"></div>
+          <div>
+            <div class="profile-name" id="profileName"></div>
+            <div class="profile-did" id="profileDid"></div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:20px;max-width:320px" id="nicknameEditor" hidden>
+          <input type="text" class="field-input" id="nicknameInput" maxlength="20"
+                 data-text-placeholder="profile.nicknamePlaceholder"
+                 placeholder="1–20 个字符" aria-label="新昵称">
+          <div class="field-error" id="nicknameErr" role="alert"></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button class="btn btn--soft btn--sm" id="nicknameToggleBtn" data-text="profile.nicknameBtn">修改昵称</button>
+          <button class="btn btn--primary btn--sm" id="nicknameSaveBtn" data-text="profile.nicknameSave" hidden>保存</button>
+        </div>
+        <p class="profile-note" data-text="profile.snapshotNote">新内容用新昵称，历史留言保留当时昵称</p>
+
+        <div style="margin-top:26px;border-top:1px solid var(--line);padding-top:18px">
+          <div class="privacy-row-item"><span class="privacy-label"><span data-text="profile.realName">真实姓名</span>（<span data-text="common.public">公开</span>开关控制掩码显示）</span><span class="privacy-label" id="valName" style="font-weight:800"></span></div>
+          <div class="privacy-row-item"><span class="privacy-label" data-text="profile.email">邮箱</span><span class="privacy-label" id="valEmail" style="font-weight:800"></span></div>
+          <div class="privacy-row-item"><span class="privacy-label" data-text="profile.phone">手机号</span><span class="privacy-label" id="valPhone" style="font-weight:800"></span></div>
+          <p class="privacy-desc" data-text="profile.privacyDesc">Service 出口脱敏：列表只返回掩码，明文不入响应体；本人完整信息仅本页可见</p>
+        </div>
+      </section>
+
+      <!-- 隐私控制卡（F6 三项独立开关） -->
+      <section class="profile-card">
+        <h2 class="profile-card-title">
+          <span data-text="profile.privacyTitle">隐私控制</span>
+          <span style="font-size:12px;color:var(--ink-3);font-weight:400;margin-left:8px" data-text="profile.privacyNote">三项独立开关</span>
+        </h2>
+        <div class="privacy-row-item">
+          <span class="privacy-label" data-text="profile.flagName">公开真实姓名</span>
+          <span class="switch"><input type="checkbox" id="flagName" aria-label="公开真实姓名"><span class="switch-track"></span></span>
+        </div>
+        <div class="privacy-row-item">
+          <span class="privacy-label" data-text="profile.flagEmail">公开邮箱</span>
+          <span class="switch"><input type="checkbox" id="flagEmail" aria-label="公开邮箱"><span class="switch-track"></span></span>
+        </div>
+        <div class="privacy-row-item">
+          <span class="privacy-label" data-text="profile.flagPhone">公开手机号</span>
+          <span class="switch"><input type="checkbox" id="flagPhone" aria-label="公开手机号"><span class="switch-track"></span></span>
+        </div>
+        <p class="privacy-desc" style="margin-top:16px" data-text="profile.privacyDesc">Service 出口脱敏：列表只返回掩码，明文不入响应体；本人完整信息仅本页可见</p>
+      </section>
+    </div>
+
+    <!-- 我的留言 -->
+    <h2 class="comment-section-title" data-text="profile.myMsgTitle">我的留言</h2>
+    <section class="mine-list" id="mineList" aria-live="polite"></section>
+  </main>
+
+  <script src="js/ui-text.js"></script>
+  <script src="js/mock/seed.js"></script>
+  <script src="js/mock/db.js"></script>
+  <script src="js/mock/api.js"></script>
+  <script src="js/core/util.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/pages/profile.js"></script>
+</body>
+</html>

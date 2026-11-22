@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="light">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
+  <title>登录 · 留言板</title>
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/pages.css">
+</head>
+<body data-page="login">
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="topbar" id="topbar"></header>
+
+  <main class="auth-wrap">
+    <h1 class="auth-title" data-text="login.title">登录</h1>
+    <p class="auth-sub" data-text="login.subtitle">登录后即可留言 评论 点赞 抽盲盒</p>
+
+    <div class="auth-card">
+      <div class="field">
+        <label class="field-label" for="loginPhone" data-text="login.phoneLabel">手机号</label>
+        <input type="tel" class="field-input" id="loginPhone" maxlength="11"
+               data-text-placeholder="login.phonePlaceholder"
+               placeholder="请输入注册手机号" autocomplete="tel">
+        <div class="field-error" id="loginPhoneErr" role="alert"></div>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="loginPwd" data-text="login.pwdLabel">密码</label>
+        <input type="password" class="field-input" id="loginPwd"
+               data-text-placeholder="login.pwdPlaceholder"
+               placeholder="请输入密码" autocomplete="current-password">
+        <div class="field-error" id="loginPwdErr" role="alert"></div>
+      </div>
+
+      <div class="hint-bar hint-bar--info" data-text="login.hint">会话 30 分钟超时，写操作需校验令牌</div>
+      <div class="hint-bar hint-bar--danger hint-bar--hidden" id="loginErrBar" role="alert"></div>
+
+      <button class="btn btn--primary btn--lg" id="loginSubmitBtn" data-text="login.submit">登录</button>
+      <p class="auth-alt">
+        <span data-text="login.toRegister">还没有账号</span>
+        <a href="register.html" id="toRegisterLink" data-text="login.registerLink">去注册</a>
+      </p>
+      <p class="auth-alt" style="margin-top:6px">
+        <span style="color:var(--ink-3)" data-text="login.demoHint">演示账号见左下角演示面板</span>
+      </p>
+    </div>
+  </main>
+
+  <script src="js/ui-text.js"></script>
+  <script src="js/mock/seed.js"></script>
+  <script src="js/mock/db.js"></script>
+  <script src="js/mock/api.js"></script>
+  <script src="js/core/util.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/pages/auth.js"></script>
+</body>
+</html>
