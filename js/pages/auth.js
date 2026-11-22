@@ -314,7 +314,18 @@
 
   /* ---------------- 共用初始化 ---------------- */
 
+  /* 开场闪屏：照搬 IntroSplash 时序（1450ms 展示 → 360ms 退场 → 移除） */
+  function scheduleSplash() {
+    var splash = document.getElementById("loginSplash");
+    console.log("[splash] schedule, found:", !!splash, "reduce:", window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (!splash) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { splash.remove(); return; }
+    setTimeout(function () { console.log("[splash] leaving"); splash.classList.add("leaving"); }, 1450);
+    setTimeout(function () { console.log("[splash] removed"); splash.remove(); }, 1810);
+  }
+
   function init() {
+    scheduleSplash();
     api.getSession().then(function (resp) {
       var session = resp.data;
       var topbarEl = $("topbar");

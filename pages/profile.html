@@ -5,88 +5,99 @@
   <meta name="color-scheme" content="light">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:,">
-  <title>个人中心 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css">
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/components.css">
-  <link rel="stylesheet" href="../css/pages.css">
+  <meta name="description" content="编辑资料 — 昵称 / 个性签名 / emoji 头像 / 隐私脱敏开关">
+  <title>编辑资料 · 留言板</title>
+  <link rel="stylesheet" href="../css/tokens.css?v=20261122b">
+  <link rel="stylesheet" href="../css/base.css?v=20261122b">
+  <link rel="stylesheet" href="../css/components.css?v=20261122b">
+  <link rel="stylesheet" href="../css/pages.css?v=20261122b">
 </head>
 <body data-page="profile">
   <div class="grain" aria-hidden="true"></div>
 
   <header class="topbar" id="topbar"></header>
 
-  <main class="profile-wrap container">
-    <h1 class="profile-title" data-text="profile.title">个人中心</h1>
+  <main class="profile-page container">
+    <!-- 面包屑（映射参考「当前位置：个人主页 ▸ 编辑资料」） -->
+    <p class="pe-breadcrumb">当前位置：<a href="zone.html" class="pe-bc-home" data-text="profile.breadcrumbHome">个人主页</a><span class="pe-bc-sep"> ▸ </span><span class="pe-bc-here" data-text="profile.breadcrumbEdit">编辑资料</span></p>
 
-    <div class="profile-grid">
-      <!-- 资料卡（API-08：本人完整信息） -->
-      <section class="profile-card">
-        <h2 class="profile-card-title" data-text="profile.nicknameTitle">修改昵称</h2>
-        <div class="profile-id-row">
-          <div id="profileAvatar"></div>
-          <div>
-            <div class="profile-name" id="profileName"></div>
-            <div class="profile-did" id="profileDid"></div>
-          </div>
-        </div>
-        <div class="field" style="margin-top:20px;max-width:320px" id="nicknameEditor" hidden>
-          <input type="text" class="field-input" id="nicknameInput" maxlength="20"
-                 data-text-placeholder="profile.nicknamePlaceholder"
-                 placeholder="1–20 个字符" aria-label="新昵称">
-          <input type="text" class="field-input" id="bioInput" maxlength="60" style="margin-top:10px"
-                 data-text-placeholder="profile.bioPlaceholder"
-                 placeholder="一句话签名（选填，展示在个人主页）" aria-label="个性签名">
+    <!-- 编辑资料白卡（居中形制） -->
+    <section class="pe-card" id="peCard">
+      <!-- 头像：emoji 8 选 1，相机覆盖层提示可更换 -->
+      <div class="pe-avatar-wrap">
+        <div id="profileAvatar"></div>
+        <button type="button" class="pe-avatar-cam" id="avatarCamBtn" aria-label="更换头像">
+          <span aria-hidden="true">📷</span>
+        </button>
+      </div>
+
+      <!-- 表单行（label 左 / 控件右） -->
+      <div class="pe-row">
+        <label class="pe-label" for="nicknameInput" data-text="profile.nicknameLabel">昵称</label>
+        <div class="pe-ctrl">
+          <input type="text" class="pe-input" id="nicknameInput" maxlength="20" aria-label="昵称">
+          <p class="pe-note" data-text="profile.nicknameRule">1–20 个字符 · 修改后历史留言保留当时昵称</p>
           <div class="field-error" id="nicknameErr" role="alert"></div>
         </div>
-        <div style="display:flex;gap:10px;margin-top:20px">
-          <button class="btn btn--soft btn--sm" id="nicknameToggleBtn" data-text="profile.nicknameBtn">修改昵称</button>
-          <button class="btn btn--primary btn--sm" id="nicknameSaveBtn" data-text="profile.nicknameSave" hidden>保存</button>
-          <a class="btn btn--ghost btn--sm" id="zoneLinkBtn" href="zone.html" data-text="common.zone" hidden>个人主页</a>
-        </div>
-        <p class="profile-note" data-text="profile.snapshotNote">新内容用新昵称，历史留言保留当时昵称</p>
+      </div>
 
-        <div style="margin-top:26px;border-top:1px solid var(--line);padding-top:18px">
-          <div class="privacy-row-item"><span class="privacy-label"><span data-text="profile.realName">真实姓名</span>（<span data-text="common.public">公开</span>开关控制掩码显示）</span><span class="privacy-label" id="valName" style="font-weight:800"></span></div>
-          <div class="privacy-row-item"><span class="privacy-label" data-text="profile.email">邮箱</span><span class="privacy-label" id="valEmail" style="font-weight:800"></span></div>
-          <div class="privacy-row-item"><span class="privacy-label" data-text="profile.phone">手机号</span><span class="privacy-label" id="valPhone" style="font-weight:800"></span></div>
+      <div class="pe-row">
+        <label class="pe-label" for="bioInput" data-text="profile.bioLabel">个性签名</label>
+        <div class="pe-ctrl">
+          <input type="text" class="pe-input" id="bioInput" maxlength="60" aria-label="个性签名">
+        </div>
+      </div>
+
+      <!-- 敏感信息行（真实姓名 / 邮箱可编辑；手机号 = 登录账号只读） -->
+      <div class="pe-row">
+        <span class="pe-label" data-text="profile.sensitiveLabel">敏感信息</span>
+        <div class="pe-ctrl">
+          <div class="pe-sensitive-grid">
+            <label class="pe-sub-label" for="realNameInput" data-text="profile.realNameLabel">真实姓名</label>
+            <input type="text" class="pe-input" id="realNameInput" maxlength="20" aria-label="真实姓名">
+            <label class="pe-sub-label" for="emailInput" data-text="profile.emailLabel">邮箱</label>
+            <input type="email" class="pe-input" id="emailInput" maxlength="60" aria-label="邮箱">
+            <label class="pe-sub-label" for="phoneInput" data-text="profile.accountLabel">手机号（登录账号）</label>
+            <input type="text" class="pe-input" id="phoneInput" readonly disabled aria-label="手机号（不可修改）">
+          </div>
+          <p class="pe-note" data-text="profile.phoneNote">手机号为登录账号，不可修改</p>
+          <p class="pe-note" data-text="profile.sensitiveNote">保存后按公开开关对外掩码展示；手机号不参与公开开关</p>
+        </div>
+      </div>
+
+      <!-- 隐私脱敏行（F6：三项独立开关 + 掩码展示） -->
+      <div class="pe-row">
+        <span class="pe-label" data-text="profile.privacyValues">隐私脱敏展示</span>
+        <div class="pe-ctrl">
+          <p class="pe-masked" id="maskedPreview"></p>
+          <div class="privacy-row pe-privacy-row">
+            <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="flagName"><span class="switch-track"></span></span><span data-text="profile.flagName">公开真实姓名</span></label>
+            <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="flagEmail"><span class="switch-track"></span></span><span data-text="profile.flagEmail">公开邮箱</span></label>
+            <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="flagPhone"><span class="switch-track"></span></span><span data-text="profile.flagPhone">公开手机号</span></label>
+          </div>
           <p class="privacy-desc" data-text="profile.privacyDesc">Service 出口脱敏：列表只返回掩码，明文不入响应体；本人完整信息仅本页可见</p>
         </div>
-      </section>
+      </div>
 
-      <!-- 隐私控制卡（F6 三项独立开关） -->
-      <section class="profile-card">
-        <h2 class="profile-card-title">
-          <span data-text="profile.privacyTitle">隐私控制</span>
-          <span style="font-size:12px;color:var(--ink-3);font-weight:400;margin-left:8px" data-text="profile.privacyNote">三项独立开关</span>
-        </h2>
-        <div class="privacy-row-item">
-          <span class="privacy-label" data-text="profile.flagName">公开真实姓名</span>
-          <span class="switch"><input type="checkbox" id="flagName" aria-label="公开真实姓名"><span class="switch-track"></span></span>
-        </div>
-        <div class="privacy-row-item">
-          <span class="privacy-label" data-text="profile.flagEmail">公开邮箱</span>
-          <span class="switch"><input type="checkbox" id="flagEmail" aria-label="公开邮箱"><span class="switch-track"></span></span>
-        </div>
-        <div class="privacy-row-item">
-          <span class="privacy-label" data-text="profile.flagPhone">公开手机号</span>
-          <span class="switch"><input type="checkbox" id="flagPhone" aria-label="公开手机号"><span class="switch-track"></span></span>
-        </div>
-        <p class="privacy-desc" style="margin-top:16px" data-text="profile.privacyDesc">Service 出口脱敏：列表只返回掩码，明文不入响应体；本人完整信息仅本页可见</p>
-      </section>
-    </div>
+      <!-- 保存 / 取消（居中，映射参考按钮组） -->
+      <div class="pe-actions">
+        <button class="btn btn--primary pe-save" id="nicknameSaveBtn" data-text="profile.nicknameSave">保存</button>
+        <button class="btn btn--ghost pe-cancel" id="cancelBtn" data-text="common.cancel">取消</button>
+      </div>
+      <p class="pe-footnote" id="peFootnote"></p>
+    </section>
 
-    <!-- 我的留言 -->
-    <h2 class="comment-section-title" data-text="profile.myMsgTitle">我的留言</h2>
+    <!-- 我的留言（列表项有标题时按「标题： 正文 #话题」展示） -->
+    <h2 class="comment-section-title pe-mine-title" data-text="profile.myMsgTitle">我的留言</h2>
     <section class="mine-list" id="mineList" aria-live="polite"></section>
   </main>
 
-  <script src="../js/ui-text.js"></script>
-  <script src="../js/mock/seed.js"></script>
-  <script src="../js/mock/db.js"></script>
-  <script src="../js/mock/api.js"></script>
-  <script src="../js/core/util.js"></script>
-  <script src="../js/components.js"></script>
-  <script src="../js/pages/profile.js"></script>
+  <script src="../js/ui-text.js?v=20261122b"></script>
+  <script src="../js/mock/seed.js?v=20261122b"></script>
+  <script src="../js/mock/db.js?v=20261122b"></script>
+  <script src="../js/mock/api.js?v=20261122b"></script>
+  <script src="../js/core/util.js?v=20261122b"></script>
+  <script src="../js/components.js?v=20261122b"></script>
+  <script src="../js/pages/profile.js?v=20261122b"></script>
 </body>
 </html>

@@ -282,6 +282,22 @@
   // 顶栏"岛"软切换入口：只重载列表，导航动画由 renderTopbar 内部处理
   HMB.pages = HMB.pages || {};
   HMB.pages.board = {
+    /* —— 预判目标页的最大滚动值（软切换转场选路用）：
+         非列表区实测高度 + 目标 tab 列表估高（单卡 104px + 间距）- 视口。
+         当前 scrollY 超过它 → 换页时滚动位置会被钳制硬切 → 应走编排转场；
+         mock 数据本地即回，判定失败返回 Infinity → 保持线性回顶旧路径。 —— */
+    predictTargetMaxScroll: function (key) {
+      if (key === "about") return Promise.resolve(0);              // 全视口固定场景
+      if (key === "mine" && !session.loggedIn) return Promise.resolve(0);  // 未登录仅一个状态框
+      return api.getMessages({
+        tab: key, sort: state.sortKey, period: state.period, q: state.q
+      }).then(function (resp) {
+        if (!resp.success || !els.boardView || !els.boardList) return Infinity;
+        var n = resp.data.list.length;
+        var chrome = els.boardView.offsetHeight - els.boardList.offsetHeight - els.listCaption.offsetHeight;
+        return Math.max(0, chrome + n * 118 + 24 - window.innerHeight);
+      }).catch(function () { return Infinity; });
+    },
     switchTab: function (key) {
       if (["hot", "latest", "mine", "about"].indexOf(key) < 0 || state.tab === key) return;
       state.tab = key;

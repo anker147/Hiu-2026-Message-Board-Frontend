@@ -1,16 +1,15 @@
 /* ============================================================
  * 留言板 · 帖子编辑器（新建 / 编辑统一入口）
- * 参考好游快爆 sendThreadShow 发帖器设计（fid→话题 / type→可见类型）
- * ------------------------------------------------------------
- * 双模式：
- *  - ?id=<resourceId> → 编辑模式：预填原文，保存走 API-07（标记「已编辑」），
- *    含原帖信息条 / 还原原文 / 危险区删除（P-08）
- *  - 无参（或 ?mode=new）→ 新建模式：承接原 P-03 发布表单全部语义
- *    （F5 无刷新提交两阶段定位、公开范围开关、本次昵称、防重锁、
- *    敏感词/限流/CSRF 就地提示保留草稿），发布成功插入「最新发布」高亮
- * 入口：详情页属主「编辑」、个人中心我的留言「编辑」、首页浮动按钮、
- *       post.html（重定向）、身份菜单等。
- * 红线：标题不设（数据语义红线）/ 字数计数器不设（PRD 9.7）/ 图片上传不设。
+ * 形制参照好游快爆 sendThreadShow 发帖器：
+ *  - 顶部操作行：类型下拉（「文章▾」→ 帖子可见类型）+ 话题版块下拉（fid）
+ *  - 图标工具栏：表情可用；图片/视频/投票/@/引用为原型禁用态（无后端能力）
+ *  - 居中窄卡：标题（选填）·48 字以内 + 分隔线 + 正文（纯白大区）
+ *  - 设置封面禁用卡 + 「▼ 发布设置」折叠设置卡（公开范围 / 本次昵称 / 危险区）
+ *  - 底部固定条：正文字数（实时）+ 发布 / 保存修改
+ * 双模式：?id=<resourceId> 编辑（预填原文，API-07，标记「已编辑」）；
+ *         无参 / ?mode=new 新建（承接原 P-03 全部语义：F5 两阶段定位等）。
+ * 红线说明：标题/字数计数按新参考（好游快爆）落地；图片上传与封面不设
+ * （无后端存储），工具栏对应项为禁用态并就地说明。
  * ============================================================ */
 (function (window, document) {
   "use strict";
@@ -28,6 +27,7 @@
   var msgId = "";
   var mode = "new";           // "new" | "edit"
   var originalContent = "";
+  var originalTitle = "";
   var selectedTag = "";
   var isPublic = true;
   var submitting = false;
@@ -45,8 +45,10 @@
   /* ---------------- 页面级状态盒（编辑模式四态） ---------------- */
 
   function renderState(spec) {
-    $("editorCard").hidden = true;
-    $("backLink").hidden = true;
+    $("editorTopbar").hidden = true;
+    $("toolbarBar").hidden = true;
+    $("editorCanvas").hidden = true;
+    $("footerBar").hidden = true;
     C.renderStateBox($("editArea"), spec);
   }
 
@@ -82,20 +84,16 @@
     });
   }
 
-  /* ---------------- 模式注入（标题 / 副题 / 区块显隐 / 按钮文案） ---------------- */
+  /* ---------------- 模式注入（区块显隐 / 模式标记 / 底部按钮） ---------------- */
 
   function applyMode() {
     var isNew = mode === "new";
-    $("pageTitle").textContent = isNew ? t("post.title") : t("editPage.title");
-    $("pageSub").textContent = isNew ? t("post.subtitle") : t("editPage.subtitle");
+    $("modeChip").textContent = isNew ? t("editPage.modeNew") : t("editPage.modeEdit");
     $("editOrigin").hidden = isNew;
-    $("editDanger").hidden = isNew;
     $("newOnlyBlock").hidden = !isNew;
-    $("resetBtn").hidden = isNew;            // 新建无“原文”，不设还原
     $("newListTitle").hidden = !isNew;
     $("newList").hidden = !isNew;
     $("editSaveBtn").textContent = isNew ? t("post.submit") : t("edit.save");
-    $("submitHint").textContent = isNew ? t("post.submittingNote") : t("editPage.saveHint");
     document.title = (isNew ? t("post.title") : t("editPage.title")) + " · 留言板";
   }
 
@@ -136,7 +134,31 @@
     HMB.i18n.apply(box);
   }
 
-  /* ---------------- 工具栏：表情弹层（光标处插入） ---------------- */
+  /* ---------------- 顶部下拉：帖子类型 / 话题版块（fid 语义映射） ---------------- */
+
+  function renderTypeDropdown() {
+    U.makeDropdown($("typeDropdown"), [
+      { key: "public", label: t("editPage.typePublic") },
+      { key: "private", label: t("editPage.typePrivate") }
+    ], isPublic ? "public" : "private", function (key) {
+      isPublic = key === "public";
+    });
+    var root = $("typeDropdown");
+    root.querySelector(".dropdown-btn").classList.add("editor-select-btn");
+    HMB.i18n.apply(root);
+  }
+
+  function renderTopicDropdown() {
+    var items = [{ key: "", label: t("post.tagNone") }].concat(
+      HMB.SEED.TOPICS.map(function (tag) { return { key: tag, label: tag }; })
+    );
+    U.makeDropdown($("topicDropdown"), items, selectedTag, function (key) {
+      selectedTag = key;
+    });
+    $("topicDropdown").querySelector(".dropdown-btn").classList.add("editor-select-btn");
+  }
+
+  /* ---------------- 图标工具栏：表情弹层（光标处插入）+ 禁用态 ---------------- */
 
   function insertAtCursor(ta, text) {
     var s = typeof ta.selectionStart === "number" ? ta.selectionStart : ta.value.length;
@@ -144,6 +166,7 @@
     ta.value = ta.value.slice(0, s) + text + ta.value.slice(e);
     try { ta.setSelectionRange(s + text.length, s + text.length); } catch (err) { /* noop */ }
     ta.focus();
+    updateWordCount();
   }
 
   function buildEmojiPop() {
@@ -162,6 +185,18 @@
   }
 
   function bindToolbar() {
+    // 禁用态图标注入（静态 SVG 常量，非用户内容）
+    [["tbImage", "image"], ["tbVideo", "video"], ["tbPoll", "poll"], ["tbAt", "at"], ["tbQuote", "quote"]]
+      .forEach(function (pair) {
+        var btn = $(pair[0]);
+        btn.textContent = "";
+        btn.appendChild(U.icon(pair[1]));
+      });
+    // 封面按钮图标
+    var coverBtn = $("coverBtn");
+    coverBtn.textContent = "";
+    coverBtn.appendChild(U.icon("image"));
+
     var pop = $("emojiPop");
     pop.setAttribute("aria-hidden", "true"); // 收起态不进无障碍树
     function setPop(open) {
@@ -181,80 +216,29 @@
       if (e.key === "Escape") setPop(false);
     });
 
-    $("resetBtn").addEventListener("click", function () {
-      $("editContent").value = originalContent;
-      $("editContent").classList.remove("is-error");
-      U.toast(t("editPage.resetDone"));
-    });
-  }
-
-  /* ---------------- 帖子类型（type 语义映射） ---------------- */
-
-  function renderTypeRow() {
-    var row = $("typeRow");
-    row.textContent = "";
-    [
-      { key: true, title: "editPage.typePublic", desc: "editPage.typePublicDesc" },
-      { key: false, title: "editPage.typePrivate", desc: "editPage.typePrivateDesc" }
-    ].forEach(function (d) {
-      var active = isPublic === d.key;
-      var opt = el("button", "type-opt" + (active ? " type-opt--active" : ""));
-      opt.type = "button";
-      opt.setAttribute("role", "radio");
-      opt.setAttribute("aria-checked", active ? "true" : "false");
-      var title = el("div", "type-opt-title");
-      title.appendChild(el("span", "check", "✓"));
-      var titleText = el("span");
-      titleText.setAttribute("data-text", d.title);
-      title.appendChild(titleText);
-      opt.appendChild(title);
-      var desc = el("div", "type-opt-desc");
-      desc.setAttribute("data-text", d.desc);
-      opt.appendChild(desc);
-      opt.addEventListener("click", function () {
-        if (isPublic === d.key) return;
-        isPublic = d.key;
-        renderTypeRow();
+    // 禁用态按钮：原型无图片/视频/投票/@/引用能力，点击就地说明
+    ["tbImage", "tbVideo", "tbPoll", "tbAt", "tbQuote"].forEach(function (id) {
+      $(id).addEventListener("click", function () {
+        U.toast($(id).getAttribute("title") || t("editPage.disabledImageTip"));
       });
-      row.appendChild(opt);
     });
-    HMB.i18n.apply(row);
+
+    // 封面按钮同禁用语义
+    $("coverBtn").addEventListener("click", function () {
+      U.toast(t("editPage.disabledCoverTip"));
+    });
+
+    // 设置卡折叠（「▼ 发布设置」）
+    var settingsCard = document.querySelector(".editor-settings-card");
+    $("settingsToggle").addEventListener("click", function () {
+      settingsCard.classList.toggle("is-collapsed");
+    });
   }
 
-  /* ---------------- 话题标签（fid 语义映射，发布/编辑共用词库） ---------------- */
+  /* ---------------- 正文字数（底部固定条，实时） ---------------- */
 
-  function renderTagRow() {
-    var row = $("tagRow");
-    row.textContent = "";
-    HMB.SEED.TOPICS.forEach(function (tag) {
-      var chip = el("span", "tag-chip tag-chip--select" + (selectedTag === tag ? " tag-chip--active" : ""), tag);
-      chip.tabIndex = 0;
-      chip.setAttribute("role", "button");
-      var toggle = function () { selectedTag = selectedTag === tag ? "" : tag; renderTagRow(); };
-      chip.addEventListener("click", toggle);
-      chip.addEventListener("keydown", function (e) { if (e.key === "Enter") toggle(); });
-      row.appendChild(chip);
-    });
-    var none = el("span", "tag-chip tag-chip--select" + (selectedTag === "" ? " tag-chip--active" : ""));
-    none.setAttribute("data-text", "post.tagNone");
-    none.tabIndex = 0;
-    none.setAttribute("role", "button");
-    none.addEventListener("click", function () { selectedTag = ""; renderTagRow(); });
-    none.addEventListener("keydown", function (e) { if (e.key === "Enter") { selectedTag = ""; renderTagRow(); } });
-    row.appendChild(none);
-    HMB.i18n.apply(row);
-  }
-
-  /* ---------------- 公开范围开关（仅新建模式，F6 用户级开关联动） ---------------- */
-
-  function syncPrivacySwitches() {
-    if (!session.loggedIn) return;
-    api.getProfile().then(function (resp) {
-      if (!resp.success) return;
-      $("pflagName").checked = resp.data.flagName;
-      $("pflagEmail").checked = resp.data.flagEmail;
-      $("pflagPhone").checked = resp.data.flagPhone;
-    });
+  function updateWordCount() {
+    $("wordCount").textContent = String($("editContent").value.length);
   }
 
   /* ---------------- 提交（新建 postMessage / 编辑 updateContent，防重锁） ---------------- */
@@ -278,10 +262,12 @@
     }
     if (!session.loggedIn) { C.openGuideModal("publish"); return; }
 
-    setBusy(true);
-    $("editFailBar").classList.add("hint-bar--hidden");
+    var title = ($("editTitle").value || "").trim();
 
-    // 新建：F5 无刷新提交（两阶段定位）采样起点；编辑：就地保存后回详情
+    setBusy(true);
+    $("editFailBar") && $("editFailBar").classList.add("hint-bar--hidden");
+
+    // 新建：F5 无刷新提交（两阶段定位）采样起点
     var S = window.scrollY;
     var t0 = performance.now();
     if (mode === "new") {
@@ -289,10 +275,7 @@
       [50, 100, 150, 200].forEach(function (dt) {
         setTimeout(function () { HMB.hooks._pushScroll(window.scrollY); }, dt);
       });
-    }
-
-    // 新建：随表单开关同步 F6 用户开关（fire-and-forget，不阻塞主流程）
-    if (mode === "new") {
+      // 随表单开关同步 F6 用户开关（fire-and-forget，不阻塞主流程）
       api.updatePrivacy({
         flagName: $("pflagName").checked,
         flagEmail: $("pflagEmail").checked,
@@ -303,6 +286,7 @@
 
     var req = mode === "new"
       ? api.postMessage({
+          title: title,
           content: content,
           nickname: $("postNickname").value.trim(),
           topic: selectedTag,
@@ -310,6 +294,7 @@
         })
       : api.updateContent({
           resourceId: msg.resourceId,
+          title: title,
           content: content,
           topic: selectedTag,
           isPublic: isPublic,
@@ -322,8 +307,7 @@
       if (!resp.success) {
         if (resp.code === 401) { C.openGuideModal(mode === "new" ? "publish" : "edit"); return; }
         // 4001 敏感词 / 4002 限流 / 9002 CSRF / 9001 参数 / 网络失败：就地提示并保留草稿（流程 B）
-        $("editFailBar").textContent = resp.message;
-        $("editFailBar").classList.remove("hint-bar--hidden");
+        U.toast(resp.message, "error");
         return;
       }
 
@@ -355,16 +339,18 @@
         HMB.hooks.highlightRemovedAt = performance.now();
       }, 1800);
 
-      // 成功复位：内容清空、开关复位、昵称保留（F5 验收）
+      // 成功复位：标题/内容清空、开关复位、昵称保留（F5 验收）
       $("editContent").value = "";
+      $("editTitle").value = "";
       $("editContent").classList.remove("is-error");
       selectedTag = "";
       isPublic = true;
-      renderTagRow();
-      renderTypeRow();
+      renderTopicDropdown();
+      renderTypeDropdown();
       $("pflagName").checked = false;
       $("pflagEmail").checked = false;
       $("pflagPhone").checked = false;
+      updateWordCount();
 
       U.toast(t("post.successToast"), "success");
     }, wait);
@@ -402,7 +388,7 @@
     C.openConfirmModal({
       titleKey: "confirm.deleteTitle",
       warnKey: "confirm.deleteWarn",
-      preview: $("editContent").value.trim() || msg.content,
+      preview: ($("editTitle").value ? $("editTitle").value + "：" : "") + $("editContent").value.trim(),
       note: t("confirm.ownerNote"),
       onConfirm: function () {
         api.deleteContent({ resourceId: msg.resourceId, csrf: session.csrf }).then(function (resp) {
@@ -427,37 +413,61 @@
     area.hidden = true;
 
     var ta = $("editContent");
+    var titleInput = $("editTitle");
     if (mode === "edit") {
       renderOrigin();
       originalContent = msg.content;
+      originalTitle = msg.title || "";
       ta.value = msg.content;
+      titleInput.value = originalTitle;
       selectedTag = msg.topicTag || "";
       isPublic = msg.isPublic !== false;
-      var backLink = $("backLink");
-      backLink.href = detailHref();
-      backLink.hidden = false;
+      $("backLink") && ($("backLink").href = detailHref());
     } else {
       ta.value = "";
+      titleInput.value = "";
       selectedTag = "";
       isPublic = true;
       syncPrivacySwitches();
       if (session.loggedIn) $("postNickname").value = session.nickname;
     }
 
+    renderTypeDropdown();
+    renderTopicDropdown();
     buildEmojiPop();
     bindToolbar();
-    renderTypeRow();
-    renderTagRow();
+    updateWordCount();
 
-    $("editorCard").hidden = false;
-    HMB.i18n.apply($("editorCard"));
+    $("editorTopbar").hidden = false;
+    $("toolbarBar").hidden = false;
+    $("editorCanvas").hidden = false;
+    $("footerBar").hidden = false;
+    HMB.i18n.apply($("editorTopbar"));
+    HMB.i18n.apply($("toolbarBar"));
+    HMB.i18n.apply(document.querySelector(".editor-canvas"));
+    HMB.i18n.apply($("footerBar"));
 
     ta.addEventListener("input", function () {
       ta.classList.remove("is-error");
-      $("editFailBar").classList.add("hint-bar--hidden");
+      updateWordCount();
+    });
+    titleInput.addEventListener("input", function () {
+      titleInput.classList.remove("is-error");
     });
     $("editSaveBtn").addEventListener("click", save);
     $("deleteBtn").addEventListener("click", confirmDelete);
+  }
+
+  /* ---------------- 公开范围开关（仅新建模式，F6 用户级开关联动） ---------------- */
+
+  function syncPrivacySwitches() {
+    if (!session.loggedIn) return;
+    api.getProfile().then(function (resp) {
+      if (!resp.success) return;
+      $("pflagName").checked = resp.data.flagName;
+      $("pflagEmail").checked = resp.data.flagEmail;
+      $("pflagPhone").checked = resp.data.flagPhone;
+    });
   }
 
   /* ---------------- 入口：?id= 编辑 / 无参新建 ---------------- */

@@ -83,6 +83,23 @@ a:focus-visible, [tabindex]:focus-visible {
   animation-delay: calc(var(--i, 0) * 25ms);
 }
 
+/* —— 软切换整页转场（当前滚动位置在目标页不存在时由 U.pageTransition 驱动）：
+      逐层退出当前页 → 换页（此刻元素已隐去，瞬时回顶不可见）→ 逐级飞入目标页；
+      线性柔和缓动，--i 由 JS 按块序号写入 —— */
+@keyframes layer-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-10px); }
+}
+.page-out > * {
+  animation: layer-out 240ms linear both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+  pointer-events: none;   /* 退出期间不可点 */
+}
+.page-in > * {
+  animation: layer-in 380ms linear both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
 /* —— 骨架 shimmer —— */
 @keyframes shimmer {
   from { background-position: 200% 0; }

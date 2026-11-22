@@ -7,6 +7,7 @@
 
   var now = Date.now();
   var DAY = 24 * 3600 * 1000;
+  var HOUR = 3600 * 1000;
 
   // 8 选 1 emoji 头像白名单（PRD F1）
   var AVATARS = ["🌸", "🐰", "🐱", "🦊", "🐻", "🐼", "🐸", "🐯"];
@@ -29,11 +30,12 @@
   ];
 
   // 期次（留言板自有周榜期次，严禁“第 128 期 / 术力口”语义）
+  // 周界口径：一周 = 周日 00:00 → 周六 24:00（非周一到周日）；range 起始日即周日
   var PERIODS = [
-    { no: 24, range: "2026.11.16–11.22" },
-    { no: 23, range: "2026.11.09–11.15" },
-    { no: 22, range: "2026.11.02–11.08" },
-    { no: 21, range: "2026.10.26–11.01" }
+    { no: 24, range: "2026.11.22–11.28" },
+    { no: 23, range: "2026.11.15–11.21" },
+    { no: 22, range: "2026.11.08–11.14" },
+    { no: 21, range: "2026.11.01–11.07" }
   ];
 
   /* —— 用户（密码为演示明文，mock 校验用；真实系统为 PBKDF2 加盐哈希） —— */
@@ -46,80 +48,84 @@
     { id: 6, account: "13800000006", password: "abc12345", displayId: "36208841", nickname: "晚风",   avatarEnum: 4, realName: "林晚风",  email: "wanfeng@qq.com",     flagName: true,  flagEmail: false, flagPhone: true,  bio: "环湖散步队队长", createdAt: now - 15 * DAY }
   ];
 
-  /* —— 留言（第 24 期 6 条：画布 01 原值；第 23 期 2 条） —— */
+  /* —— 留言（第 24 期 6 条：画布 01 原值；第 23 期 2 条）
+     时间锚点：周界口径为“周日 00:00 → 周六 24:00”，演示留言锚定在本期周日内
+     （第 24 期 6 条在周日内 3~19h，第 23 期 2 条在上周日晚 ~ 周一晚）；
+     热度分不落库：由 api 出口层按周榜公式实时计算（浏览基数×时间修正 + 评论×1 + 点赞×2 + 收藏×5，
+     结构参照 biliboard.uk 公示口径，绝对分值以“万”展示） —— */
   var MESSAGES = [
     {
-      resourceId: "a1f0b2c3-7f3a-4c21-9d01-000000000001", no: "7f3a9c21",
+      resourceId: "a1f0b2c3-7f3a-4c21-9d01-000000000001", title: "一起去看晚霞吧", no: "7f3a9c21",
       ownerId: 1, content: "下课后一起去看晚霞吗，操场边那棵树又开花了",
       nicknameSnapshot: "小满", avatarEnum: 1, displayId: "20849317",
       topicTag: "校园日常", isPublic: true, period: 24,
-      createdAt: now - 1 * DAY,
+      createdAt: now - 3 * HOUR,
       stats: { views: 12000, likes: 328, comments: 46, favorites: 89 },
-      heat: 8.6, heatDelta: 12.4, peakRank: 2, isNew: true
+      heatDelta: 12.4, peakRank: 2, isNew: true
     },
     {
-      resourceId: "a1f0b2c3-b2e1-4d94-9d02-000000000002", no: "b2e1d94c",
+      resourceId: "a1f0b2c3-b2e1-4d94-9d02-000000000002", title: "图书馆靠窗位与耳机共享", no: "b2e1d94c",
       ownerId: 2, content: "图书馆靠窗的位置今天没人，把耳机借给需要的同学",
       nicknameSnapshot: "阿泽", avatarEnum: 4, displayId: "70134852",
       topicTag: "互助", isPublic: true, period: 24,
-      createdAt: now - 2 * DAY,
+      createdAt: now - 7 * HOUR,
       stats: { views: 9840, likes: 256, comments: 38, favorites: 72 },
-      heat: 7.2, heatDelta: 5.1, peakRank: 4, isNew: false
+      heatDelta: 5.1, peakRank: 4, isNew: false
     },
     {
-      resourceId: "a1f0b2c3-c9a2-278e-9d03-000000000003", no: "c9a2278e",
+      resourceId: "a1f0b2c3-c9a2-278e-9d03-000000000003", title: "糖醋排骨回归了", no: "c9a2278e",
       ownerId: 3, content: "食堂三楼的糖醋排骨回归了，排队值得，附今日窗口实拍感受",
       nicknameSnapshot: "橘子汽水", avatarEnum: 4, displayId: "44920183",
       topicTag: "食堂", isPublic: true, period: 24,
-      createdAt: now - 2 * DAY - 3600e3,
+      createdAt: now - 8 * HOUR,
       stats: { views: 8120, likes: 198, comments: 51, favorites: 63 },
-      heat: 6.4, heatDelta: -3.8, peakRank: 1, isNew: false
+      heatDelta: -3.8, peakRank: 1, isNew: false
     },
     {
-      resourceId: "a1f0b2c3-8e7c-c35a-9d04-000000000004", no: "8e7cc35a",
+      resourceId: "a1f0b2c3-8e7c-c35a-9d04-000000000004", title: "助攻课推荐求真实体验", no: "8e7cc35a",
       ownerId: 4, content: "问一下大家，助攻课还有没有被推荐的老师，想听真实体验",
       nicknameSnapshot: "匿名同学", avatarEnum: 6, displayId: "53871022",
       topicTag: "求助", isPublic: true, period: 24,
-      createdAt: now - 3 * DAY,
+      createdAt: now - 12 * HOUR,
       stats: { views: 7560, likes: 142, comments: 64, favorites: 41 },
-      heat: 5.8, heatDelta: 0, peakRank: 6, isNew: false
+      heatDelta: 0, peakRank: 6, isNew: false
     },
     {
-      resourceId: "a1f0b2c3-dda5-e812-9d05-000000000005", no: "dda5e812",
+      resourceId: "a1f0b2c3-dda5-e812-9d05-000000000005", title: "盲盒破冰成功", no: "dda5e812",
       ownerId: 5, content: "盲盒回复太好玩了，抽到一条去年陌生同学的祝福，破冰成功",
       nicknameSnapshot: "树树", avatarEnum: 7, displayId: "61590247",
       topicTag: "盲盒", isPublic: true, period: 24,
-      createdAt: now - 3 * DAY - 5 * 3600e3,
+      createdAt: now - 17 * HOUR,
       stats: { views: 6910, likes: 176, comments: 33, favorites: 58 },
-      heat: 5.1, heatDelta: 8.7, peakRank: 12, isNew: false
+      heatDelta: 8.7, peakRank: 12, isNew: false
     },
     {
-      resourceId: "a1f0b2c3-ad8b-9f97-9d06-000000000006", no: "ad8b9f97",
+      resourceId: "a1f0b2c3-ad8b-9f97-9d06-000000000006", title: "环湖散步路线推荐", no: "ad8b9f97",
       ownerId: 6, content: "今天的天气太适合散步了，晚风很温柔，推荐环湖路线给大家",
       nicknameSnapshot: "晚风", avatarEnum: 4, displayId: "36208841",
       topicTag: "日常", isPublic: true, period: 24,
-      createdAt: now - 4 * DAY,
+      createdAt: now - 19 * HOUR,
       stats: { views: 5430, likes: 121, comments: 27, favorites: 35 },
-      heat: 4.6, heatDelta: 0, peakRank: 9, isNew: false
+      heatDelta: 0, peakRank: 9, isNew: false
     },
     /* —— 第 23 期 2 条（期次切换可测） —— */
     {
-      resourceId: "a1f0b2c3-23a1-0001-9d07-000000000007", no: "23a10001",
+      resourceId: "a1f0b2c3-23a1-0001-9d07-000000000007", title: "英语角继续约", no: "23a10001",
       ownerId: 2, content: "上周的英语角来了好多外教，这周继续约起来",
       nicknameSnapshot: "阿泽", avatarEnum: 4, displayId: "70134852",
       topicTag: "校园日常", isPublic: true, period: 23,
-      createdAt: now - 9 * DAY,
+      createdAt: now - 6 * DAY - 3 * HOUR,
       stats: { views: 4210, likes: 96, comments: 18, favorites: 22 },
-      heat: 3.4, heatDelta: -1.2, peakRank: 5, isNew: false
+      heatDelta: -1.2, peakRank: 5, isNew: false
     },
     {
-      resourceId: "a1f0b2c3-23a2-0002-9d08-000000000008", no: "23a20002",
+      resourceId: "a1f0b2c3-23a2-0002-9d08-000000000008", title: "期末小组自习室分享", no: "23a20002",
       ownerId: 5, content: "分享一个期末复习的小组自习室，氛围超好",
       nicknameSnapshot: "树树", avatarEnum: 7, displayId: "61590247",
       topicTag: "互助", isPublic: true, period: 23,
-      createdAt: now - 10 * DAY,
+      createdAt: now - 7 * DAY - 2 * HOUR,
       stats: { views: 3870, likes: 88, comments: 15, favorites: 30 },
-      heat: 2.9, heatDelta: 2.3, peakRank: 8, isNew: false
+      heatDelta: 2.3, peakRank: 8, isNew: false
     }
   ];
 
@@ -177,7 +183,7 @@
 
   window.HMB = window.HMB || {};
   window.HMB.SEED = {
-    VERSION: 1,
+    VERSION: 3, // v3：期次周界改为“周日→周六”，演示留言时间锚点同步重锚 → 升版触发旧数据重置
     AVATARS: AVATARS,
     NICK_ADJ: NICK_ADJ,
     NICK_ANIMAL: NICK_ANIMAL,

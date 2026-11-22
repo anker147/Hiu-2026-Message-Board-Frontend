@@ -92,8 +92,7 @@
     play: '<svg ' + SVG_ATTRS + '><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>',
     users: '<svg ' + SVG_ATTRS + '><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
     link2: '<svg ' + SVG_ATTRS + '><path d="M15 7h3a5 5 0 0 1 0 10h-3M9 17H6a5 5 0 0 1 0-10h3M8 12h8"/></svg>',
-    gift: '<svg ' + SVG_ATTRS + ' width="15" height="15"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M12 8s-1.5-4-4-4-2.5 3 0 4M12 8s1.5-4 4-4 2.5 3 0 4"/></svg>',
-    up: '<svg ' + SVG_ATTRS + '><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
+    gift: '<svg ' + SVG_ATTRS + ' width="15" height="15"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M12 8s-1.5-4-4-4-2.5 3 0 4M12 8s1.5-4 4-4 2.5 3 0 4"/></svg>'
   };
 
   function icon(name) {
@@ -387,7 +386,7 @@
     var navRow = el("div", "dbg-row");
     [
       ["首页榜单", "index.html"],
-      ["发布留言", "edit.html?mode=new"],
+      ["发布留言", "post.html"],
       ["详情/评论", "detail.html?id=a1f0b2c3-7f3a-4c21-9d01-000000000001"],
       ["注册", "register.html"],
       ["登录", "login.html"],
@@ -487,9 +486,10 @@
   };
   HMB.hooks = hooks;
 
-  /* ---------- 按钮乱码解码（hover）：字库取自站内文字，总时长 ≤ 0.5s ----------
+  /* ---------- 按钮乱码解码（hover）：字库取自站内文字，总时长 ≤ 0.5s，乱码每 70ms 才换一批 ----------
      mouseover 委托到 [data-scramble]——动态渲染的按钮（重试/去登录等）同样命中；
-     空格保持原位，字符从左到右逐位"解锁"，未解锁位随机取字库字符；reduced-motion 不启用。 */
+     只改写文本节点（nodeValue），按钮内的图标 span / SVG 等元素子节点原样保留；
+     空格保持原位，字符从左到右逐位"解锁"；reduced-motion 不启用。 */
   (function () {
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     var POOL = "留言板热榜最新我的关于评论点赞盲盒抽取发布重试登录注册消息身份选择好友确认取消周更互动Hiu24码号中英混排01{}<>/#*+";
@@ -500,23 +500,56 @@
       var now = performance.now();
       var last = doneAt.get(el);
       if (last && now - last < 350) return;      // 刚播完的短冷却，防止在按钮内移动时连播
-      var final = el.textContent;
-      if (!final || final.length < 2) return;
+      var nodes = [];
+      (function walk(n) {
+        for (var c = n.firstChild; c; c = c.nextSibling) {
+          if (c.nodeType === 3) { if (c.nodeValue && c.nodeValue.trim()) nodes.push({ node: c, text: c.nodeValue }); }
+          else if (c.nodeType === 1) walk(c);
+        }
+      })(el);
+      var len = 0;
+      nodes.forEach(function (pair) {
+        pair.entries = [];
+        for (var i = 0; i < pair.text.length; i++) {
+          var ch = pair.text[i];
+          var space = (ch === " " || ch === "　");
+          pair.entries.push({ ch: ch, space: space, glyph: POOL[(Math.random() * POOL.length) | 0] });
+          if (!space) len++;
+        }
+      });
+      if (len < 2) return;
+      var done = 0;
+      nodes.forEach(function (pair) {
+        pair.entries.forEach(function (en) {
+          if (en.space) { en.unlock = 0; return; }
+          en.unlock = 0.18 + 0.72 * (done / Math.max(1, len - 1));
+          done++;
+        });
+      });
       running.add(el);
-      var len = final.length;
-      var start = now, DUR = 460;
+      var start = now, DUR = 460, ROLL = 70, lastRoll = start;
       function tick(now2) {
         var t = Math.min(1, (now2 - start) / DUR);
-        var text = "";
-        for (var i = 0; i < len; i++) {
-          var ch = final[i];
-          if (ch === " " || ch === "　") { text += ch; continue; }
-          var unlock = 0.18 + 0.72 * (i / Math.max(1, len - 1));
-          text += (t >= unlock) ? ch : POOL[(Math.random() * POOL.length) | 0];
+        if (now2 - lastRoll >= ROLL) {           // 频次：乱码字每 70ms 才重摇一次
+          lastRoll = now2;
+          nodes.forEach(function (pair) {
+            pair.entries.forEach(function (en) {
+              if (t < en.unlock) en.glyph = POOL[(Math.random() * POOL.length) | 0];
+            });
+          });
         }
-        el.textContent = text;
+        nodes.forEach(function (pair) {
+          var out = "";
+          pair.entries.forEach(function (en) {
+            out += (t >= en.unlock) ? en.ch : en.glyph;
+          });
+          pair.node.nodeValue = out;             // 只写文本节点 → 图标元素不动
+        });
         if (t < 1) requestAnimationFrame(tick);
-        else { el.textContent = final; running.delete(el); doneAt.set(el, performance.now()); }
+        else {
+          nodes.forEach(function (pair) { pair.node.nodeValue = pair.text; });   // 精确还原
+          running.delete(el); doneAt.set(el, performance.now());
+        }
       }
       requestAnimationFrame(tick);
     }

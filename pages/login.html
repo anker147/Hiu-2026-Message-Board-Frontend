@@ -6,38 +6,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:,">
   <title>登录 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css">
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/components.css">
-  <link rel="stylesheet" href="../css/pages.css">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261122b">
+  <link rel="stylesheet" href="../css/base.css?v=20261122b">
+  <link rel="stylesheet" href="../css/components.css?v=20261122b">
+  <link rel="stylesheet" href="../css/pages.css?v=20261122b">
 </head>
 <body data-page="login">
   <div class="grain" aria-hidden="true"></div>
   <!-- 背景：公开图站随机自然景观（JS 随机取图，15% 不透明度，离线时静默隐藏） -->
   <img class="login-bg" id="loginBg" alt="" aria-hidden="true">
 
-  <!-- 顶栏：logo + 口号（参考站右侧的多余入口全部砍掉） -->
-  <header class="login-header">
-    <span class="login-logo">Board</span>
-    <span class="login-sep" aria-hidden="true"></span>
-    <span class="login-slogan" data-text="login.slogan">留言板 · 把今天想说的话，留在榜上</span>
-  </header>
+  <!-- 开场闪屏（照搬 IntroSplash：脉冲 logo 环 + kicker + 大标题 + 呼吸渐变条，1.45s 后退场） -->
+  <div class="login-splash" id="loginSplash" aria-hidden="true">
+    <div class="splash-ring"><span class="splash-logo">Board</span></div>
+    <span class="splash-kicker">BOARD MESSAGE SYSTEM</span>
+    <h1 class="splash-title">留言板</h1>
+    <div class="splash-bar"></div>
+  </div>
 
-  <!-- 主区：左品牌右白卡（mail.163.com 形式），页脚版权类全部砍掉 -->
-  <main class="login-hero">
-    <section class="login-brand">
-      <span class="login-kicker" data-text="login.kicker">MESSAGE BOARD · HIU 2026</span>
-      <h1 class="login-big">留言板</h1>
-      <div class="login-bar" aria-hidden="true"></div>
-      <p class="login-slogan-line" data-text="login.subtitle">登录后即可留言 评论 点赞 抽盲盒</p>
-      <div class="login-feats" aria-hidden="true">
-        <span class="login-feat">热榜周更</span>
-        <span class="login-feat">评论互动</span>
-        <span class="login-feat">盲盒抽取</span>
-      </div>
-    </section>
-
+  <!-- 启动设置屏（照搬 ConsoleEntry：全屏暗场 place-items center，居中一张卡） -->
+  <main class="login-stage">
     <section class="login-card" aria-label="登录与注册">
+      <div class="login-kicker">BOARD MESSAGE SYSTEM</div>
+      <h1 class="login-title">留言板</h1>
+      <p class="login-sub" data-text="login.subtitle">登录后即可留言 评论 点赞 抽盲盒</p>
+
       <div class="login-tabs" role="tablist" aria-label="登录或注册">
         <button type="button" class="login-tab is-on" data-form="login" role="tab"
                 aria-selected="true" data-text="login.tabLogin">账号登录</button>
@@ -48,20 +41,23 @@
       <div class="login-forms">
         <!-- 登录表单 -->
         <section class="login-form" id="loginForm">
-          <div class="field login-field">
-            <input type="tel" class="field-input" id="loginPhone" maxlength="11"
+          <label class="login-field" for="loginPhone">
+            <span class="login-label" data-text="login.phoneLabel">手机号</span>
+            <input type="tel" class="login-input" id="loginPhone" maxlength="11"
                    data-text-placeholder="login.phonePlaceholder"
                    placeholder="请输入注册手机号" autocomplete="tel">
-            <div class="field-error" id="loginPhoneErr" role="alert"></div>
-          </div>
-
-          <div class="field login-field">
-            <input type="password" class="field-input" id="loginPwd"
+            <span class="field-error" id="loginPhoneErr" role="alert"></span>
+          </label>
+          <label class="login-field" for="loginPwd">
+            <span class="login-label login-label--row">
+              <span data-text="login.pwdLabel">密码</span>
+              <button type="button" class="login-eye" id="loginEye" aria-label="显示或隐藏密码"></button>
+            </span>
+            <input type="password" class="login-input" id="loginPwd"
                    data-text-placeholder="login.pwdPlaceholder"
                    placeholder="请输入密码" autocomplete="current-password">
-            <button type="button" class="login-eye" id="loginEye" aria-label="显示或隐藏密码"></button>
-            <div class="field-error" id="loginPwdErr" role="alert"></div>
-          </div>
+            <span class="field-error" id="loginPwdErr" role="alert"></span>
+          </label>
 
           <div class="hint-bar hint-bar--danger hint-bar--hidden" id="loginErrBar" role="alert"></div>
 
@@ -71,35 +67,38 @@
 
         <!-- 注册表单（自 register.html 迁入，切换时卡高自然拉伸） -->
         <section class="login-form" id="regForm" hidden>
-          <div class="field login-field">
-            <input type="tel" class="field-input" id="regPhone" maxlength="11"
+          <label class="login-field" for="regPhone">
+            <span class="login-label" data-text="register.phoneLabel">手机号 账号</span>
+            <input type="tel" class="login-input" id="regPhone" maxlength="11"
                    data-text-placeholder="register.phonePlaceholder"
                    placeholder="请输入 11 位大陆手机号" autocomplete="tel">
-            <div class="field-error" id="regPhoneErr" role="alert"></div>
-          </div>
-
-          <div class="field login-field">
-            <input type="password" class="field-input" id="regPwd"
+            <span class="field-error" id="regPhoneErr" role="alert"></span>
+          </label>
+          <label class="login-field" for="regPwd">
+            <span class="login-label" data-text="register.pwdLabel">密码</span>
+            <input type="password" class="login-input" id="regPwd"
                    data-text-placeholder="register.pwdPlaceholder"
                    placeholder="至少 8 位，含字母与数字" autocomplete="new-password">
-            <div class="field-error" id="regPwdErr" role="alert"></div>
-          </div>
-
-          <div class="field login-field">
-            <input type="password" class="field-input" id="regConfirm"
+            <span class="field-error" id="regPwdErr" role="alert"></span>
+          </label>
+          <label class="login-field" for="regConfirm">
+            <span class="login-label" data-text="register.confirmLabel">确认密码</span>
+            <input type="password" class="login-input" id="regConfirm"
                    data-text-placeholder="register.confirmPlaceholder"
                    placeholder="再次输入密码" autocomplete="new-password">
-            <div class="field-error" id="regConfirmErr" role="alert"></div>
-          </div>
-
-          <div class="login-two">
-            <input type="text" class="field-input" id="regName"
-                   data-text-placeholder="register.namePlaceholder"
-                   placeholder="真实姓名（选填）" autocomplete="name">
-            <input type="email" class="field-input" id="regEmail"
-                   data-text-placeholder="register.emailPlaceholder"
-                   placeholder="邮箱地址（选填）" autocomplete="email">
-          </div>
+            <span class="field-error" id="regConfirmErr" role="alert"></span>
+          </label>
+          <label class="login-field">
+            <span class="login-label" data-text="register.optionalLabel">真实姓名 / 邮箱（选填）</span>
+            <span class="login-two">
+              <input type="text" class="login-input" id="regName"
+                     data-text-placeholder="register.namePlaceholder"
+                     placeholder="真实姓名" autocomplete="name">
+              <input type="email" class="login-input" id="regEmail"
+                     data-text-placeholder="register.emailPlaceholder"
+                     placeholder="邮箱地址" autocomplete="email">
+            </span>
+          </label>
 
           <div class="hint-bar hint-bar--info" data-text="register.hint">注册后分配 8 位展示 ID 与 emoji 头像</div>
           <div class="hint-bar hint-bar--danger hint-bar--hidden" id="regErrBar" role="alert"></div>
@@ -116,12 +115,12 @@
     </section>
   </main>
 
-  <script src="../js/ui-text.js"></script>
-  <script src="../js/mock/seed.js"></script>
-  <script src="../js/mock/db.js"></script>
-  <script src="../js/mock/api.js"></script>
-  <script src="../js/core/util.js"></script>
-  <script src="../js/components.js"></script>
-  <script src="../js/pages/auth.js"></script>
+  <script src="../js/ui-text.js?v=20261122b"></script>
+  <script src="../js/mock/seed.js?v=20261122b"></script>
+  <script src="../js/mock/db.js?v=20261122b"></script>
+  <script src="../js/mock/api.js?v=20261122b"></script>
+  <script src="../js/core/util.js?v=20261122b"></script>
+  <script src="../js/components.js?v=20261122b"></script>
+  <script src="../js/pages/auth.js?v=20261122b"></script>
 </body>
 </html>

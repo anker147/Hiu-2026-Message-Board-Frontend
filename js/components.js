@@ -65,7 +65,8 @@
     var TAB_ICONS = { hot: "flame", latest: "clock", mine: "user", about: "info" };
     var TAB_SUBS = { hot: "HOT", latest: "LATEST", mine: "MINE", about: "ABOUT" };
     var TAB_DEFS = [["hot", "common.hot"], ["latest", "common.latest"], ["mine", "common.mine"], ["about", "common.about"]];
-    var current = activeTab;   // 当前项的可变副本：软切换后必须同步，否则闭包旧值会把"切回加载时 tab"判为无操作
+    var current = activeTab;
+    var switchEpoch = 0;   // 点击代际：predict 异步期间连点时，过期点击的 doSwap 作废   // 当前项的可变副本：软切换后必须同步，否则闭包旧值会把"切回加载时 tab"判为无操作
     /* tab 构建器：活岛用 data-text 走 i18n 注入；测量克隆行用 withText 直接写文本（克隆不经过 i18n.apply） */
     function buildTab(pair, isActive, withText) {
       var a = el("a", "nav-tab" + (isActive ? " is-active" : ""));
@@ -96,7 +97,10 @@
             !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
           e.preventDefault();
           e.stopPropagation();   // 软切换不交给页面过渡层（否则 140ms 后会被导航）
-          if (current !== pair[0]) {
+          var myEpoch = ++switchEpoch;
+          var doSwap = function () {
+            if (myEpoch !== switchEpoch) return;   // 过期点击：更新的一击已接管
+            if (current === pair[0]) return;
             if (history.replaceState) history.replaceState(null, "", "index.html?tab=" + pair[0]);
             var prev = nav.querySelector(".nav-tab.is-active");
             if (prev) {
@@ -110,8 +114,23 @@
             slidePillTo(pair[0]);
             current = pair[0];
             board.switchTab(pair[0]);
-          }
-          smoothScrollToTop();   // 切换 tag（含回点当前项）默认丝滑线性回顶
+          };
+          if (current === pair[0]) { smoothScrollToTop(); return; }   // 回点当前项：线性回顶
+          /* 当前滚动位置在目标页不存在（scrollY > 目标页最大滚动值，含目标页 ≤ 一屏）
+             → 逐层退出当前页 → 换页+不可见回顶 → 逐级飞入目标页；
+             滚动位置仍有效 / 已在顶部 → 原路径：换内容 + 线性回顶滑行。 */
+          var boardView = document.getElementById("boardView");
+          var predict = board.predictTargetMaxScroll
+            ? board.predictTargetMaxScroll(pair[0])
+            : Promise.resolve(Infinity);
+          predict.then(function (maxScroll) {
+            if (window.scrollY > 0 && window.scrollY > maxScroll && boardView && U.pageTransition) {
+              U.pageTransition(boardView, doSwap);
+            } else {
+              doSwap();
+              smoothScrollToTop();
+            }
+          });
         }
         // 非榜单页 / 修饰键点击 → 默认整页跳转
       });
@@ -122,6 +141,14 @@
     /* —— 吸顶小边：完全收起态（is-crowded）岛平移到只露下缘小边，
           点小边弹出整岛再操作（capture 先于 tab 命中，避免露边误触导航）；
           弹出态点岛上空白收回；再次滚动自动收回。 —— */
+    /* 果冻收回：移除弹出态并播过冲动画（jelly-tuck，仅 crowd=1 场景；430ms 后摘标记可重复触发） */
+    var retractIsland = function () {
+      mount.classList.remove("is-popped");
+      nav.classList.remove("is-retracting");
+      void nav.offsetWidth;
+      nav.classList.add("is-retracting");
+      setTimeout(function () { nav.classList.remove("is-retracting"); }, 430);
+    };
     nav.addEventListener("click", function (e) {
       if (!mount.classList.contains("is-crowded")) return;
       if (!mount.classList.contains("is-popped")) {
@@ -131,7 +158,7 @@
       }
       if (!(e.target.closest && e.target.closest(".nav-tab"))) {
         e.preventDefault(); e.stopPropagation();
-        mount.classList.remove("is-popped");
+        retractIsland();
       }
     }, true);
 
@@ -272,7 +299,9 @@
         menu.appendChild(a);
         return a;
       }
-      menuItem("common.viewProfile", "profile.html");
+      // 「个人中心」= 第一页面：个人主页动态流（zone.html，按展示 ID 寻址）
+      if (session.displayId) menuItem("common.viewProfile", "zone.html?u=" + encodeURIComponent(session.displayId));
+      menuItem("common.editProfile", "profile.html");
       menuItem("common.myMessages", "index.html?tab=mine");
       var logoutItem = menuItem("common.logout", "#", true);
 
@@ -311,7 +340,7 @@
     HMB.i18n.apply(mount);
 
     /* —— 下滑挤占收起：banner 顶边上移穿过导航带时按进度写 --crowd(0→1)，
-       CSS 四层错峰消费（两翼滑出 → 导航岛收紧 → 玻璃盖板淡入 → 岛吸顶露小边）；
+       CSS 三层错峰消费（两翼滑出 → 导航岛收紧 → 岛吸顶露小边），顶栏全程完全透明；
        banner 隐藏（软切换到关于视图）视为无挤占，复位展开态。 —— */
     var banner = document.querySelector(".banner");
     if (banner) {
@@ -334,14 +363,15 @@
           mount.classList.toggle("is-crowded", crowded);
         }
         if (!crowded && mount.classList.contains("is-popped")) {
-          mount.classList.remove("is-popped");   // 离开完全收起态 → 弹出态复位
+          mount.classList.remove("is-popped");   // 离开完全收起态 → 弹出态复位（视图切换，不播果冻）
+          nav.classList.remove("is-retracting");
         }
       };
       window.addEventListener("scroll", function () {
-        // 弹出态下再次滚动（进度仍为满）→ 收回小边，回到吸顶待命
+        // 弹出态下再次滚动（进度仍为满）→ 果冻收回小边，回到吸顶待命
         if (mount.classList.contains("is-popped") &&
             parseFloat(mount.style.getPropertyValue("--crowd") || "0") >= 0.98) {
-          mount.classList.remove("is-popped");
+          retractIsland();
         }
         updateCrowd();
       }, { passive: true });
@@ -405,7 +435,8 @@
     /* 03/04 主信息区 + 统计区 */
     var mainZone = el("div", "main-zone");
     var title = el("h3", "card-title");
-    title.appendChild(U.highlightMatch(msg.content, ctx.q));
+    // 有选填标题时主标题行显示标题（正文入卡片正文位由详情承载）
+    title.appendChild(U.highlightMatch(msg.title || msg.content, ctx.q));
     title.tabIndex = 0;
     title.setAttribute("role", "link");
     var openFn = function () { if (ctx.onOpen) ctx.onOpen(msg); };

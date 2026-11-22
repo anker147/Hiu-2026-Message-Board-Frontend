@@ -7,10 +7,10 @@
   <link rel="icon" href="data:,">
   <meta name="description" content="个人主页 — 公开资料、留言与评论动态、话题足迹">
   <title>个人主页 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css">
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/components.css">
-  <link rel="stylesheet" href="../css/pages.css">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261122b">
+  <link rel="stylesheet" href="../css/base.css?v=20261122b">
+  <link rel="stylesheet" href="../css/components.css?v=20261122b">
+  <link rel="stylesheet" href="../css/pages.css?v=20261122b">
 </head>
 <body data-page="zone">
   <div class="grain" aria-hidden="true"></div>
@@ -24,22 +24,29 @@
     <!-- 头部资料区（zone 页 hero：头像 / 昵称 / 展示 ID / 签名 / 统计） -->
     <section class="zone-hero" id="zoneHero" hidden></section>
 
-    <!-- 主区：左动态流 + 右侧栏（关于 / 留言生涯 / 话题足迹） -->
+    <!-- 主区：左动态流（大 tab + 子筛选）+ 右侧栏（关于 / 留言生涯 / 话题足迹） -->
     <div class="zone-grid" id="zoneGrid" hidden>
       <section class="zone-feed-col">
-        <div class="zone-tabs" id="zoneTabs" role="tablist" aria-label="动态筛选"></div>
+        <div class="zone-maintabs" id="zoneMainTabs" role="tablist" aria-label="内容域">
+          <button type="button" class="zone-maintab is-active" role="tab" aria-selected="true">
+            <span data-text="zone.maintabFeed">动态</span>
+          </button>
+        </div>
+        <div class="zone-subbar">
+          <div class="zone-tabs" id="zoneTabs" role="tablist" aria-label="动态筛选"></div>
+        </div>
         <div id="zoneFeed" aria-live="polite"></div>
       </section>
       <aside class="zone-side-col" id="zoneSide"></aside>
     </div>
   </main>
 
-  <script src="../js/ui-text.js"></script>
-  <script src="../js/mock/seed.js"></script>
-  <script src="../js/mock/db.js"></script>
-  <script src="../js/mock/api.js"></script>
-  <script src="../js/core/util.js"></script>
-  <script src="../js/components.js"></script>
-  <script src="../js/pages/zone.js"></script>
+  <script src="../js/ui-text.js?v=20261122b"></script>
+  <script src="../js/mock/seed.js?v=20261122b"></script>
+  <script src="../js/mock/db.js?v=20261122b"></script>
+  <script src="../js/mock/api.js?v=20261122b"></script>
+  <script src="../js/core/util.js?v=20261122b"></script>
+  <script src="../js/components.js?v=20261122b"></script>
+  <script src="../js/pages/zone.js?v=20261122b"></script>
 </body>
 </html>

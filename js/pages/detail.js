@@ -114,6 +114,10 @@
     who.appendChild(el("span", "msg-card-date", msg.isPublic === false ? t("common.private") : t("common.public")));
     body.appendChild(who);
 
+    if (msg.title) {
+      var msgTitle = el("div", "msg-card-title", msg.title);
+      body.appendChild(msgTitle);
+    }
     var content = el("div", "msg-card-content");
     content.appendChild(U.highlightMatch(msg.content, ""));
     body.appendChild(content);

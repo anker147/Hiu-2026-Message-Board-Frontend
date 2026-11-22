@@ -103,7 +103,10 @@
     if (u.maskedEmail) chips.appendChild(el("span", "zone-meta-chip", t("profile.email") + " " + u.maskedEmail));
     if (u.maskedPhone) chips.appendChild(el("span", "zone-meta-chip", t("profile.phone") + " " + u.maskedPhone));
     main.appendChild(chips);
+    hero.appendChild(main);
 
+    // 右侧：统计数字块（映射参考站「49关注 183粉丝」位）+ 本人操作
+    var side = el("div", "zone-hero-side");
     var stats = el("div", "zone-stats");
     [
       { num: zone.stats.messages, key: "zone.statMessages" },
@@ -117,10 +120,7 @@
       box.appendChild(label);
       stats.appendChild(box);
     });
-    main.appendChild(stats);
-    hero.appendChild(main);
-
-    var side = el("div", "zone-hero-side");
+    side.appendChild(stats);
     if (zone.isSelf) {
       var editBtn = el("button", "btn btn--soft btn--sm");
       editBtn.type = "button";
@@ -200,7 +200,10 @@
     item.appendChild(head);
 
     var content = el("div", "zone-item-content");
-    content.textContent = m.content;
+    if (m.title) {
+      content.appendChild(el("b", null, m.title + "  "));
+    }
+    content.appendChild(document.createTextNode(m.content));
     content.tabIndex = 0;
     content.setAttribute("role", "link");
     content.addEventListener("click", function () { openDetail(detailHref(m.resourceId)); });
@@ -245,7 +248,7 @@
     });
     item.appendChild(content);
 
-    // 引用卡（映射参考站「TA回复的帖子」的原帖卡：摘要 + 来自话题 + @原作者）
+    // 引用条（映射参考站浅灰底原帖条：缩略方块 + 标题/摘要单行 + 来自话题）
     var quote = el("div", "zone-quote");
     quote.tabIndex = 0;
     quote.setAttribute("role", "link");
@@ -253,16 +256,20 @@
     quote.addEventListener("keydown", function (e) {
       if (e.key === "Enter") openDetail(detailHref(c.messageId));
     });
-    quote.appendChild(el("div", "zone-quote-label", t("zone.quoteLabel")));
-    quote.appendChild(el("div", "zone-quote-content", c.message.content));
+    var qav = U.avatar(null, "avatar--sm zone-quote-avatar");
+    qav.textContent = "📝";
+    quote.appendChild(qav);
+    var qmain = el("div", "zone-quote-main");
+    qmain.appendChild(el("div", "zone-quote-content", c.message.title || c.message.content));
     var qmeta = el("div", "zone-quote-meta");
     if (c.message.topicTag) {
       qmeta.appendChild(el("span", "topic", t("zone.quoteFrom", { topic: c.message.topicTag })));
-      qmeta.appendChild(document.createTextNode(" · "));
+      qmeta.appendChild(document.createTextNode(" · @" + c.message.nicknameSnapshot));
+    } else {
+      qmeta.appendChild(document.createTextNode("@" + c.message.nicknameSnapshot));
     }
-    qmeta.appendChild(document.createTextNode("@" + c.message.nicknameSnapshot));
-    qmeta.appendChild(document.createTextNode(" · " + U.fmtDate(c.message.createdAt)));
-    quote.appendChild(qmeta);
+    qmain.appendChild(qmeta);
+    quote.appendChild(qmain);
     item.appendChild(quote);
 
     var statsRow = el("div", "zone-item-stats");
@@ -314,19 +321,23 @@
     about.appendChild(sideRow(t("zone.aboutJoined"), U.fmtDate(zone.user.createdAt)));
     side.appendChild(about);
 
-    /* 留言生涯（映射「游戏生涯」三统计行） */
+    /* 留言生涯（映射「游戏生涯」三列大数字块） */
     var career = el("div", "zone-side-card");
     career.appendChild(el("div", "zone-side-title", t("zone.careerTitle")));
+    var grid = el("div", "zone-career-grid");
     [
       { key: "zone.careerMessages", num: zone.stats.messages },
       { key: "zone.careerComments", num: zone.stats.comments },
       { key: "zone.careerLikes", num: zone.stats.likesReceived }
     ].forEach(function (d) {
-      var row = el("div", "zone-career-row");
-      row.appendChild(el("span", null, t(d.key)));
-      row.appendChild(el("span", "num", U.fmtViews(d.num)));
-      career.appendChild(row);
+      var col = el("div", "zone-career-col");
+      col.appendChild(el("div", "zone-career-num", U.fmtViews(d.num)));
+      var lb = el("div", "zone-career-label");
+      lb.setAttribute("data-text", d.key);
+      col.appendChild(lb);
+      grid.appendChild(col);
     });
+    career.appendChild(grid);
     side.appendChild(career);
 
     /* 话题足迹（映射「关注论坛」卡：话题 + 条数；无话题时不渲染空卡） */
