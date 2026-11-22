@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="light">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="0; url=pages/index.html">
+  <title>留言板 · 跳转中</title>
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: flex; align-items: center; justify-content: center;
+      background: #FDFCFF; color: #64748B;
+      font-family: "Microsoft YaHei", system-ui, sans-serif; font-size: 14px;
+    }
+    a { color: #359EFF; }
+  </style>
+</head>
+<body>
+  <p>正在进入 <a href="pages/index.html">留言板</a> …</p>
+  <script>
+    // GitHub Pages 等子路径部署下同样成立：相对跳转，透传查询与哈希
+    location.replace("pages/index.html" + location.search + location.hash);
+  </script>
+</body>
+</html>
