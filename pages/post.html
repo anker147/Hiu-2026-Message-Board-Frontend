@@ -5,71 +5,16 @@
   <meta name="color-scheme" content="light">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:,">
-  <meta name="description" content="发布留言 — 无刷新提交，成功后原地定位高亮">
   <title>发布留言 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css">
-  <link rel="stylesheet" href="../css/base.css">
-  <link rel="stylesheet" href="../css/components.css">
-  <link rel="stylesheet" href="../css/pages.css">
+  <!-- P-03 独立发布页已并入帖子编辑器（edit.html 双模式：新建/编辑统一承接）。
+       本页仅保留重定向，旧链接（画布 03 独立发布页入口）自动跳转新建模式。 -->
+  <meta http-equiv="refresh" content="0;url=edit.html?mode=new">
 </head>
-<body data-page="post">
-  <div class="grain" aria-hidden="true"></div>
-
-  <header class="topbar" id="topbar"></header>
-
-  <main class="post-page container">
-    <!-- 画布 03：页面级标题 + 副题 -->
-    <h1 class="page-title" data-text="post.title">发布留言</h1>
-    <p class="page-sub" data-text="post.subtitle">无刷新提交，成功后原地定位高亮，不跳回页首</p>
-
-    <!-- 发布表单（与首页内嵌表单区共享同一提交逻辑 publishForm.js） -->
-    <section class="post-form-card">
-      <label class="field-label" for="postContent">
-        <span data-text="post.contentLabel">留言内容</span>
-        <span style="color:var(--ink-3);font-weight:400;margin-left:8px" data-text="post.contentMax">最多 500 字</span>
-      </label>
-      <textarea class="post-textarea" id="postContent" maxlength="500"
-                data-text-placeholder="post.contentPlaceholder"
-                placeholder="写下你想说的话，支持话题标签" aria-label="留言内容"></textarea>
-
-      <div class="post-sub-label" data-text="post.tagLabel">话题标签</div>
-      <div class="tag-select-row" id="tagRow"></div>
-
-      <div class="post-sub-label" data-text="post.privacyLabel">公开范围（独立控制）</div>
-      <div class="privacy-row" id="postPrivacyRow">
-        <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagName"><span class="switch-track"></span></span><span data-text="post.privacyName">公开姓名</span></label>
-        <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagEmail"><span class="switch-track"></span></span><span data-text="post.privacyEmail">公开邮箱</span></label>
-        <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagPhone"><span class="switch-track"></span></span><span data-text="post.privacyPhone">公开手机号</span></label>
-      </div>
-
-      <div class="field" style="margin-top:18px;max-width:320px">
-        <label class="field-label" for="postNickname" data-text="post.nicknameLabel">本次显示昵称</label>
-        <input type="text" class="field-input" id="postNickname" maxlength="20" aria-label="本次显示昵称">
-      </div>
-
-      <div class="post-actions">
-        <button class="btn btn--primary" id="postSubmitBtn" data-text="post.submit">发布留言</button>
-        <span class="post-hint" data-text="post.submittingNote">提交中防重锁 · 滚动位置保持 · scrollY 偏差不超过 2px</span>
-      </div>
-      <div class="hint-bar hint-bar--danger hint-bar--hidden post-fail-bar" id="postFailBar" role="alert"></div>
-      <p class="post-branch-note" data-text="post.branchNote">异常分支：敏感词就地提示并保留内容 · 限流显示剩余秒数 · 网络失败保留草稿可重试</p>
-    </section>
-
-    <!-- 提交后高亮区（画布 03 的“提交后高亮卡”示意：新卡 --blue 高亮 1800ms） -->
-    <h2 class="comment-section-title" style="margin-top:28px">
-      <span data-text="post.latestTitle">最新发布</span>
-      <a href="index.html" style="font-size:12px;font-weight:400;margin-left:10px" data-text="post.backBoard">返回热榜 →</a>
-    </h2>
-    <section class="board-list stagger" id="newList" style="margin-top:12px;padding-bottom:60px"></section>
-  </main>
-
-  <script src="../js/ui-text.js"></script>
-  <script src="../js/mock/seed.js"></script>
-  <script src="../js/mock/db.js"></script>
-  <script src="../js/mock/api.js"></script>
-  <script src="../js/core/util.js"></script>
-  <script src="../js/components.js"></script>
-  <script src="../js/pages/publishForm.js"></script>
-  <script src="../js/pages/post.js"></script>
+<body>
+  <script>
+    // JS 跳转优先（带 veil 过渡层的页面不闪白）；meta refresh 兜底
+    window.location.replace("edit.html?mode=new");
+  </script>
+  <noscript><p style="font-family:sans-serif;padding:24px">发布页已迁移，<a href="edit.html?mode=new">前往编辑器</a></p></noscript>
 </body>
 </html>

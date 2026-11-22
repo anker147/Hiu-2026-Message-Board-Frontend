@@ -139,7 +139,7 @@
       box.appendChild(brand);
       box.appendChild(el("p", "about-modal-body", t("about.introBody")));
       var chips = el("div", "hero-chips");
-      chips.appendChild(chipRow("post.html", "about.chipPost"));
+      chips.appendChild(chipRow("edit.html?mode=new", "about.chipPost"));
       chips.appendChild(chipRow("states.html", "about.chipStates"));
       chips.appendChild(chipRow("https://github.com/anker147/Hiu-2026-Message-Board-Frontend", "about.chipRepo"));
       box.appendChild(chips);

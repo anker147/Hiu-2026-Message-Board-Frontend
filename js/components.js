@@ -12,6 +12,41 @@
 
   /* ================= 顶栏 ================= */
 
+  /* —— 线性匀速回顶（切换 tag / 回顶按钮共用）：rAF 逐帧线性插值 scrollY，
+        匀速 1.6px/ms（短距下限 280ms、长距上限 800ms）；动画期间临时关掉
+        CSS scroll-behavior:smooth，防止逐帧 scrollTo 被浏览器平滑动画吞掉；
+        用户滚轮/触摸立即让位；reduced-motion 或无 rAF 环境直跳。
+        __topAnim 递增令牌：仅最新动画有权推进/复位 scrollBehavior，防连点互抢。 —— */
+  var __topAnim = 0;
+  function smoothScrollToTop() {
+    var startY = window.scrollY || 0;
+    if (startY <= 1) return;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || typeof window.requestAnimationFrame !== "function") {
+      window.scrollTo(0, 0);
+      return;
+    }
+    var dur = Math.max(280, Math.min(800, startY / 1.6));
+    var root = document.documentElement;
+    root.style.scrollBehavior = "auto";
+    var now = function () { return (window.performance && performance.now) ? performance.now() : Date.now(); };
+    var myId = ++__topAnim;
+    var t0 = now();
+    var cancelled = false;
+    var yieldScroll = function () { cancelled = true; };
+    window.addEventListener("wheel", yieldScroll, { once: true, passive: true });
+    window.addEventListener("touchstart", yieldScroll, { once: true, passive: true });
+    var step = function (ts) {
+      if (myId !== __topAnim) return;                     // 已被更新的动画接管 → 静默退出
+      if (cancelled) { root.style.scrollBehavior = ""; return; }
+      var k = Math.min(1, ((ts || now()) - t0) / dur);
+      window.scrollTo(0, Math.round(startY * (1 - k)));   // 线性：位移与时间成正比
+      if (k < 1) window.requestAnimationFrame(step);
+      else { __topAnim++; root.style.scrollBehavior = ""; }
+    };
+    window.requestAnimationFrame(step);
+  }
+
   function renderTopbar(mount, activeTab, session) {
     mount.textContent = "";
     var inner = el("div", "topbar-inner");
@@ -76,12 +111,29 @@
             current = pair[0];
             board.switchTab(pair[0]);
           }
+          smoothScrollToTop();   // 切换 tag（含回点当前项）默认丝滑线性回顶
         }
         // 非榜单页 / 修饰键点击 → 默认整页跳转
       });
       nav.appendChild(a);
     });
     inner.appendChild(nav);
+
+    /* —— 吸顶小边：完全收起态（is-crowded）岛平移到只露下缘小边，
+          点小边弹出整岛再操作（capture 先于 tab 命中，避免露边误触导航）；
+          弹出态点岛上空白收回；再次滚动自动收回。 —— */
+    nav.addEventListener("click", function (e) {
+      if (!mount.classList.contains("is-crowded")) return;
+      if (!mount.classList.contains("is-popped")) {
+        e.preventDefault(); e.stopPropagation();
+        mount.classList.add("is-popped");
+        return;
+      }
+      if (!(e.target.closest && e.target.closest(".nav-tab"))) {
+        e.preventDefault(); e.stopPropagation();
+        mount.classList.remove("is-popped");
+      }
+    }, true);
 
     /* 终态几何测量：折叠/展开过渡会改变所有 tab 的实时几何，
        胶囊必须落到"过渡结束后"的槽位——把整行 tab 克隆进同款隐形容器（目标项展开态）读取终值。 */
@@ -248,7 +300,58 @@
     }
     inner.appendChild(right);
     mount.appendChild(inner);
+
+    /* —— 回顶按钮：顶栏完全收起（is-crowded）时右下角弹出，点击线性丝滑回顶 —— */
+    var backTop = el("button", "back-top");
+    backTop.type = "button";
+    backTop.setAttribute("data-text-aria", "topbar.backTop");
+    backTop.appendChild(U.icon("up"));
+    backTop.addEventListener("click", function () { smoothScrollToTop(); });
+    mount.appendChild(backTop);
     HMB.i18n.apply(mount);
+
+    /* —— 下滑挤占收起：banner 顶边上移穿过导航带时按进度写 --crowd(0→1)，
+       CSS 四层错峰消费（两翼滑出 → 导航岛收紧 → 玻璃盖板淡入 → 岛吸顶露小边）；
+       banner 隐藏（软切换到关于视图）视为无挤占，复位展开态。 —— */
+    var banner = document.querySelector(".banner");
+    if (banner) {
+      var updateCrowd = function () {
+        var v;
+        if (!banner.offsetWidth) {   // display:none（关于视图激活）→ 无挤占
+          v = "0";
+        } else {
+          var top = banner.getBoundingClientRect().top;   // 静置时 top = 80（顶栏 60 + 外边距 20）
+          v = (Math.min(1, Math.max(0, (80 - top) / 80))).toFixed(3);
+        }
+        // MO 监听全页属性变更，本函数自身也写 style/class —— Chromium 对 classList.toggle
+        // 即使值未变也会派发 class 属性变更记录，必须逐项"值变化才写"，
+        // 否则"写 → 触发 MO → 再写"会无限自旋饿死微任务队列
+        if (mount.style.getPropertyValue("--crowd") !== v) {
+          mount.style.setProperty("--crowd", v);
+        }
+        var crowded = v !== "0" && parseFloat(v) >= 0.98;
+        if (crowded !== mount.classList.contains("is-crowded")) {
+          mount.classList.toggle("is-crowded", crowded);
+        }
+        if (!crowded && mount.classList.contains("is-popped")) {
+          mount.classList.remove("is-popped");   // 离开完全收起态 → 弹出态复位
+        }
+      };
+      window.addEventListener("scroll", function () {
+        // 弹出态下再次滚动（进度仍为满）→ 收回小边，回到吸顶待命
+        if (mount.classList.contains("is-popped") &&
+            parseFloat(mount.style.getPropertyValue("--crowd") || "0") >= 0.98) {
+          mount.classList.remove("is-popped");
+        }
+        updateCrowd();
+      }, { passive: true });
+      if (window.MutationObserver) {   // banner 所在视图的显示切换（软切换"关于"）不伴随 scroll，
+        new MutationObserver(updateCrowd).observe(document.body, {   // 用 MO 捕获 hidden/class/style 变更
+          attributes: true, attributeFilter: ["hidden", "class", "style"], subtree: true,
+        });
+      }
+      updateCrowd();
+    }
   }
 
   /* ================= 榜单卡（9.3 六区） ================= */
@@ -415,6 +518,7 @@
       var btn = el("button", "btn " + (spec.btnCls || "btn--primary"));
       btn.type = "button";
       btn.setAttribute("data-text", spec.btnKey);
+      btn.setAttribute("data-scramble", "");   // 重试 / 去登录 / 去发布：hover 乱码解码
       btn.addEventListener("click", function () { if (spec.onBtn) spec.onBtn(); });
       box.appendChild(btn);
     }
@@ -545,6 +649,7 @@
     var goBtn = el("button", "btn btn--primary");
     goBtn.type = "button";
     goBtn.setAttribute("data-text", "guide.btn");
+    goBtn.setAttribute("data-scramble", "");   // 去登录：hover 乱码解码
     goBtn.addEventListener("click", function () {
       window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
     });

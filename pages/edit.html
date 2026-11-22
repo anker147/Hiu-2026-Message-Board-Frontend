@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="light">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
+  <meta name="description" content="帖子编辑器 — 新建与编辑统一入口：仅作者可编辑，保存后内容标记「已编辑」">
+  <title>帖子编辑器 · 留言板</title>
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+</head>
+<body data-page="edit">
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="topbar" id="topbar"></header>
+
+  <main class="post-page container">
+    <!-- 页面级标题 + 副题（新建 / 编辑两种模式由 edit.js 按模式注入） -->
+    <h1 class="page-title" id="pageTitle">发布留言</h1>
+    <p class="page-sub" id="pageSub">无刷新提交，成功后原地定位高亮，不跳回页首</p>
+    <a class="edit-back" id="backLink" href="detail.html" data-text="editPage.backDetail" hidden>返回详情 →</a>
+
+    <!-- 加载骨架 / 页面级状态盒（未登录 / 不存在 / 非本人）由 edit.js 渲染至此 -->
+    <section id="editArea" class="edit-area"></section>
+
+    <!-- 编辑器卡片（sendThreadShow 发帖器形制）：新建 / 编辑共用，区块按模式显隐 -->
+    <section class="post-form-card" id="editorCard" hidden>
+      <!-- 原帖信息条（仅编辑模式：作者快照 / 期次 / 话题 / 统计，只读上下文） -->
+      <div class="edit-origin-card" id="editOrigin"></div>
+
+      <label class="field-label" for="editContent">
+        <span data-text="post.contentLabel">留言内容</span>
+        <span style="color:var(--ink-3);font-weight:400;margin-left:8px" data-text="post.contentMax">最多 500 字</span>
+      </label>
+      <textarea class="post-textarea" id="editContent" maxlength="500" aria-label="留言内容"></textarea>
+
+      <!-- 工具栏：表情（光标处插入）/ 还原原文（编辑模式）；右侧仅字数上限提示（PRD 9.7 不设计数器） -->
+      <div class="editor-toolbar" id="editToolbar">
+        <button type="button" class="tool-btn" id="emojiBtn" aria-haspopup="true">
+          <span aria-hidden="true">😊</span>
+          <span data-text="editPage.toolbarEmoji">表情</span>
+        </button>
+        <button type="button" class="tool-btn" id="resetBtn">
+          <span aria-hidden="true">↺</span>
+          <span data-text="editPage.toolbarReset">还原原文</span>
+        </button>
+        <span class="tool-note" data-text="post.contentMax">最多 500 字</span>
+        <div class="emoji-pop" id="emojiPop" role="menu" aria-label="插入表情"></div>
+      </div>
+
+      <!-- 帖子类型（sendThreadShow type 参数语义映射：公开 / 仅自己可见） -->
+      <div class="post-sub-label" data-text="editPage.typeLabel">帖子类型</div>
+      <div class="type-row" id="typeRow" role="radiogroup" aria-label="帖子类型"></div>
+
+      <!-- 话题标签（sendThreadShow fid 版块语义映射，新建可选 / 编辑可改） -->
+      <div class="post-sub-label" data-text="post.tagLabel">话题标签</div>
+      <div class="tag-select-row" id="tagRow"></div>
+
+      <!-- 公开范围 + 本次昵称（仅新建模式，承接 P-03 发布表单语义） -->
+      <div id="newOnlyBlock">
+        <div class="post-sub-label" data-text="post.privacyLabel">公开范围（独立控制）</div>
+        <div class="privacy-row" id="postPrivacyRow">
+          <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagName"><span class="switch-track"></span></span><span data-text="post.privacyName">公开姓名</span></label>
+          <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagEmail"><span class="switch-track"></span></span><span data-text="post.privacyEmail">公开邮箱</span></label>
+          <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagPhone"><span class="switch-track"></span></span><span data-text="post.privacyPhone">公开手机号</span></label>
+        </div>
+
+        <div class="field" style="margin-top:18px;max-width:320px">
+          <label class="field-label" for="postNickname" data-text="post.nicknameLabel">本次显示昵称</label>
+          <input type="text" class="field-input" id="postNickname" maxlength="20" aria-label="本次显示昵称">
+        </div>
+      </div>
+
+      <div class="post-actions">
+        <button class="btn btn--primary" id="editSaveBtn">发布留言</button>
+        <span class="post-hint" id="submitHint">提交中防重锁 · 滚动位置保持 · scrollY 偏差不超过 2px</span>
+      </div>
+      <div class="hint-bar hint-bar--danger hint-bar--hidden post-fail-bar" id="editFailBar" role="alert"></div>
+      <p class="post-branch-note">异常分支：401 引导登录 · 非本人 5002 状态盒 · 敏感词就地提示保留草稿 · 网络失败保留草稿可重试</p>
+
+      <!-- 危险区（仅编辑模式）：删除走 P-08 确认弹窗，成功后回热榜 -->
+      <div class="edit-danger" id="editDanger">
+        <span class="edit-danger-label" data-text="editPage.dangerZone">危险操作</span>
+        <span class="edit-danger-note" data-text="editPage.dangerNote">删除后不可恢复，评论与点赞一并清除</span>
+        <button class="btn btn--danger btn--sm" id="deleteBtn" data-text="detail.delete">删除</button>
+      </div>
+    </section>
+
+    <!-- 最新发布（仅新建模式）：提交成功后新卡插入并 --blue 高亮 1800ms（F5 两阶段定位） -->
+    <h2 class="comment-section-title" id="newListTitle" hidden>
+      <span data-text="post.latestTitle">最新发布</span>
+      <a href="index.html" style="font-size:12px;font-weight:400;margin-left:10px" data-text="post.backBoard">返回热榜 →</a>
+    </h2>
+    <section class="board-list stagger" id="newList" style="margin-top:12px;padding-bottom:60px" hidden></section>
+  </main>
+
+  <script src="../js/ui-text.js"></script>
+  <script src="../js/mock/seed.js"></script>
+  <script src="../js/mock/db.js"></script>
+  <script src="../js/mock/api.js"></script>
+  <script src="../js/core/util.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/pages/edit.js"></script>
+</body>
+</html>

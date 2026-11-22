@@ -220,6 +220,7 @@
       heat: m.heat, heatDelta: m.heatDelta, peakRank: m.peakRank,
       // 展示辅助（非后端契约，页面渲染用）
       no: m.no, isNew: !!m.isNew, isPublic: m.isPublic !== false, period: m.period,
+      edited: !!m.edited,
       // F6：列表只返回掩码，且受三项公开开关控制（未勾选 → 空串）
       maskedName: owner && owner.flagName ? maskName(owner.realName) : "",
       maskedEmail: owner && owner.flagEmail ? maskEmail(owner.email) : "",
@@ -275,6 +276,7 @@
         realName: (args.name || "").trim(),
         email: (args.email || "").trim(),
         flagName: false, flagEmail: false, flagPhone: false,
+        bio: "",
         createdAt: Date.now()
       };
       users.push(user);
@@ -356,6 +358,9 @@
       var period = opts.period;
       var list = db.getMessages().filter(function (m) {
         if (period && m.period !== period) return false;
+        // 帖子可见类型（isPublic=false 仅自己可见）：不进入他人可见的任何列表视图
+        if (m.isPublic === false &&
+            !(session && session.userId === m.ownerId)) return false;
         if (opts.tab === "mine" && m.ownerId !== session.userId) return false;
         if (opts.q) {
           var q = opts.q.toLowerCase();
@@ -389,16 +394,25 @@
     });
   }
 
-  /** 单条留言（详情页用；浏览 +1 best-effort） */
-  function apiGetMessage(resourceId) {
+  /**
+   * 单条留言（详情页用；浏览 +1 best-effort）。
+   * opts.countView=false 时不计浏览（帖子编辑页读取原文不得推高浏览量）。
+   * 帖子可见类型：isPublic=false 仅自己可见，非作者读取 → 5001（他人视图中不存在）。
+   */
+  function apiGetMessage(resourceId, opts) {
+    opts = opts || {};
     return netGate().then(function (net) {
       if (!net.success) return net;
       var messages = db.getMessages();
       var m = messages.find(function (x) { return x.resourceId === resourceId; });
       if (!m) return fail(5001, "error.5001");
-      m.stats.views += 1;
-      db.saveMessages(messages);
       var session = currentSession(true);
+      if (m.isPublic === false &&
+          !(session && session.userId === m.ownerId)) return fail(5001, "error.5001");
+      if (opts.countView !== false) {
+        m.stats.views += 1;
+        db.saveMessages(messages);
+      }
       var data = toListMessage(m);
       data.isMine = !!(session && session.userId === m.ownerId);
       return ok(data);
@@ -598,9 +612,16 @@
         var gate = sensitiveGate(content); // 改删/编辑：仅敏感词门（F10）
         if (gate) return gate;
         m.content = content;
+        // 帖子编辑页扩展：话题（白名单校验）与可见类型随保存提交；未传参保持原值（评论编辑不传）
+        if (args.topic !== undefined) {
+          var topic = (args.topic || "").trim();
+          if (topic && seed.TOPICS.indexOf(topic) < 0) return fail(9001, "error.9001");
+          m.topicTag = topic;
+        }
+        if (args.isPublic !== undefined) m.isPublic = !!args.isPublic;
         m.edited = true;
         db.saveMessages(messages);
-        return ok({});
+        return ok(toListMessage(m));
       }
 
       var comments = db.getComments();
@@ -778,6 +799,91 @@
     });
   }
 
+  /* ---------------- 个人主页（扩展，参照好游快爆 zone 页设计） ---------------- */
+
+  /**
+   * 公开个人主页聚合（按展示 ID 查询，访客可看）：
+   * - 用户公开面：昵称 / emoji 头像 / 展示 ID / 签名 / 注册时间；掩码字段仅在本人开关开启时返回
+   * - 动态流：公开留言 + 非匿名评论（引用原帖摘要）
+   * - 红线 F9/D-02：匿名（盲盒）回复绝不出现在作者主页 —— 前端接口不返回其归属关系
+   * - 可见类型：仅自己可见的留言与其下的评论，对他人一律不可见
+   */
+  function apiGetZone(args) {
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var session = currentSession(true);
+      var u = db.getUsers().find(function (x) { return x.displayId === args.displayId; });
+      if (!u) return fail(5001, "zone.userNotFound");
+
+      var isSelf = !!(session && session.userId === u.id);
+      var allMessages = db.getMessages();
+      var msgById = {};
+      allMessages.forEach(function (m) { msgById[m.resourceId] = m; });
+
+      // 仅自己可见：本人主页可见（isSelf），他人不可见；其下评论同理
+      var messages = allMessages.filter(function (m) {
+        return m.ownerId === u.id && (isSelf || m.isPublic !== false);
+      });
+      var comments = db.getComments().filter(function (c) {
+        if (c.ownerId !== u.id || c.isAnonymous) return false;
+        var m = msgById[c.messageId];
+        return m && (isSelf || m.isPublic !== false);
+      });
+
+      var likesReceived = messages.reduce(function (s, m) { return s + m.stats.likes; }, 0) +
+        comments.reduce(function (s, c) { return s + (c.likes || 0); }, 0);
+
+      var topicsMap = {};
+      messages.forEach(function (m) {
+        if (m.topicTag) topicsMap[m.topicTag] = (topicsMap[m.topicTag] || 0) + 1;
+      });
+      var topics = Object.keys(topicsMap).map(function (tag) {
+        return { tag: tag, count: topicsMap[tag] };
+      }).sort(function (a, b) { return b.count - a.count; });
+
+      return ok({
+        isSelf: isSelf,
+        user: {
+          displayId: u.displayId,
+          nickname: u.nickname,
+          avatarEnum: u.avatarEnum,
+          bio: u.bio || "",
+          createdAt: u.createdAt,
+          // F6：主页只展示掩码，且仅在本人公开开关开启时非空
+          maskedName: u.flagName ? maskName(u.realName) : "",
+          maskedEmail: u.flagEmail ? maskEmail(u.email) : "",
+          maskedPhone: u.flagPhone ? maskPhone(u.account) : ""
+        },
+        memberDays: Math.max(1, Math.ceil((Date.now() - u.createdAt) / 86400000)),
+        stats: {
+          messages: messages.length,
+          comments: comments.length,
+          likesReceived: likesReceived
+        },
+        topics: topics,
+        messages: messages.map(toListMessage),
+        comments: comments.map(function (c) {
+          var m = msgById[c.messageId];
+          return {
+            resourceId: c.resourceId,
+            messageId: c.messageId,
+            content: c.content,
+            createdAt: c.createdAt,
+            likes: c.likes,
+            edited: !!c.edited,
+            message: {
+              resourceId: m.resourceId,
+              content: m.content,
+              topicTag: m.topicTag || "",
+              nicknameSnapshot: m.nicknameSnapshot,
+              createdAt: m.createdAt
+            }
+          };
+        })
+      });
+    });
+  }
+
   /* ---------------- 个人中心（API-08 + 扩展，F6/F4） ---------------- */
 
   function apiGetProfile() {
@@ -795,6 +901,7 @@
         account: u.account,
         realName: u.realName || "",
         email: u.email || "",
+        bio: u.bio || "",
         flagName: !!u.flagName,
         flagEmail: !!u.flagEmail,
         flagPhone: !!u.flagPhone,
@@ -821,6 +928,7 @@
     });
   }
 
+  /** F4 昵称 / 个性签名（写时快照：历史留言保留当时昵称；签名展示在个人主页） */
   function apiUpdateNickname(args) {
     return netGate().then(function (net) {
       if (!net.success) return net;
@@ -828,12 +936,17 @@
       if (auth.err) return auth.err;
       var nick = (args.nickname || "").trim();
       if (!nick || nick.length > 20) return fail(9001, "error.9001");
+      if (args.bio !== undefined) {
+        var bio = (args.bio || "").trim();
+        if (bio.length > 60) return fail(9001, "error.9001");
+      }
       var users = db.getUsers();
       var u = users.find(function (x) { return x.id === auth.session.userId; });
       if (!u) return fail(401, "error.401");
       u.nickname = nick; // 写时快照：历史留言保留当时昵称（D-03）
+      if (args.bio !== undefined) u.bio = (args.bio || "").trim();
       db.saveUsers(users);
-      return ok({ nickname: nick });
+      return ok({ nickname: nick, bio: u.bio || "" });
     });
   }
 
@@ -883,6 +996,7 @@
     /* API-11 */ getBlindbox: apiGetBlindbox,
     /* API-12 */ blindboxReply: apiBlindboxReply,
     /* 扩展 */   getMessage: apiGetMessage,
+    /* 扩展 */   getZone: apiGetZone,
     /* 扩展 */   updatePrivacy: apiUpdatePrivacy,
     /* 扩展 */   updateNickname: apiUpdateNickname,
     /* 扩展 */   getSession: apiGetSession,

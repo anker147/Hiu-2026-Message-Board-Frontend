@@ -66,6 +66,7 @@
 
     btn.addEventListener("click", function () {
       if (busy) return;
+      if (!agreeOk(errBar)) return;
       clearErrs(form);
       errBar.classList.add("hint-bar--hidden");
 
@@ -104,6 +105,17 @@
 
     pwd.addEventListener("keydown", function (e) { if (e.key === "Enter") btn.click(); });
     phone.addEventListener("keydown", function (e) { if (e.key === "Enter") pwd.focus(); });
+
+    var eye = $("loginEye");
+    if (eye) {
+      eye.appendChild(U.icon("eye"));
+      eye.addEventListener("click", function () {
+        var show = pwd.type === "password";
+        pwd.type = show ? "text" : "password";
+        eye.classList.toggle("is-on", show);
+        eye.setAttribute("aria-label", show ? "隐藏密码" : "显示密码");
+      });
+    }
   }
 
   /* ---------------- 注册页 ---------------- */
@@ -123,6 +135,7 @@
 
     btn.addEventListener("click", function () {
       if (busy) return; // 防重锁
+      if (!agreeOk(errBar)) return;
       clearErrs(form);
       errBar.classList.add("hint-bar--hidden");
 
@@ -174,6 +187,13 @@
             var link = document.createElement("a");
             link.href = "login.html?phone=" + encodeURIComponent(phone.value.trim());
             link.textContent = t("register.gotoLogin") + " →";
+            link.addEventListener("click", function (ev) {
+              ev.preventDefault();                       // 同页：切回登录 tab 并带号填充
+              switchFormTab("login");
+              var lp = $("loginPhone");
+              lp.value = phone.value.trim();
+              lp.focus();
+            });
             errBar.appendChild(document.createTextNode(resp.message + "  "));
             errBar.appendChild(link);
             errBar.classList.remove("hint-bar--hidden");
@@ -192,12 +212,113 @@
     pwd.addEventListener("keydown", function (e) { if (e.key === "Enter") confirm.focus(); });
   }
 
+  /* ---------------- 登录卡共用：tab 切换 / 用户协议 / 背景图 ---------------- */
+
+  function switchFormTab(which) {
+    var card = document.querySelector(".login-card");
+    if (!card) return;
+    var wrap = card.querySelector(".login-forms");
+    var lf = card.querySelector("#loginForm"), rf = card.querySelector("#regForm");
+    if ((which === "login" && !lf.hidden) || (which === "register" && !rf.hidden)) return;
+    card.querySelectorAll(".login-tab").forEach(function (b) {
+      var on = b.getAttribute("data-form") === which;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    var fromH = wrap.offsetHeight;
+    wrap.style.height = fromH + "px";
+    wrap.style.overflow = "hidden";
+    lf.hidden = which !== "login";
+    rf.hidden = which !== "register";
+    var toH = wrap.scrollHeight;                       // 新表单的自然高度
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (Math.abs(toH - fromH) > 1 && !reduce) {
+      void wrap.offsetHeight;
+      wrap.style.transition = "height 300ms cubic-bezier(0.2, 0.9, 0.3, 1)";
+      wrap.style.height = toH + "px";
+      var done = function () {
+        wrap.style.height = "";
+        wrap.style.overflow = "";
+        wrap.style.transition = "";
+        wrap.removeEventListener("transitionend", done);
+      };
+      wrap.addEventListener("transitionend", done);
+      setTimeout(done, 380);                            // 兜底清理
+    } else {
+      wrap.style.height = "";
+      wrap.style.overflow = "";
+    }
+    var target = which === "login" ? lf : rf;
+    if (!reduce && target.animate) {
+      var a = target.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: "linear" });
+      a.finished.then(function () { a.cancel(); }).catch(function () {});
+    }
+  }
+
+  var AGREEMENT = [
+    "1. 本站为黑龙江外国语学院计算机科学与技术专业全栈开发实训课程的教学演示项目，仅用于课程学习与作品展示。",
+    "2. 本站所有数据仅保存在您当前浏览器的 localStorage 中，不向任何服务器上传；请勿输入真实密码或您不愿他人看到的敏感信息。",
+    "3. 您发布的留言、评论等内容应遵守法律法规与校园文明规范，不得包含违法、暴力、色情或侵犯他人权益的信息。",
+    "4. 课程开发小组有权对演示数据做重置与清理，您在演示期间产生的内容可能随时被清除。",
+    "5. 随机分配的 8 位展示 ID 与 emoji 头像仅用于演示身份标识，不代表任何真实用户。",
+    "6. 勾选同意即表示您已阅读并理解以上内容。如有疑问，请联系课程开发小组。"
+  ];
+
+  function agreeOk(errBar) {
+    var cb = $("loginAgree");
+    if (cb && cb.checked) return true;
+    if (errBar) {
+      errBar.textContent = t("login.agreeRequired");
+      errBar.classList.remove("hint-bar--hidden");
+    }
+    var row = document.querySelector(".login-agree");
+    if (row) {
+      row.classList.remove("agree-shake");
+      void row.offsetWidth;
+      row.classList.add("agree-shake");
+    }
+    return false;
+  }
+
+  function bindTabs() {
+    document.querySelectorAll(".login-tab").forEach(function (b) {
+      b.addEventListener("click", function () {
+        switchFormTab(b.getAttribute("data-form"));
+      });
+    });
+  }
+
+  function bindAgreement() {
+    var link = $("agreeLink");
+    if (!link) return;
+    link.addEventListener("click", function (e) {
+      e.preventDefault();
+      var box = el("div", "agree-body");
+      AGREEMENT.forEach(function (para) { box.appendChild(el("p", null, para)); });
+      U.openModal(box, { modalCls: "modal--about" });
+    });
+  }
+
+  function bindBg() {
+    var bg = $("loginBg");
+    if (!bg) return;
+    var WINTER = [1036, 866, 869, 903, 1044, 1045];            // 冬季景观图集（雪景/冷调，已逐张目检）
+    var pre = new Image();
+    pre.onload = function () {
+      bg.src = pre.src;
+      bg.classList.add("is-loaded");                           // 预载完成 → CSS 渐显，不"唰"一下
+    };
+    pre.onerror = function () { bg.style.display = "none"; }; // 离线/失败：静默回落纯深色底
+    pre.src = "https://picsum.photos/id/" + WINTER[Math.floor(Math.random() * WINTER.length)] + "/1920/1080";
+  }
+
   /* ---------------- 共用初始化 ---------------- */
 
   function init() {
     api.getSession().then(function (resp) {
       var session = resp.data;
-      C.renderTopbar($("topbar"), null, session);
+      var topbarEl = $("topbar");
+      if (topbarEl) C.renderTopbar(topbarEl, null, session);   // 登录页（163 形式）无岛顶栏
 
       // 无权限态：已登录访问 P-02/P-05 → 跳 P-01（5.12）
       if (session.loggedIn) {
@@ -205,8 +326,11 @@
         return;
       }
       HMB.util.renderDebugPanel();
-      if (page === "login") initLogin();
-      else initRegister();
+      initLogin();       // 登录卡双 tab：登录 / 注册（register.html 已并入本页）
+      initRegister();
+      bindTabs();
+      bindAgreement();
+      bindBg();
     });
   }
 

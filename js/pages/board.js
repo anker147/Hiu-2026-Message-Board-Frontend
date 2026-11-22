@@ -1,6 +1,6 @@
 /* ============================================================
  * 留言板 · 首页榜单页（P-01 + P-03 内嵌表单区）
- * tab 切换 / 搜索防抖 / 自定义下拉 / 发布表单（共享组件 publishForm）/
+ * tab 切换 / 搜索防抖 / 自定义下拉 / 浮动操作（发布入口 → 帖子编辑器新建模式）/
  * 点赞状态机（F8）/ 盲盒入口（F9）/ 四态
  * ============================================================ */
 (function (window, document) {
@@ -36,8 +36,6 @@
     els.searchIcon = $("searchIcon");
     els.sortDropdown = $("sortDropdown");
     els.periodDropdown = $("periodDropdown");
-    els.quickPost = $("quickPost");
-    els.postSection = $("postSection");
     els.listCaption = $("listCaption");
     els.boardList = $("boardList");
     els.publishFloatBtn = $("publishFloatBtn");
@@ -52,7 +50,6 @@
 
     // 图标（静态 SVG 常量）
     els.searchIcon.appendChild(U.icon("search"));
-    $("quickPostIcon").appendChild(U.icon("pencil"));
     $("publishIcon").appendChild(U.icon("pencil"));
     $("blindboxIcon").appendChild(U.icon("gift"));
 
@@ -65,7 +62,6 @@
       session = resp.data;
       renderTopbarIfNeeded();
       bindToolbar();
-      bindPublishForm();
       bindFloatActions();
       if (state.tab === "about") {   // ?tab=about 直达：显示关于视图，跳过列表
         if (els.boardView) els.boardView.hidden = true;
@@ -120,39 +116,13 @@
     });
   }
 
-  /* ---------------- 发布表单（共享组件，P-03 内嵌宿主） ---------------- */
-
-  function bindPublishForm() {
-    var form = HMB.publishForm.mount({
-      getSession: function () { return session; },
-      quickPost: els.quickPost,
-      insertInto: els.boardList,
-      onLike: handleLike,
-      onOpen: openDetail,
-      onInserted: function () {
-        if (state.period !== currentPeriod) state.period = currentPeriod;
-        els.listCaption.textContent = "";
-      },
-      toastOnSuccess: true
-    });
-
-    els.publishFloatBtn.addEventListener("click", function () {
-      form.expand();
-      setTimeout(function () {
-        els.postSection.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 80);
-    });
-
-    // 独立发布页入口（Page 1 画布 03 整页呈现）
-    var postPageLink = $("postPageLink");
-    if (postPageLink) {
-      postPageLink.addEventListener("click", function (e) { e.stopPropagation(); });
-    }
-  }
-
   /* ---------------- 浮动操作 ---------------- */
 
   function bindFloatActions() {
+    // 发布入口 → 帖子编辑器新建模式（原内嵌表单区已移除，编辑器统一承接新建/编辑）
+    els.publishFloatBtn.addEventListener("click", function () {
+      window.location.href = "edit.html?mode=new";
+    });
     els.blindboxBtn.addEventListener("click", function () {
       if (!session.loggedIn) { C.openGuideModal("blindbox"); return; }
       C.openBlindboxModal(session);
@@ -281,7 +251,7 @@
             descKey: "board.stateEmptyDesc",
             btnKey: "board.stateEmptyBtn",
             onBtn: function () {
-              window.location.href = "post.html";
+              window.location.href = "edit.html?mode=new";
             }
           });
         }

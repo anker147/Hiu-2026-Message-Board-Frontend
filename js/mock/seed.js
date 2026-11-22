@@ -18,6 +18,16 @@
   // 敏感词表（PRD F10：加微信、代考、办证、刷单等，可配置）
   var SENSITIVE_WORDS = ["加微信", "代考", "办证", "刷单"];
 
+  // 话题词库（发布表单 / 编辑页共享的“版块”语义，服务端校验以此白名单为准）
+  var TOPICS = ["校园日常", "互助", "食堂", "求助", "盲盒", "日常"];
+
+  // 编辑器表情库（帖子编辑页工具栏“表情”选择器；与头像 8 选 1 白名单同源起头）
+  var EMOJI_LIBRARY = [
+    "🌸", "🐰", "🐱", "🦊", "🐻", "🐼", "🐸", "🐯",
+    "😊", "😂", "🥰", "😎", "🤔", "😭", "🥳", "😴",
+    "👍", "🎉", "✨", "🔥", "💡", "📚", "☕", "🌙"
+  ];
+
   // 期次（留言板自有周榜期次，严禁“第 128 期 / 术力口”语义）
   var PERIODS = [
     { no: 24, range: "2026.11.16–11.22" },
@@ -28,12 +38,12 @@
 
   /* —— 用户（密码为演示明文，mock 校验用；真实系统为 PBKDF2 加盐哈希） —— */
   var USERS = [
-    { id: 1, account: "13800000001", password: "abc12345", displayId: "20849317", nickname: "小满",   avatarEnum: 1, realName: "王小满",  email: "xiaoman@hiu.edu.cn", flagName: true,  flagEmail: false, flagPhone: false, createdAt: now - 30 * DAY },
-    { id: 2, account: "13800000002", password: "abc12345", displayId: "70134852", nickname: "阿泽",   avatarEnum: 4, realName: "陈泽宇",  email: "azezey@qq.com",      flagName: false, flagEmail: false, flagPhone: false, createdAt: now - 28 * DAY },
-    { id: 3, account: "13800000003", password: "abc12345", displayId: "44920183", nickname: "橘子汽水", avatarEnum: 4, realName: "李橘橙",  email: "",                   flagName: false, flagEmail: false, flagPhone: false, createdAt: now - 25 * DAY },
-    { id: 4, account: "13800000004", password: "abc12345", displayId: "53871022", nickname: "匿名同学", avatarEnum: 6, realName: "",       email: "anon2026@163.com",   flagName: false, flagEmail: true,  flagPhone: false, createdAt: now - 21 * DAY },
-    { id: 5, account: "13800000005", password: "abc12345", displayId: "61590247", nickname: "树树",   avatarEnum: 7, realName: "苏树",    email: "sushu@hiu.edu.cn",   flagName: false, flagEmail: false, flagPhone: false, createdAt: now - 18 * DAY },
-    { id: 6, account: "13800000006", password: "abc12345", displayId: "36208841", nickname: "晚风",   avatarEnum: 4, realName: "林晚风",  email: "wanfeng@qq.com",     flagName: true,  flagEmail: false, flagPhone: true,  createdAt: now - 15 * DAY }
+    { id: 1, account: "13800000001", password: "abc12345", displayId: "20849317", nickname: "小满",   avatarEnum: 1, realName: "王小满",  email: "xiaoman@hiu.edu.cn", flagName: true,  flagEmail: false, flagPhone: false, bio: "喜欢在晚自习后去操场看晚霞", createdAt: now - 30 * DAY },
+    { id: 2, account: "13800000002", password: "abc12345", displayId: "70134852", nickname: "阿泽",   avatarEnum: 4, realName: "陈泽宇",  email: "azezey@qq.com",      flagName: false, flagEmail: false, flagPhone: false, bio: "图书馆靠窗党，耳机常备", createdAt: now - 28 * DAY },
+    { id: 3, account: "13800000003", password: "abc12345", displayId: "44920183", nickname: "橘子汽水", avatarEnum: 4, realName: "李橘橙",  email: "",                   flagName: false, flagEmail: false, flagPhone: false, bio: "食堂测评雷达，三楼蹲点中", createdAt: now - 25 * DAY },
+    { id: 4, account: "13800000004", password: "abc12345", displayId: "53871022", nickname: "匿名同学", avatarEnum: 6, realName: "",       email: "anon2026@163.com",   flagName: false, flagEmail: true,  flagPhone: false, bio: "路过，随便看看", createdAt: now - 21 * DAY },
+    { id: 5, account: "13800000005", password: "abc12345", displayId: "61590247", nickname: "树树",   avatarEnum: 7, realName: "苏树",    email: "sushu@hiu.edu.cn",   flagName: false, flagEmail: false, flagPhone: false, bio: "盲盒爱好者，专职送祝福", createdAt: now - 18 * DAY },
+    { id: 6, account: "13800000006", password: "abc12345", displayId: "36208841", nickname: "晚风",   avatarEnum: 4, realName: "林晚风",  email: "wanfeng@qq.com",     flagName: true,  flagEmail: false, flagPhone: true,  bio: "环湖散步队队长", createdAt: now - 15 * DAY }
   ];
 
   /* —— 留言（第 24 期 6 条：画布 01 原值；第 23 期 2 条） —— */
@@ -172,6 +182,8 @@
     NICK_ADJ: NICK_ADJ,
     NICK_ANIMAL: NICK_ANIMAL,
     SENSITIVE_WORDS: SENSITIVE_WORDS,
+    TOPICS: TOPICS,
+    EMOJI_LIBRARY: EMOJI_LIBRARY,
     PERIODS: PERIODS,
     CURRENT_PERIOD: 24,
     USERS: USERS,

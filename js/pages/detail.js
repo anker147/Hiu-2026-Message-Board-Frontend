@@ -96,9 +96,22 @@
     body.style.flex = "1";
     body.style.minWidth = "0";
     var who = el("div", "who");
-    who.appendChild(el("span", "msg-card-author", "@" + msg.nicknameSnapshot));
+    var author = el("span", "msg-card-author author-link", "@" + msg.nicknameSnapshot);
+    author.tabIndex = 0;
+    author.setAttribute("role", "link");
+    author.addEventListener("click", function () {
+      if (msg.displayId) window.location.href = "zone.html?u=" + encodeURIComponent(msg.displayId);
+    });
+    author.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && msg.displayId) {
+        window.location.href = "zone.html?u=" + encodeURIComponent(msg.displayId);
+      }
+    });
+    who.appendChild(author);
     who.appendChild(el("span", "msg-card-date", U.fmtDate(msg.createdAt)));
-    who.appendChild(el("span", "msg-card-date", t("common.public")));
+    if (msg.edited) who.appendChild(el("span", "edited-mark", t("common.edited")));
+    // 帖子可见类型（isPublic=false 仅自己可见，他人视图中本就不出现）
+    who.appendChild(el("span", "msg-card-date", msg.isPublic === false ? t("common.private") : t("common.public")));
     body.appendChild(who);
 
     var content = el("div", "msg-card-content");
@@ -203,21 +216,8 @@
   /* ---------------- 属主改删（P-08） ---------------- */
 
   function editMessage() {
-    C.openEditModal({
-      initial: msg.content,
-      onSave: function (content, done) {
-        api.updateContent({ resourceId: msg.resourceId, content: content, csrf: session.csrf })
-          .then(function (resp) {
-            done(resp);
-            if (resp.success) {
-              U.toast(t("edit.successToast"), "success");
-              api.getMessage(msgId).then(function (r) {
-                if (r.success) { msg = r.data; renderMessage(); }
-              });
-            }
-          });
-      }
-    });
+    // 帖子走整页编辑器（参考好游快爆 sendThreadShow 设计）；评论仍用编辑弹窗
+    window.location.href = "edit.html?id=" + encodeURIComponent(msg.resourceId);
   }
 
   function confirmDeleteMessage() {

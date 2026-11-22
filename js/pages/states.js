@@ -38,7 +38,7 @@
       titleKey: "board.stateEmptyTitle",
       descKey: "board.stateEmptyDesc",
       btnKey: "board.stateEmptyBtn",
-      onBtn: function () { window.location.href = "post.html"; }
+      onBtn: function () { window.location.href = "edit.html?mode=new"; }
     });
 
     // 错误态

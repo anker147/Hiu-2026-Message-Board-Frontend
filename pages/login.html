@@ -13,42 +13,107 @@
 </head>
 <body data-page="login">
   <div class="grain" aria-hidden="true"></div>
+  <!-- 背景：公开图站随机自然景观（JS 随机取图，15% 不透明度，离线时静默隐藏） -->
+  <img class="login-bg" id="loginBg" alt="" aria-hidden="true">
 
-  <header class="topbar" id="topbar"></header>
+  <!-- 顶栏：logo + 口号（参考站右侧的多余入口全部砍掉） -->
+  <header class="login-header">
+    <span class="login-logo">Board</span>
+    <span class="login-sep" aria-hidden="true"></span>
+    <span class="login-slogan" data-text="login.slogan">留言板 · 把今天想说的话，留在榜上</span>
+  </header>
 
-  <main class="auth-wrap">
-    <h1 class="auth-title" data-text="login.title">登录</h1>
-    <p class="auth-sub" data-text="login.subtitle">登录后即可留言 评论 点赞 抽盲盒</p>
+  <!-- 主区：左品牌右白卡（mail.163.com 形式），页脚版权类全部砍掉 -->
+  <main class="login-hero">
+    <section class="login-brand">
+      <span class="login-kicker" data-text="login.kicker">MESSAGE BOARD · HIU 2026</span>
+      <h1 class="login-big">留言板</h1>
+      <div class="login-bar" aria-hidden="true"></div>
+      <p class="login-slogan-line" data-text="login.subtitle">登录后即可留言 评论 点赞 抽盲盒</p>
+      <div class="login-feats" aria-hidden="true">
+        <span class="login-feat">热榜周更</span>
+        <span class="login-feat">评论互动</span>
+        <span class="login-feat">盲盒抽取</span>
+      </div>
+    </section>
 
-    <div class="auth-card">
-      <div class="field">
-        <label class="field-label" for="loginPhone" data-text="login.phoneLabel">手机号</label>
-        <input type="tel" class="field-input" id="loginPhone" maxlength="11"
-               data-text-placeholder="login.phonePlaceholder"
-               placeholder="请输入注册手机号" autocomplete="tel">
-        <div class="field-error" id="loginPhoneErr" role="alert"></div>
+    <section class="login-card" aria-label="登录与注册">
+      <div class="login-tabs" role="tablist" aria-label="登录或注册">
+        <button type="button" class="login-tab is-on" data-form="login" role="tab"
+                aria-selected="true" data-text="login.tabLogin">账号登录</button>
+        <button type="button" class="login-tab" data-form="register" role="tab"
+                aria-selected="false" data-text="login.tabReg">注册账号</button>
       </div>
 
-      <div class="field">
-        <label class="field-label" for="loginPwd" data-text="login.pwdLabel">密码</label>
-        <input type="password" class="field-input" id="loginPwd"
-               data-text-placeholder="login.pwdPlaceholder"
-               placeholder="请输入密码" autocomplete="current-password">
-        <div class="field-error" id="loginPwdErr" role="alert"></div>
+      <div class="login-forms">
+        <!-- 登录表单 -->
+        <section class="login-form" id="loginForm">
+          <div class="field login-field">
+            <input type="tel" class="field-input" id="loginPhone" maxlength="11"
+                   data-text-placeholder="login.phonePlaceholder"
+                   placeholder="请输入注册手机号" autocomplete="tel">
+            <div class="field-error" id="loginPhoneErr" role="alert"></div>
+          </div>
+
+          <div class="field login-field">
+            <input type="password" class="field-input" id="loginPwd"
+                   data-text-placeholder="login.pwdPlaceholder"
+                   placeholder="请输入密码" autocomplete="current-password">
+            <button type="button" class="login-eye" id="loginEye" aria-label="显示或隐藏密码"></button>
+            <div class="field-error" id="loginPwdErr" role="alert"></div>
+          </div>
+
+          <div class="hint-bar hint-bar--danger hint-bar--hidden" id="loginErrBar" role="alert"></div>
+
+          <button class="login-submit" id="loginSubmitBtn" data-scramble data-text="login.submit">登 录</button>
+          <a class="login-skip" href="index.html" data-text="login.skip">暂不登录</a>
+        </section>
+
+        <!-- 注册表单（自 register.html 迁入，切换时卡高自然拉伸） -->
+        <section class="login-form" id="regForm" hidden>
+          <div class="field login-field">
+            <input type="tel" class="field-input" id="regPhone" maxlength="11"
+                   data-text-placeholder="register.phonePlaceholder"
+                   placeholder="请输入 11 位大陆手机号" autocomplete="tel">
+            <div class="field-error" id="regPhoneErr" role="alert"></div>
+          </div>
+
+          <div class="field login-field">
+            <input type="password" class="field-input" id="regPwd"
+                   data-text-placeholder="register.pwdPlaceholder"
+                   placeholder="至少 8 位，含字母与数字" autocomplete="new-password">
+            <div class="field-error" id="regPwdErr" role="alert"></div>
+          </div>
+
+          <div class="field login-field">
+            <input type="password" class="field-input" id="regConfirm"
+                   data-text-placeholder="register.confirmPlaceholder"
+                   placeholder="再次输入密码" autocomplete="new-password">
+            <div class="field-error" id="regConfirmErr" role="alert"></div>
+          </div>
+
+          <div class="login-two">
+            <input type="text" class="field-input" id="regName"
+                   data-text-placeholder="register.namePlaceholder"
+                   placeholder="真实姓名（选填）" autocomplete="name">
+            <input type="email" class="field-input" id="regEmail"
+                   data-text-placeholder="register.emailPlaceholder"
+                   placeholder="邮箱地址（选填）" autocomplete="email">
+          </div>
+
+          <div class="hint-bar hint-bar--info" data-text="register.hint">注册后分配 8 位展示 ID 与 emoji 头像</div>
+          <div class="hint-bar hint-bar--danger hint-bar--hidden" id="regErrBar" role="alert"></div>
+
+          <button class="login-submit" id="regSubmitBtn" data-text="register.submit">注册并进入留言板</button>
+        </section>
       </div>
 
-      <div class="hint-bar hint-bar--info" data-text="login.hint">会话 30 分钟超时，写操作需校验令牌</div>
-      <div class="hint-bar hint-bar--danger hint-bar--hidden" id="loginErrBar" role="alert"></div>
-
-      <button class="btn btn--primary btn--lg" id="loginSubmitBtn" data-text="login.submit">登录</button>
-      <p class="auth-alt">
-        <span data-text="login.toRegister">还没有账号</span>
-        <a href="register.html" id="toRegisterLink" data-text="login.registerLink">去注册</a>
-      </p>
-      <p class="auth-alt" style="margin-top:6px">
-        <span style="color:var(--ink-3)" data-text="login.demoHint">演示账号见左下角演示面板</span>
-      </p>
-    </div>
+      <!-- 用户协议：勾选后才允许提交（登录 / 注册共用） -->
+      <label class="login-agree">
+        <input type="checkbox" id="loginAgree">
+        <span data-text="login.agree">我已阅读并同意</span><a href="#" id="agreeLink" data-text="login.agreeDoc">《用户协议》</a>
+      </label>
+    </section>
   </main>
 
   <script src="../js/ui-text.js"></script>

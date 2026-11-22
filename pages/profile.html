@@ -34,11 +34,15 @@
           <input type="text" class="field-input" id="nicknameInput" maxlength="20"
                  data-text-placeholder="profile.nicknamePlaceholder"
                  placeholder="1–20 个字符" aria-label="新昵称">
+          <input type="text" class="field-input" id="bioInput" maxlength="60" style="margin-top:10px"
+                 data-text-placeholder="profile.bioPlaceholder"
+                 placeholder="一句话签名（选填，展示在个人主页）" aria-label="个性签名">
           <div class="field-error" id="nicknameErr" role="alert"></div>
         </div>
         <div style="display:flex;gap:10px;margin-top:20px">
           <button class="btn btn--soft btn--sm" id="nicknameToggleBtn" data-text="profile.nicknameBtn">修改昵称</button>
           <button class="btn btn--primary btn--sm" id="nicknameSaveBtn" data-text="profile.nicknameSave" hidden>保存</button>
+          <a class="btn btn--ghost btn--sm" id="zoneLinkBtn" href="zone.html" data-text="common.zone" hidden>个人主页</a>
         </div>
         <p class="profile-note" data-text="profile.snapshotNote">新内容用新昵称，历史留言保留当时昵称</p>
 

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="color-scheme" content="light">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
+  <meta name="description" content="个人主页 — 公开资料、留言与评论动态、话题足迹">
+  <title>个人主页 · 留言板</title>
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+</head>
+<body data-page="zone">
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="topbar" id="topbar"></header>
+
+  <main class="zone-page container">
+    <!-- 加载骨架 / 页面级状态盒（缺参 / 用户不存在）由 zone.js 渲染至此 -->
+    <section id="zoneArea"></section>
+
+    <!-- 头部资料区（zone 页 hero：头像 / 昵称 / 展示 ID / 签名 / 统计） -->
+    <section class="zone-hero" id="zoneHero" hidden></section>
+
+    <!-- 主区：左动态流 + 右侧栏（关于 / 留言生涯 / 话题足迹） -->
+    <div class="zone-grid" id="zoneGrid" hidden>
+      <section class="zone-feed-col">
+        <div class="zone-tabs" id="zoneTabs" role="tablist" aria-label="动态筛选"></div>
+        <div id="zoneFeed" aria-live="polite"></div>
+      </section>
+      <aside class="zone-side-col" id="zoneSide"></aside>
+    </div>
+  </main>
+
+  <script src="../js/ui-text.js"></script>
+  <script src="../js/mock/seed.js"></script>
+  <script src="../js/mock/db.js"></script>
+  <script src="../js/mock/api.js"></script>
+  <script src="../js/core/util.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/pages/zone.js"></script>
+</body>
+</html>

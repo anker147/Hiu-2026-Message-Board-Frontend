@@ -60,6 +60,9 @@
       $("valEmail").textContent = profile.email || "—";
       $("valPhone").textContent = profile.account;
       $("nicknameInput").value = profile.nickname;
+      $("bioInput").value = profile.bio || "";
+      $("zoneLinkBtn").href = "zone.html?u=" + encodeURIComponent(profile.displayId);
+      $("zoneLinkBtn").hidden = false;
 
       $("flagName").checked = profile.flagName;
       $("flagEmail").checked = profile.flagEmail;
@@ -89,13 +92,14 @@
     });
   }
 
-  /* ---------------- F4 修改昵称（写时快照） ---------------- */
+  /* ---------------- F4 修改昵称 / 个性签名（写时快照） ---------------- */
 
   function bindNickname() {
     var toggleBtn = $("nicknameToggleBtn");
     var saveBtn = $("nicknameSaveBtn");
     var editor = $("nicknameEditor");
     var input = $("nicknameInput");
+    var bioInput = $("bioInput");
     var err = $("nicknameErr");
 
     toggleBtn.addEventListener("click", function () {
@@ -117,9 +121,16 @@
         input.focus();
         return;
       }
+      var bio = bioInput.value.trim();
+      if (bio.length > 60) {
+        err.textContent = t("profile.bioTooLong");
+        err.classList.add("is-visible");
+        bioInput.focus();
+        return;
+      }
       err.classList.remove("is-visible");
       saveBtn.disabled = true;
-      api.updateNickname({ nickname: nick, csrf: session.csrf }).then(function (resp) {
+      api.updateNickname({ nickname: nick, bio: bio, csrf: session.csrf }).then(function (resp) {
         saveBtn.disabled = false;
         if (resp.code === 401) { C.openGuideModal("nickname"); return; }
         if (resp.success) {
@@ -188,16 +199,8 @@
         editBtn.type = "button";
         editBtn.setAttribute("data-text", "detail.edit");
         editBtn.addEventListener("click", function () {
-          C.openEditModal({
-            initial: m.content,
-            onSave: function (value, done) {
-              api.updateContent({ resourceId: m.resourceId, content: value, csrf: session.csrf })
-                .then(function (r) {
-                  done(r);
-                  if (r.success) { U.toast(t("edit.successToast"), "success"); loadMine(); }
-                });
-            }
-          });
+          // 帖子走整页编辑器（新建/编辑统一入口）；删除仍用 P-08 确认弹窗
+          window.location.href = "edit.html?id=" + encodeURIComponent(m.resourceId);
         });
         var delBtn = el("button", "btn btn--ghost btn--sm");
         delBtn.type = "button";

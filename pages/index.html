@@ -62,61 +62,16 @@
       <div class="dropdown" id="periodDropdown"></div>
     </section>
 
-    <!-- 快捷发布条（P-03 内嵌表单区入口） -->
-    <div class="quick-post" id="quickPost" role="button" tabindex="0" aria-label="展开发布留言表单">
-      <span id="quickPostIcon"></span>
-      <span data-text="board.quickPostPlaceholder">写下你想说的话，支持话题标签…</span>
-      <a class="quick-post-link" id="postPageLink" href="post.html">独立发布页 →</a>
-    </div>
-
-    <!-- 发布留言表单区（P-03：F5 无刷新提交 + 两阶段定位） -->
-    <section class="post-section" id="postSection" hidden>
-      <div class="post-form-card">
-        <div class="post-form-head">
-          <h2 class="post-form-title" data-text="post.title">发布留言</h2>
-          <span class="post-form-note" data-text="post.subtitle">无刷新提交，成功后原地定位高亮，不跳回页首</span>
-        </div>
-        <label class="field-label" for="postContent">
-          <span data-text="post.contentLabel">留言内容</span>
-          <span style="color:var(--ink-3);font-weight:400;margin-left:8px" data-text="post.contentMax">最多 500 字</span>
-        </label>
-        <textarea class="post-textarea" id="postContent" maxlength="500"
-                  data-text-placeholder="post.contentPlaceholder"
-                  placeholder="写下你想说的话，支持话题标签" aria-label="留言内容"></textarea>
-
-        <div class="post-sub-label" data-text="post.tagLabel">话题标签</div>
-        <div class="tag-select-row" id="tagRow"></div>
-
-        <div class="post-sub-label" data-text="post.privacyLabel">公开范围（独立控制）</div>
-        <div class="privacy-row" id="postPrivacyRow">
-          <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagName"><span class="switch-track"></span></span><span data-text="post.privacyName">公开姓名</span></label>
-          <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagEmail"><span class="switch-track"></span></span><span data-text="post.privacyEmail">公开邮箱</span></label>
-          <label class="privacy-item"><span class="switch switch--sm"><input type="checkbox" id="pflagPhone"><span class="switch-track"></span></span><span data-text="post.privacyPhone">公开手机号</span></label>
-        </div>
-
-        <div class="field" style="margin-top:18px;max-width:320px">
-          <label class="field-label" for="postNickname" data-text="post.nicknameLabel">本次显示昵称</label>
-          <input type="text" class="field-input" id="postNickname" maxlength="20" aria-label="本次显示昵称">
-        </div>
-
-        <div class="post-actions">
-          <button class="btn btn--primary" id="postSubmitBtn" data-text="post.submit">发布留言</button>
-          <span class="post-hint" data-text="post.submittingNote">提交中防重锁 · 滚动位置保持 · scrollY 偏差不超过 2px</span>
-        </div>
-        <div class="hint-bar hint-bar--danger hint-bar--hidden post-fail-bar" id="postFailBar" role="alert"></div>
-      </div>
-    </section>
-
     <div class="list-caption" id="listCaption" aria-live="polite"></div>
 
     <!-- 榜单卡片列表 -->
     <section class="board-list stagger" id="boardList" aria-label="留言榜单"></section>
   <!-- 悬浮操作组（属于榜单视图：关于视图激活时随 boardView 一并隐藏） -->
   <div class="float-actions">
-    <button class="float-btn float-btn--blindbox" id="blindboxBtn" type="button">
+    <button class="float-btn float-btn--blindbox" id="blindboxBtn" data-scramble type="button">
       <span id="blindboxIcon"></span><span data-text="board.blindboxFloat">抽取今日盲盒</span>
     </button>
-    <button class="float-btn float-btn--publish" id="publishFloatBtn" type="button">
+    <button class="float-btn float-btn--publish" id="publishFloatBtn" data-scramble type="button">
       <span id="publishIcon"></span><span data-text="board.publishFloat">发布一条留言</span>
     </button>
   </div>
@@ -131,7 +86,6 @@
   <script src="../js/mock/api.js"></script>
   <script src="../js/core/util.js"></script>
   <script src="../js/components.js"></script>
-  <script src="../js/pages/publishForm.js"></script>
   <script src="../js/pages/board.js"></script>
   <script src="../js/pages/about.js"></script>
 </body>
