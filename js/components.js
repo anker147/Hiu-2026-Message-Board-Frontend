@@ -423,7 +423,9 @@
 
   /**
    * ctx: { rank:int|null(当前列表位次；null=无排名显示，我的留言视图),
-   *        peakMode:"hot"|"new"|"dual"(峰值区口径), q:搜索词, session, onLike(msg, btn), onOpen(msg) }
+   *        peakMode:"hot"|"dual"|"none"(峰值区口径；"none" 不渲染历史最高),
+   *        peakRankFallback:boolean(是否允许用当前名次兜底首次上榜；搜索结果传 false),
+   *        q:搜索词, session, onLike(msg, btn), onOpen(msg) }
    */
   function renderCard(msg, ctx) {
     ctx = ctx || {};
@@ -526,17 +528,26 @@
     }));
     card.appendChild(sparkWrap);
 
-    /* 06 最高区：单榜显示本榜历史最高；双榜（我的留言）并排显示周榜/新帖两榜历史最高。
-     * 没有数据时显示 0，不做任何推导赋值。 */
-    var peakZone = el("div", "peak-zone" + (ctx.peakMode === "dual" ? " peak-zone--dual" : ""));
-    if (ctx.peakMode === "dual") {
-      peakZone.appendChild(peakStack("board.peakHot", msg.peakRank));
-      peakZone.appendChild(peakStack("board.peakNew", msg.peakNewRank || 0));
-    } else {
-      peakZone.appendChild(peakStack("board.rankLabel",
-        ctx.peakMode === "new" ? (msg.peakNewRank || 0) : msg.peakRank));
+    /* 06 最高区：周榜显示本榜历史最高（首次上榜时用当前真实名次兜底）；
+     * 双榜（我的留言/全部留言）并排显示周榜/新帖两榜历史最高；
+     * 本周新帖不显示历史最高，因为没有跨期历史口径。 */
+    if (ctx.peakMode !== "none" && ctx.peakMode !== "new") {
+      var peakZone = el("div", "peak-zone" + (ctx.peakMode === "dual" ? " peak-zone--dual" : ""));
+      if (ctx.peakMode === "dual") {
+        peakZone.appendChild(peakStack("board.peakHot", msg.peakRank));
+        peakZone.appendChild(peakStack("board.peakNew", msg.peakNewRank || 0));
+      } else {
+        var hotPeak = msg.peakRank;
+        if (ctx.peakRankFallback !== false && (!hotPeak || hotPeak <= 0) &&
+            ctx.rank && ctx.rank > 0) {
+          // 完整周榜首次上榜：当前名次就是本次真实数据，不是历史估算。
+          // 搜索结果的 rank 只是筛选后序号，不能当榜位，调用方需传 peakRankFallback:false。
+          hotPeak = ctx.rank;
+        }
+        peakZone.appendChild(peakStack("board.rankLabel", hotPeak));
+      }
+      card.appendChild(peakZone);
     }
-    card.appendChild(peakZone);
 
     HMB.i18n.apply(card);
     return card;
