@@ -287,7 +287,7 @@
       // 注意：不能用 var pill —— 会覆盖闭包里的导航胶囊引用，placePill/slidePillTo 将错操作此按钮
       var idPill = el("button", "identity-pill");
       idPill.type = "button";
-      idPill.appendChild(U.avatar(session.avatarEnum));
+      idPill.appendChild(U.avatar(session.avatarEnum, "", session.avatarUrl));
       idPill.appendChild(el("span", null, "@" + session.nickname));
       var menu = el("div", "identity-menu");
 
@@ -454,7 +454,7 @@
 
     /* 02 头像区 */
     var avZone = el("div", "avatar-zone");
-    avZone.appendChild(U.avatar(msg.avatarEnum));
+    avZone.appendChild(U.avatar(msg.avatarEnum, "", msg.avatarUrl));
     card.appendChild(avZone);
 
     /* 03/04 主信息区 + 统计区 */

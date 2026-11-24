@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 17; // v17：活跃度称号系统文案（纯前端计算 + 本地缓存）
+  var VERSION = 18; // v18：头像上传文案
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -181,9 +181,14 @@
     "editPage.settingsLabel": "设置",
     "editPage.publishSettings": "发布设置",
     "editPage.coverLabel": "设置封面",
-    "editPage.coverNote1": "· 前端原型不包含图片上传（无后端存储）",
-    "editPage.coverNote2": "· 图片能力接入后支持 JPEG / JPG / PNG",
-    "editPage.disabledImageTip": "前端原型不支持图片上传",
+    "editPage.coverNote1": "· 封面能力暂未开放",
+    "editPage.coverNote2": "· 图片请通过下方「文末图片」添加（最多 10 张）",
+    "editPage.imagesTitle": "文末图片",
+    "editPage.imagesAdd": "添加图片",
+    "editPage.imagesNote": "最多 10 张 · JPG/PNG/GIF/WebP · 单张 ≤5MB · 显示在正文末尾",
+    "editPage.imagesMax": "最多只能添加 10 张图片",
+    "editPage.imagesFail": "部分图片添加失败（格式或大小不符）",
+    "editPage.disabledImageTip": "点击添加文末图片",
     "editPage.disabledVideoTip": "前端原型不支持视频投稿",
     "editPage.disabledPollTip": "前端原型不支持投票帖",
     "editPage.disabledAtTip": "留言暂不支持 @ 用户",
@@ -488,7 +493,11 @@
     "profile.sensitiveNote": "保存后按你的公开设置展示，手机号不会对外显示",
     "profile.emailInvalid": "邮箱格式不正确",
     "profile.sensitiveSaved": "敏感信息已更新",
-    "profile.avatarTitle": "选择 emoji 头像",
+    "profile.avatarTitle": "选择头像",
+    "profile.avatarUpload": "上传图片作为头像",
+    "profile.avatarUploaded": "头像已更新，保存后生效",
+    "profile.avatarUploadFail": "图片读取失败或格式不支持",
+    "profile.avatarReset": "恢复默认头像",
     "profile.savedReload": "资料已保存",
     "profile.bioPlaceholder": "一句话签名（选填，展示在个人主页）",
     "profile.bioTooLong": "签名最多 60 个字符",

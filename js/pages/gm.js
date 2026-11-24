@@ -390,7 +390,7 @@
       var headers = ["gm.user.colUser", "gm.user.colRole", "gm.user.colStatus", "gm.content.colStats", "gm.user.colActions"];
       var rows = d.list.map(function (u) {
         var userCell = el("div", "gm-user-cell");
-        userCell.appendChild(U.avatar(u.avatarEnum));
+        userCell.appendChild(U.avatar(u.avatarEnum, "", u.avatarUrl));
         var info = el("div", "gm-user-info");
         info.appendChild(el("div", "gm-user-name", u.nickname));
         info.appendChild(el("div", "gm-user-sub", "@" + u.displayId + " · " + u.account));

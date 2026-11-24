@@ -7,10 +7,10 @@
   <link rel="icon" href="data:,">
   <meta name="description" content="帖子编辑器 — 新建与编辑统一入口（参照好游快爆 sendThreadShow 形制）">
   <title>帖子编辑器 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css?v=20261124ak">
-  <link rel="stylesheet" href="../css/base.css?v=20261124ak">
-  <link rel="stylesheet" href="../css/components.css?v=20261124ak">
-  <link rel="stylesheet" href="../css/pages.css?v=20261124ak">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261124al">
+  <link rel="stylesheet" href="../css/base.css?v=20261124al">
+  <link rel="stylesheet" href="../css/components.css?v=20261124al">
+  <link rel="stylesheet" href="../css/pages.css?v=20261124al">
 </head>
 <body data-page="edit">
   <div class="grain" aria-hidden="true"></div>
@@ -101,6 +101,18 @@
              aria-label="正文"></div>
       </section>
 
+      <!-- 文末图片（最多 10 张，横向滑动无滚动条；正文不图文混排，图独立于 content） -->
+      <section class="editor-images-card" id="imagesCard">
+        <div class="ei-head">
+          <span class="ei-title" data-text="editPage.imagesTitle">文末图片</span>
+          <span class="ei-count" id="eiCount">0/10</span>
+          <button type="button" class="ei-add" id="eiAddBtn" data-text="editPage.imagesAdd">添加图片</button>
+          <input type="file" id="eiFile" class="ei-file" multiple accept="image/jpeg,image/png,image/gif,image/webp">
+        </div>
+        <div class="ei-strip" id="eiStrip" aria-label="已添加的文末图片"></div>
+        <p class="ei-note" data-text="editPage.imagesNote">最多 10 张 · JPG/PNG/GIF/WebP · 单张 ≤5MB · 显示在正文末尾</p>
+      </section>
+
       <!-- 设置封面（原型禁用形制：无后端图片存储） -->
       <section class="editor-cover-card" id="coverCard">
         <button type="button" class="editor-cover-btn" id="coverBtn" data-text-title="editPage.disabledCoverTip" aria-label="设置封面"></button>
@@ -160,12 +172,13 @@
     </div>
   </div>
 
-  <script src="../js/ui-text.js?v=20261124ak"></script>
-  <script src="../js/mock/seed.js?v=20261124ak"></script>
-  <script src="../js/mock/db.js?v=20261124ak"></script>
-  <script src="../js/mock/api.js?v=20261124ak"></script>
-  <script src="../js/core/util.js?v=20261124ak"></script>
-  <script src="../js/components.js?v=20261124ak"></script>
-  <script src="../js/pages/edit.js?v=20261124ak"></script>
+  <script src="../js/ui-text.js?v=20261124al"></script>
+  <script src="../js/mock/seed.js?v=20261124al"></script>
+  <script src="../js/mock/db.js?v=20261124al"></script>
+  <script src="../js/mock/api.js?v=20261124al"></script>
+  <script src="../js/core/util.js?v=20261124al"></script>
+  <script src="../js/core/media.js?v=20261124al"></script>
+  <script src="../js/components.js?v=20261124al"></script>
+  <script src="../js/pages/edit.js?v=20261124al"></script>
 </body>
 </html>

@@ -90,7 +90,7 @@
 
     var head = el("div", "msg-card-head");
     var avWrap = el("div", "msg-card-avatar");
-    avWrap.appendChild(U.avatar(msg.avatarEnum));
+    avWrap.appendChild(U.avatar(msg.avatarEnum, "", msg.avatarUrl));
     head.appendChild(avWrap);
 
     var body = el("div");
@@ -122,6 +122,9 @@
     var content = el("div", "msg-card-content rich-content");
     content.appendChild(U.renderRich(msg.content, ""));
     body.appendChild(content);
+    // 文末图片：正文之后的独立横滑条（正文仍不含图，不图文混排）
+    var strip = U.imageStrip(msg.images);
+    if (strip) body.appendChild(strip);
     head.appendChild(body);
     card.appendChild(head);
 

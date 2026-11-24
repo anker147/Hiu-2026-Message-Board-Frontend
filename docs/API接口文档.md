@@ -120,6 +120,28 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 字体选择使用系统字体或本地打包的免费开源字体（思源黑体 / 霞鹜文楷 / Fusion Pixel，OFL 许可），
 **不得引入需要商业授权的字体文件**。
 
+> **图片不入正文**：帖子为纯文字排版，**不做图文混排**。`content` 白名单持续剔除 `img`；
+> 用户上传的图片走独立字段（头像 `avatarUrl`、文末图 `images[]`）单独渲染，见 §0.7。
+
+### 0.7 图片与头像存储方案（本次新增）
+
+设计参考追风杯导播系统：**业务字段只存字符串引用，不存二进制**；引用解析失败时回退默认资源。
+本站是前后端分离项目，在此基础上补一个上传接口 + 文件表，业务层契约与追风杯保持一致（字段都是字符串引用）。
+
+**核心约定（务必实现）**
+
+1. **业务字段只存引用字符串**：头像 `avatarUrl`、文末图 `images[]` 元素均为不透明字符串引用，
+   后端不解析、不改写含义，原样入库、原样出口。
+2. **上传接口返回引用**：`POST /api/upload` 返回 `{ ref, url }`。`ref` 为稳定引用串，`url` 为可直接渲染的 CDN 地址；
+   二者等价，前端只保存其一。
+3. **默认回退**：`avatarUrl` 为空 / 引用失效时，前端回退到 `avatarEnum` emoji 头像；
+   `images[]` 中失效引用被跳过，不影响其余图片。
+4. **数量与格式限制**：头像单张；文末图最多 **10 张**、按数组顺序展示；
+   仅接受 `image/jpeg|png|gif|webp`，单张 ≤ **5 MB**。超限 → 9001。
+5. **本地原型（Mock）**：无后端上传，`ref` 形如 `localimg://<id>`，本体是 dataURL 存浏览器
+   `localStorage['hmb_v1_media']`；生产把上传换成对象存储、返回 CDN URL 即可，**业务字段与渲染逻辑无需改动**。
+6. **内容口径不变**：图片渲染在正文**末尾**（独立区块），`content` 内仍禁止 `img`；字数/敏感词只按可见文字算，图片不计数。
+
 ---
 
 ## 1. 接口清单总览
@@ -147,8 +169,9 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 | E4 | 昵称/签名/头像 | PUT | `/api/profile/nickname` | 是 | 是 |
 | E5 | 敏感信息编辑 | PUT | `/api/profile/sensitive` | 是 | 是 |
 | E6 | 会话查询 | GET | `/api/session` | 否 | 否 |
+| U1 | 图片上传（头像/文末图） | POST | `/api/upload` | 是 | 是 |
 
-> 计 20 条路由（Mock 层 17 个方法：API-01~12 中 07 拆两路由、06 与 05 共用实现、加 7 扩展）。
+> 计 21 条路由（Mock 层 17 个方法：API-01~12 中 07 拆两路由、06 与 05 共用实现、加 7 扩展；U1 为本地存储实现，无需后端）。
 
 ---
 
@@ -226,6 +249,8 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
       "content": "string（可见文字≤500，可为白名单 HTML 排版片段）",
       "nicknameSnapshot": "string（发帖时昵称快照）",
       "avatarEnum": 1,
+      "avatarUrl": "localimg://img-xxx（发帖时头像 URL 快照，可空；空则回退 avatarEnum）",
+      "images": ["localimg://img-xxx", "localimg://img-yyy"],
       "displayId": "20849317",
       "topicTag": "校园日常",
       "createdAt": 1730000000000,
@@ -257,6 +282,8 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 
 | 字段 | 说明 |
 |---|---|
+| `avatarUrl` | ⭐ 本次新增：发帖时头像 URL 快照（字符串引用，见 §0.7）；为空/失效时前端回退 `avatarEnum` emoji。历史数据缺字段按空串处理 |
+| `images` | ⭐ 本次新增：文末图片引用数组，最多 10 张、按数组顺序在正文末尾独立渲染；失效引用跳过。历史数据缺字段按 `[]` 处理 |
 | `isMine` | ⭐ **新增字段**（本次"所有帖子"功能需要）：当前用户是否为作者。未登录恒 `false`。前端据此显示"编辑/删除"入口 |
 | `maskedXxx` | F6 掩码，受用户三项公开开关控制；未开启时返回空串 |
 | `heatDelta` | 相对上周变动百分比，后端原样透传；缺失时前端显示 `0%` |
@@ -277,12 +304,13 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 | 字段 | 类型 | 必填 | 校验 |
 |---|---|---|---|
 | title | string | 否 | ≤48 字，过敏感词 |
-| content | string | 是 | 可见文字 1~500 字，可为白名单 HTML 排版片段；过敏感词 + 限流（见 §0.6） |
+| content | string | 是 | 可见文字 1~500 字，可为白名单 HTML 排版片段；过敏感词 + 限流（见 §0.6）；**不得含 `img`**（图片走 `images`） |
 | nickname | string | 否 | 1~20 字；非空且与现昵称不同时**更新用户昵称** |
 | topic | string | 否 | 必须在 `TOPICS` 白名单：校园日常/互助/食堂/求助/盲盒/日常 |
+| images | string[] | 否 | ⭐ 本次新增：文末图引用数组，最多 10 张，仅接受上传接口返回的引用；去重、超长截断、非法引用丢弃（见 §0.7） |
 | csrf | string | 是 | — |
 
-**服务端生成**：`resourceId`(UUID)、`no`(8位随机)、`ownerId`=会话用户、`nicknameSnapshot`=本次昵称、`avatarEnum`=用户头像、`displayId`、`isPublic=true`、`period`=当前期次、`createdAt`=now、`stats` 全 0、`heatDelta=0`、`peakRank=0`、`peakNewRank=0`、`isNew=true`。
+**服务端生成**：`resourceId`(UUID)、`no`(8位随机)、`ownerId`=会话用户、`nicknameSnapshot`=本次昵称、`avatarEnum`=用户头像、`avatarUrlSnapshot`=用户当前头像 URL（本次新增）、`displayId`、`isPublic=true`、`period`=当前期次、`createdAt`=now、`stats` 全 0、`heatDelta=0`、`peakRank=0`、`peakNewRank=0`、`isNew=true`。
 
 **安检门**：敏感词(4001) → 限流(4002, 10秒滑窗>3次) → 记录本次时间戳。
 
@@ -312,13 +340,13 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 
 ### API-07a 编辑内容 `PUT /api/content/{resourceId}`
 
-**入参** `content`(必填,可见文字 1~500 的白名单 HTML)、`title`(选填,≤48)、`topic`(选填,白名单)、`isPublic`(选填,bool)、`csrf`
+**入参** `content`(必填,可见文字 1~500 的白名单 HTML)、`title`(选填,≤48)、`topic`(选填,白名单)、`isPublic`(选填,bool)、`images`(选填,string[] 最多 10 张,见 §0.7)、`csrf`
 
 **逻辑**：
 - 先查帖子，再查评论（同一接口按 resourceId 分发）；
 - owner 不符 → 5002；不存在 → 5001；
 - 敏感词门（无限流）；
-- 未传的 `title`/`topic`/`isPublic` **保持原值**；
+- 未传的 `title`/`topic`/`isPublic`/`images` **保持原值**；传 `images` 则**整体替换**文末图数组（不是追加）；
 - 标记 `edited=true`。
 
 **出参** 帖子 → 列表元素结构；评论 → `{}`。
@@ -342,6 +370,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 ```json
 {
   "displayId": "20849317", "nickname": "小满", "avatarEnum": 1,
+  "avatarUrl": "localimg://img-xxx（可空，空则用 avatarEnum 回退）",
   "account": "13800000001", "realName": "王小满", "email": "xiaoman@hiu.edu.cn",
   "bio": "喜欢在晚自习后去操场看晚霞",
   "flagName": true, "flagEmail": false, "flagPhone": false,
@@ -444,6 +473,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
   "isSelf": false,
   "user": {
     "displayId": "20849317", "nickname": "小满", "avatarEnum": 1,
+    "avatarUrl": "localimg://img-xxx（可空，空则用 avatarEnum 回退）",
     "bio": "...", "createdAt": 1730000000000,
     "maskedName": "王*", "maskedEmail": "", "maskedPhone": ""
   },
@@ -497,9 +527,11 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 
 ### E4 昵称/签名/头像 `PUT /api/profile/nickname`
 
-**入参** `nickname`(1~20,必填)、`bio`(选填,≤60)、`avatarEnum`(选填,1~8)、`csrf`
-**出参** `{ nickname, bio, avatar }`
-> 昵称/头像写时快照：历史留言保留发帖当时的昵称与头像，不随用户资料变化。
+**入参** `nickname`(1~20,必填)、`bio`(选填,≤60)、`avatarEnum`(选填,1~8)、`avatarUrl`(选填,string,见 §0.7)、`csrf`
+**出参** `{ nickname, bio, avatar, avatarEnum, avatarUrl }`
+> - `avatarUrl` 传上传接口返回的引用即启用图片头像；传空串 `""` = 恢复默认 emoji 头像（前端"恢复默认"按钮）。
+> - 未传 `avatarUrl` 时保持原值；历史数据缺字段按空串处理。非空引用必须是合法引用格式，否则 → 9001。
+> - 昵称/头像写时快照：历史留言保留发帖当时的昵称与头像，不随用户资料变化。
 
 ### E5 敏感信息编辑 `PUT /api/profile/sensitive`
 
@@ -510,8 +542,42 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 ### E6 会话查询 `GET /api/session`
 
 **出参**（未登录）`{ "loggedIn": false }`；（已登录）
-`{ "loggedIn": true, "userId": 1, "nickname": "小满", "avatarEnum": 1, "displayId": "20849317", "csrf": "..." }`
-> csrf 由此接口下发，前端写操作带上。
+`{ "loggedIn": true, "userId": 1, "nickname": "小满", "avatarEnum": 1, "avatarUrl": "localimg://img-xxx（可空）", "displayId": "20849317", "csrf": "..." }`
+> csrf 由此接口下发，前端写操作带上；`avatarUrl` 供顶栏/导航头像渲染，空则用 `avatarEnum`。
+
+---
+
+### U1 图片上传 `POST /api/upload` ⭐ 本次新增
+
+> 头像上传与文末图共用一个接口。前端原型（Mock）用 localStorage 实现，不发真实网络请求；生产需实现此接口对接对象存储。
+
+**入参**（`multipart/form-data`）
+
+| 字段 | 类型 | 必填 | 校验 |
+|---|---|---|---|
+| `file` | binary | 是 | 仅 `image/jpeg|png|gif|webp`，单张 ≤ 5 MB；超限 → 9001 |
+| `type` | enum | 是 | `avatar`（头像）\| `message`（文末图），仅用于后端分目录/配额，不改变返回结构 |
+| `csrf` | string | 是 | — |
+
+**出参**
+
+```json
+{
+  "ref": "localimg://img-mn3k2a9f-x7p2qc1d",
+  "url": "https://cdn.example.com/hmb/2026/11/img-mn3k2a9f.webp",
+  "type": "avatar",
+  "size": 182344
+}
+```
+
+| 字段 | 说明 |
+|---|---|
+| `ref` | 稳定引用串，本地原型用 `localimg://<id>`；生产可等于 `url` |
+| `url` | 可直接塞进 `<img src>` 的地址；生产为 CDN/对象存储公网地址 |
+| 说明 | 业务接口（E4 / API-04W / API-07a）保存 `ref` 或 `url` 任一字符串即可，出口原样返回；前端做失效回退 |
+
+**约束**：需登录（是）、需 csrf（是）；单账号建议加上传频率限制（与 API-04W 限流独立）；
+图片本体存对象存储，业务表只存引用字符串（见 §0.7 与表结构文档 §7）。失败错误码用 9001（非法文件）或 9003（存储配额/写入失败）。
 
 ---
 
@@ -541,11 +607,11 @@ out.isMine = (session != null && session.userId == message.ownerId)
 | 前端页面 | 调用接口 |
 |---|---|
 | 榜单页 `index.html` | API-04（hot/latest/mine）、API-10、API-11 |
-| 编辑器 `edit.html` | E1（读原文，`countView=false`）、API-04W、API-07a、API-07b |
-| 详情页 `detail.html` | E1、API-09、API-10、API-07a、API-07b |
+| 编辑器 `edit.html` | E1（读原文，`countView=false`）、API-04W、API-07a、API-07b、U1（文末图上传，原型走本地媒体层） |
+| 详情页 `detail.html` | E1、API-09、API-10、API-07a、API-07b；正文末尾按 `images[]` 渲染图片条 |
 | 登录页 `login.html` | API-01、API-02 |
-| 个人中心 `profile.html` | API-08、API-04(mine)、E3/E4/E5 |
-| 个人主页 `zone.html` | E2 |
+| 个人中心 `profile.html` | API-08、API-04(mine)、E3/E4/E5、U1（头像上传，原型走本地媒体层） |
+| 个人主页 `zone.html` | E2；顶栏/侧栏/留言卡统一按 `avatarUrl` 渲染头像，空则回退 `avatarEnum` |
 | 全站帖子页（本次新增） | API-04(hot) + `q` 搜索 + `isMine` |
 
 联调入口：`python -m http.server 8080` → `http://localhost:8080/pages/index.html`
@@ -568,6 +634,9 @@ out.isMine = (session != null && session.userId == message.ownerId)
 3. **分页**：当前 Mock 一次性返回全量。数据量上来后建议 API-04 加 `page`/`pageSize`，前端列表改为滚动加载（**需前端配合改代码**）。
 4. **统计口径**：`stats` 的"新增互动"语义 —— 帖子 `period` 归属期次，stats 即该期新增。真实后端需按周窗口聚合，不能是历史累计值。
 5. **`no` 字段**：8 位随机展示号（非主键），用于卡片 "NO.7f3a9c21" 展示；是否保留请确认。
+6. **图片存储落地（本次新增）**：U1 上传接口需后端对接对象存储（OSS/S3/COS），确认存储桶、公网 CDN 域名与目录分法（`avatar/` / `message/`）；
+   建议图片入 CDN 后返回 `ref = url`，业务表只存该字符串。需确认单账号上传频率上限与是否需要图片内容审核（鉴黄/敏感图）。
+   前端原型不依赖此项：`ref` 用 `localimg://<id>`、本体存 localStorage，生产替换上传实现即可，业务接口字段契约不变。
 
 ---
 

@@ -133,6 +133,17 @@
     return frag;
   }
 
+  /** 文末图片横滑条（最多 10 张，滚动条由 base.css 全站隐藏）：无图片返回 null */
+  function imageStrip(images) {
+    if (!window.HMB.media || !Array.isArray(images) || !images.length) return null;
+    var strip = el("div", "msg-images");
+    images.slice(0, 10).forEach(function (ref) {
+      var img = window.HMB.media.el(ref, "msg-images-item", "文末图片");
+      if (img) strip.appendChild(img);
+    });
+    return strip.childNodes.length ? strip : null;
+  }
+
   /* ---------------- 格式化 ---------------- */
 
   function fmtViews(n) {
@@ -513,13 +524,17 @@
 
   /* ---------------- 头像 ---------------- */
 
-  function avatarNode(enumVal, extraCls) {
+  function avatarNode(enumVal, extraCls, avatarUrl) {
     var seedAv = window.HMB.SEED.AVATARS;
     var cls = "avatar" + (extraCls ? " " + extraCls : "");
+    // 上传头像优先（追风杯式字符串引用 + 默认回退）：media 能解析则渲染图片
+    if (window.HMB.media && avatarUrl) {
+      var img = window.HMB.media.el(avatarUrl, cls + " avatar--img", "头像");
+      if (img) return img;
+    }
     if (!enumVal || enumVal < 1 || enumVal > seedAv.length) {
       // 匿名身份“热心同学”
-      var anon = el("div", cls + " avatar--anon", "🎁");
-      return anon;
+      return el("div", cls + " avatar--anon", "🎁");
     }
     return el("div", cls + " avatar--" + enumVal, seedAv[enumVal - 1]);
   }
@@ -856,6 +871,7 @@
     sanitizeRichHtml: sanitizeRichHtml,
     richTextToPlain: richTextToPlain,
     renderRich: renderRich,
+    imageStrip: imageStrip,
     fmtViews: fmtViews,
     fmtHeat: fmtHeat,
     periodStartTime: periodStartTime,

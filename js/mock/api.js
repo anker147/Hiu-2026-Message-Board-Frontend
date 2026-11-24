@@ -302,6 +302,20 @@
     return (box.textContent || box.innerText || "").replace(/\u00a0/g, " ").trim();
   }
 
+  /** 文末图片引用白名单校验：只接受 localimg://id，最多 10 张，去重。
+   *  正文 content 仍不含 img（不图文混排），图作为独立字段随帖保存。 */
+  function sanitizeImages(images) {
+    if (!Array.isArray(images)) return [];
+    var out = [], seen = {};
+    for (var i = 0; i < images.length && out.length < 10; i++) {
+      var s = typeof images[i] === "string" ? images[i] : "";
+      if (s.indexOf("localimg://") !== 0 || s.length <= 11 || seen[s]) continue;
+      seen[s] = 1;
+      out.push(s);
+    }
+    return out;
+  }
+
   function messageSecurityGate(userId, content) {
     var sens = sensitiveGate(content);
     if (sens) return sens;
@@ -330,6 +344,8 @@
       content: m.content,
       nicknameSnapshot: m.nicknameSnapshot,
       avatarEnum: m.avatarEnum,
+      avatarUrl: (m.avatarUrlSnapshot !== undefined ? m.avatarUrlSnapshot : (owner && owner.avatarUrl)) || "",
+      images: (m.images || []).slice(0, 10),   // 文末图片引用（localimg://id），最多 10 张；正文不含图
       displayId: m.displayId,
       topicTag: m.topicTag || "",
       createdAt: m.createdAt,
@@ -586,6 +602,8 @@
         content: content,
         nicknameSnapshot: nick || user.nickname,
         avatarEnum: user.avatarEnum,
+        avatarUrlSnapshot: user.avatarUrl || "",   // 发帖时头像快照（真实头像引用，历史不变）
+        images: sanitizeImages(args.images),        // 文末图片引用，最多 10 张
         displayId: user.displayId,
         topicTag: args.topic || "",
         isPublic: true,
@@ -777,6 +795,8 @@
           m.topicTag = topic;
         }
         if (args.isPublic !== undefined) m.isPublic = !!args.isPublic;
+        // 文末图片：传 images 时整体替换（含全部删除→空数组）；未传保持原值（评论编辑不传）
+        if (args.images !== undefined) m.images = sanitizeImages(args.images);
         m.edited = true;
         db.saveMessages(messages);
         return ok(toListMessage(m));
@@ -1127,6 +1147,7 @@
           displayId: u.displayId,
           nickname: u.nickname,
           avatarEnum: u.avatarEnum,
+          avatarUrl: u.avatarUrl || "",
           bio: u.bio || "",
           createdAt: u.createdAt,
           // F6：主页只展示掩码，且仅在本人公开开关开启时非空
@@ -1167,6 +1188,7 @@
         displayId: u.displayId,
         nickname: u.nickname,
         avatarEnum: u.avatarEnum,
+        avatarUrl: u.avatarUrl || "",
         account: u.account,
         realName: u.realName || "",
         email: u.email || "",
@@ -1225,8 +1247,15 @@
       u.nickname = nick; // 写时快照：历史留言保留当时昵称（D-03）
       if (args.bio !== undefined) u.bio = (args.bio || "").trim();
       if (args.avatarEnum !== undefined) u.avatarEnum = parseInt(args.avatarEnum, 10);
+      // 头像上传（追风杯式字符串引用）：localimg://id 存 users.avatarUrl；
+      // 传空串表示回退 emoji 头像（avatarEnum）。业务字段只存引用，不存二进制。
+      if (args.avatarUrl !== undefined) {
+        var au = String(args.avatarUrl || "");
+        if (au && au.indexOf("localimg://") !== 0) return fail(9001, "error.9001");
+        u.avatarUrl = au;
+      }
       db.saveUsers(users);
-      return ok({ nickname: nick, bio: u.bio || "", avatar: u.avatarEnum });
+      return ok({ nickname: nick, bio: u.bio || "", avatar: u.avatarEnum, avatarUrl: u.avatarUrl || "" });
     });
   }
 
@@ -1711,6 +1740,7 @@
       userId: u.id,
       nickname: u.nickname,
       avatarEnum: u.avatarEnum,
+      avatarUrl: u.avatarUrl || "",
       displayId: u.displayId,
       role: u.role || "user",
       isAdmin: isAdmin(u),
