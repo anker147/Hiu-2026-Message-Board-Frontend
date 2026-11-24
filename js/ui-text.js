@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 21; // v21：GM 期次字段校验文案
+  var VERSION = 22; // v22：搜索下拉文案
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -51,6 +51,12 @@
     "search.scopeMine": "搜索我的留言…",
     "search.scopeAll": "搜索全部留言…",
     "search.scopeZone": "搜索 TA 的留言…",
+    "search.dropdownHot": "热门留言",
+    "search.dropdownResults": "搜索结果",
+    "search.dropdownEmpty": "输入标题、内容、编号、用户 ID 或昵称试试",
+    "search.dropdownNoResult": "没有找到相关留言",
+    "search.dropdownMore": "查看全部搜索结果 →",
+    "search.dropdownBy": "ID {id}",
     "common.period": "统计周",
     "common.periodThisWeek": "第 {n} 期（本周）",
     "common.periodN": "第 {n} 期",

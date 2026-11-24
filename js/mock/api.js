@@ -510,7 +510,12 @@
         if (opts.tab === "mine" && m.ownerId !== session.userId) return false;
         if (opts.q) {
           var q = opts.q.toLowerCase();
-          var hay = ((m.title ? m.title + " " : "") + plainContent(m.content) + " " + m.nicknameSnapshot + " " + (m.topicTag || "")).toLowerCase();
+          var poster = db.findUserById(m.ownerId);   // 用于按用户 ID / 账号检索
+          var hay = ((m.title ? m.title + " " : "") + plainContent(m.content) + " " +
+            m.nicknameSnapshot + " " + (m.topicTag || "") + " " +
+            m.resourceId + " " + (m.displayId || "") + " " +
+            (poster ? (poster.displayId || "") + " " + (poster.account || "") : "")
+          ).toLowerCase();
           if (hay.indexOf(q) < 0) return false;
         }
         return true;

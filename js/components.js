@@ -35,6 +35,112 @@
     return SEARCH_SCOPES[activeTab] || null;
   }
 
+  /* 搜索下拉：聚焦展开 → 岛收起、框变长、显示 10 条；输入实时刷新（无需空格/回车）。
+     数据来自 API-04 tab=hot，前端 rankBoard 按热度折算取前 10；空词即热门 10 条。 */
+  var searchReqSeq = 0;    // 过期响应令牌：只认最后一次输入
+  function buildSearchDropdown(box, input) {
+    var dd = el("div", "search-dropdown");
+    dd.hidden = true;
+    dd.setAttribute("role", "listbox");
+    box.appendChild(dd);
+    return dd;
+  }
+
+  function openSearchDropdown(box, input) {
+    var dd = box.querySelector(".search-dropdown");
+    if (!dd) return;
+    HMB.globalSearch.open = true;
+    box.classList.add("is-open");
+    var topbar = box.closest(".topbar");
+    if (topbar) topbar.classList.add("is-search-focus");
+    fetchSearchResults(input.value.trim(), box.dataset.scope, function (list, q) {
+      if (!HMB.globalSearch.open || !dd.isConnected) return;   // 已关闭或已换焦点
+      renderSearchResults(dd, list, q, input, box);
+    });
+  }
+
+  function closeSearchDropdown(box) {
+    HMB.globalSearch.open = false;
+    if (!box) return;
+    box.classList.remove("is-open");
+    var topbar = box.closest(".topbar");
+    if (topbar) topbar.classList.remove("is-search-focus");
+    // 必须 blur：否则 :focus-within 仍成立，搜索框宽度不会从 420px 回落到 260px
+    var input = box.querySelector(".topbar-search-input");
+    if (input && document.activeElement === input) input.blur();
+    var dd = box.querySelector(".search-dropdown");
+    if (dd) { dd.hidden = true; dd.textContent = ""; }
+  }
+
+  function fetchSearchResults(q, scope, cb) {
+    var seq = ++searchReqSeq;
+    if (!HMB.api || !HMB.api.getMessages) { cb([], q); return; }
+    // 作用域：我的留言用 mine（需登录）；其余统一按全站 hot（下拉是快速跳转，不做期次过滤）
+    var tab = scope === "board-mine" ? "mine" : "hot";
+    HMB.api.getMessages({ tab: tab, q: q, pageSize: 60 }).then(function (resp) {
+      if (seq !== searchReqSeq) return;                       // 过期响应丢弃
+      var list = [];
+      if (resp && resp.success && resp.data && resp.data.list) {
+        list = U.rankBoard(resp.data.list.slice(), { sort: "heat" });
+      }
+      cb(list.slice(0, 10), q);
+    }).catch(function () { if (seq === searchReqSeq) cb([], q); });
+  }
+
+  function renderSearchResults(dd, list, q, input, box) {
+    dd.textContent = "";
+    var head = el("div", "search-dd-head");
+    head.appendChild(el("span", "search-dd-head-title", t(q ? "search.dropdownResults" : "search.dropdownHot")));
+    if (q) head.appendChild(el("span", "search-dd-head-q", "「" + q + "」"));
+    dd.appendChild(head);
+
+    if (!list.length) {
+      dd.appendChild(el("div", "search-dd-empty", t(q ? "search.dropdownNoResult" : "search.dropdownEmpty")));
+    } else {
+      list.forEach(function (m, i) {
+        var item = el("button", "search-dd-item");
+        item.type = "button";
+        item.setAttribute("role", "option");
+        var rank = el("span", "search-dd-rank" + (i < 3 ? " search-dd-rank--top" : ""), String(i + 1));
+        item.appendChild(rank);
+        var main = el("span", "search-dd-main");
+        var title = el("span", "search-dd-title");
+        title.appendChild(U.highlightMatch(m.title || U.richTextToPlain(m.content), q));
+        main.appendChild(title);
+        var meta = el("span", "search-dd-meta");
+        meta.appendChild(el("span", null, (m.nicknameSnapshot || "匿名")));
+        meta.appendChild(el("span", "search-dd-sep", "·"));
+        meta.appendChild(el("span", null, t("search.dropdownBy", { id: m.displayId || "—" })));
+        if (m.resourceId) {
+          // 用尾部 8 位：seed 的 UUID 头部相同，截前 8 位会重复；尾部唯一且仍是完整编号的子串，可直接搜中
+          var ridShort = String(m.resourceId).slice(-8);
+          var ridNode = el("span", "search-dd-rid", ridShort);
+          ridNode.title = String(m.resourceId);
+          meta.appendChild(el("span", "search-dd-sep", "·"));
+          meta.appendChild(ridNode);
+        }
+        main.appendChild(meta);
+        item.appendChild(main);
+        if (m.resourceId) {
+          item.addEventListener("click", function () {
+            closeSearchDropdown(box);
+            window.location.href = "detail.html?id=" + encodeURIComponent(m.resourceId);
+          });
+        }
+        dd.appendChild(item);
+      });
+    }
+    // 底部“查看全部”：保留关键词，交给当前页面列表消费
+    var more = el("button", "search-dd-more", t("search.dropdownMore"));
+    more.type = "button";
+    more.addEventListener("click", function () {
+      closeSearchDropdown(box);
+      input.blur();
+    });
+    dd.appendChild(more);
+    dd.hidden = false;
+  }
+
   function buildGlobalSearch(activeTab) {
     var conf = resolveScope(activeTab);
     var box = el("div", "topbar-search");
@@ -50,17 +156,36 @@
     input.setAttribute("placeholder", t(conf ? conf.key : "common.searchPlaceholder"));
     input.setAttribute("data-text-placeholder", conf ? conf.key : "common.searchPlaceholder");
     input.value = HMB.globalSearch.q || "";
+
+    // 发全局事件给当前页列表（列表仍按各自口径刷新）；输入即时，不再等空格/回车
     var emit = function () {
       HMB.globalSearch.q = input.value.trim();
       window.dispatchEvent(new CustomEvent("hmb:globalsearch", {
         detail: { q: HMB.globalSearch.q, scope: box.dataset.scope }
       }));
     };
-    input.addEventListener("input", U.debounce(emit, 200));
+    input.addEventListener("input", function () {
+      emit();                                   // 列表同步
+      openSearchDropdown(box, input);           // 下拉同步刷新（按最新 q）
+    });
+    input.addEventListener("focus", function () { openSearchDropdown(box, input); });
     input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") { e.preventDefault(); emit(); }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        emit();
+        openSearchDropdown(box, input);
+      } else if (e.key === "Escape") {
+        closeSearchDropdown(box);
+        input.blur();
+      }
     });
     box.appendChild(input);
+    buildSearchDropdown(box, input);
+    // 点外部收起面板（capture 先于 input focus，避免刚聚焦就被关）
+    document.addEventListener("pointerdown", function (e) {
+      if (!HMB.globalSearch.open) return;
+      if (!box.contains(e.target)) closeSearchDropdown(box);
+    }, true);
     return box;
   }
 
@@ -68,6 +193,7 @@
   function setSearchScope(activeTab) {
     var box = document.querySelector(".topbar-search");
     if (!box) return;
+    closeSearchDropdown(box);                    // 换域先收起下拉，避免残留旧作用域结果
     var conf = resolveScope(activeTab);
     // 切到无列表视图（about/gm）：隐藏搜索框；切回榜单/全部留言：显示
     box.hidden = !conf;

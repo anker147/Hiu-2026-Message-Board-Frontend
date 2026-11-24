@@ -158,17 +158,37 @@ body.is-tab-switching #gmView {
   width: 260px; height: 40px;
   background: rgba(255,255,255,.55);
   border: 1px solid rgba(255,255,255,.7);
+  border-top-color: transparent;             /* 上边框交给 ::before，浮动缺口/聚焦中性描边 */
   border-radius: 999px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 4px 14px rgba(30,41,59,.10);
   backdrop-filter: blur(14px) saturate(1.3);
   -webkit-backdrop-filter: blur(14px) saturate(1.3);
-  transition: box-shadow 200ms var(--ease-out), border-color 200ms var(--ease-out), background 200ms var(--ease-out);
+  transition: width 320ms var(--ease-std), box-shadow 200ms var(--ease-out),
+              border-color 200ms var(--ease-out), background 200ms var(--ease-out);
 }
-.topbar-search:focus-within {
-  background: rgba(255,255,255,.78);
-  border-color: var(--ink-3);
-  box-shadow: inset 0 1px 0 #fff, 0 6px 20px rgba(30,41,59,.14);
+.topbar-search::before {                      /* 上边框：聚焦收窄为中性描边，右端淡入贴合圆角 */
+  content: ""; position: absolute; top: -1px; left: 10px; right: 10px; height: 1px;
+  background: linear-gradient(to right, transparent, rgba(148,163,184,.5) 7px, rgba(148,163,184,.5) calc(100% - 7px), transparent);
+  border-radius: 999px 999px 0 0; pointer-events: none;
+  transition: opacity 200ms var(--ease-out);
 }
+/* 搜索聚焦：框体展开变长，右翼保持可见（不被岛收起样式波及） */
+.topbar-search:focus-within,
+.topbar.is-search-focus .topbar-search {
+  width: 420px;
+  background: rgba(255,255,255,.92);
+  border-color: transparent;
+  border-top-color: transparent;
+  box-shadow: inset 0 1px 0 #fff, 0 8px 26px rgba(30,41,59,.18);
+}
+/* 搜索聚焦态：导航岛收起（缩窄上移淡出），左翼 logo 让位；顶栏右翼强制可见。
+   与滚动 is-crowded 独立开，互不冲突（is-crowded 时搜索框本就 hidden 不可聚焦）。 */
+.topbar.is-search-focus .nav-island {
+  transform: translateY(calc(-100% + 6px)) scale(.86);
+  opacity: 0; pointer-events: none;
+}
+.topbar.is-search-focus .logo { opacity: 0; transform: translateX(-10px); }
+.topbar.is-search-focus .topbar-right { visibility: visible !important; opacity: 1 !important; transform: none !important; }
 .topbar-search-ico {
   flex: none; display: inline-flex; align-items: center; justify-content: center;
   width: 34px; height: 100%; color: var(--blue); pointer-events: none;
@@ -181,6 +201,65 @@ body.is-tab-switching #gmView {
 }
 .topbar-search-input::placeholder { color: var(--ink-3); }
 .topbar-search-input::-webkit-search-cancel-button { cursor: pointer; }
+
+/* 搜索下拉：10 条热点/结果，跟随展开的搜索框，亚克力白卡 */
+.search-dropdown {
+  position: absolute; top: calc(100% + 10px); left: 0; right: 0;
+  z-index: 120; padding: 8px;
+  background: rgba(255,255,255,.97);
+  border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(16,24,40,.20), inset 0 1px 0 #fff;
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  animation: search-dd-in 200ms var(--ease-std) both;
+  max-height: min(560px, 68vh); overflow: auto;
+}
+.search-dropdown[hidden] { display: none; }
+@keyframes search-dd-in {
+  from { opacity: 0; transform: translateY(-8px) scale(.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.search-dd-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px 10px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.search-dd-head-title { font-size: 12px; font-weight: 800; color: var(--ink-2); letter-spacing: .3px; }
+.search-dd-head-q { font-size: 12px; color: var(--blue); font-weight: 700; }
+.search-dd-item {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 9px 10px; border: 0; border-radius: 10px;
+  background: transparent; text-align: left; cursor: pointer;
+  font-family: var(--font); transition: background 140ms var(--ease-out);
+}
+.search-dd-item:hover, .search-dd-item:focus-visible { background: var(--blue-soft); outline: none; }
+.search-dd-rank {
+  flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 7px; background: var(--bg); color: var(--ink-3);
+  font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.search-dd-rank--top { background: var(--blue); color: #fff; }
+.search-dd-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.search-dd-title {
+  font-size: 13.5px; font-weight: 700; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.search-dd-title mark { background: #FFF0A8; color: inherit; padding: 0 1px; border-radius: 2px; }
+.search-dd-meta {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: 11.5px; color: var(--ink-3);
+}
+.search-dd-sep { opacity: .5; }
+.search-dd-rid { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+.search-dd-empty { padding: 26px 12px; text-align: center; font-size: 13px; color: var(--ink-3); }
+.search-dd-more {
+  display: block; width: 100%; margin-top: 4px; padding: 10px;
+  border: 0; border-top: 1px solid var(--line); background: transparent;
+  color: var(--blue); font-size: 12.5px; font-weight: 700; cursor: pointer;
+  font-family: var(--font); border-radius: 0 0 10px 10px;
+  transition: background 140ms var(--ease-out);
+}
+.search-dd-more:hover { background: var(--blue-soft); }
 .topbar.is-crowded .logo,
 .topbar.is-crowded .topbar-right { visibility: hidden; }   /* 完全收起后移出命中区与焦点序 */
 
@@ -1844,6 +1923,7 @@ body[data-page="login"] :is(button, a, [tabindex]):focus-visible { outline: 2px 
   .back-top { right: 16px; bottom: 116px; width: 40px; height: 40px; }   /* 浮动组（40+12+40）上方 */
   .topbar-inner { gap: 10px; }
   .topbar-search { width: 180px; height: 36px; }
+  .topbar-search:focus-within, .topbar.is-search-focus .topbar-search { width: min(320px, 62vw); }
   .topbar-search-ico { width: 30px; }
   .nav-tab { padding: 6px 10px; }
   .nav-tab.is-active { gap: 6px; }
@@ -1884,6 +1964,7 @@ body[data-page="login"] :is(button, a, [tabindex]):focus-visible { outline: 2px 
   .nav-tab-sub { font-size: 8px; }
   .login-pill { height: 32px; padding: 0 10px; font-size: 11.5px; }
   .topbar-search { width: 118px; height: 32px; }
+  .topbar-search:focus-within, .topbar.is-search-focus .topbar-search { width: min(260px, 78vw); }
   .topbar-search-ico { width: 26px; }
   .topbar-search-input { font-size: 12px; padding-right: 8px; }
 }
