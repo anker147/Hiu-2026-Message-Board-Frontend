@@ -116,7 +116,7 @@
     body.appendChild(who);
 
     if (msg.title) {
-      var msgTitle = el("div", "msg-card-title", msg.title);
+      var msgTitle = el("div", "msg-card-title", U.maskSensitive(msg.title));
       body.appendChild(msgTitle);
     }
     var content = el("div", "msg-card-content rich-content");

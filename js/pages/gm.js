@@ -895,7 +895,7 @@
     body.appendChild(el("div", "gm-detail-section-title", t("gm.detail.original")));
     var contentBox = el("div", "gm-detail-content" + (x.type === "message" ? " rich-content" : ""));
     if (x.type === "message" && (x.fullContent || /<[a-z][\s\S]*>/i.test(x.content || ""))) {
-      contentBox.appendChild(U.renderRich(x.fullContent || x.content, ""));
+      contentBox.appendChild(U.renderRich(x.fullContent || x.content, "", { mask: false }));
     } else {
       contentBox.textContent = x.content || "—";
     }
