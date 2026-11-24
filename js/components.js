@@ -521,7 +521,7 @@
     var sparkWrap = el("div", "card-spark");
     var sparkColor = msg.rate > 0 ? "var(--up)" : (msg.rate < 0 ? "var(--down)" : "var(--blue)");
     sparkWrap.appendChild(U.renderSparkline(msg.rateHistory || [], {
-      width: 88, height: 48, stroke: sparkColor, fill: sparkColor,
+      width: 108, height: 60, stroke: sparkColor, fill: sparkColor,
       label: "本周热度趋势"
     }));
     card.appendChild(sparkWrap);

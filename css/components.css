@@ -230,10 +230,10 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
   animation: highlight-fade 1800ms var(--ease-out) forwards;
 }
 
-/* 排名区 44px */
-.rank-zone { width: 44px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+/* 排名区 50px */
+.rank-zone { width: 50px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .rank-num {
-  font-size: 34px; font-weight: 800; line-height: 1;
+  font-size: 40px; font-weight: 800; line-height: 1;
   color: transparent; letter-spacing: -1px;
   -webkit-text-stroke: 2px var(--rank-n);
   paint-order: stroke;
@@ -250,13 +250,13 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .rank-badge--down { background: var(--down-soft); color: var(--down); }
 .rank-badge--flat { background: #F1F5F9; color: var(--ink-3); }
 
-/* 头像区 66×66 */
-.avatar-zone { width: 66px; height: 66px; flex: none; }
+/* 头像区 74×74 */
+.avatar-zone { width: 74px; height: 74px; flex: none; }
 .avatar {
   width: 100%; height: 100%;
   border-radius: var(--radius-avatar);
   display: flex; align-items: center; justify-content: center;
-  font-size: 30px; user-select: none;
+  font-size: 34px; user-select: none;
 }
 .avatar--1 { background: var(--av-1); } .avatar--2 { background: var(--av-2); }
 .avatar--3 { background: var(--av-3); } .avatar--4 { background: var(--av-4); }
@@ -267,7 +267,7 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 /* 主信息区 */
 .main-zone { flex: 1; min-width: 0; }
 .card-title {
-  font-size: 16px; font-weight: 700; color: var(--ink);
+  font-size: 18px; font-weight: 700; color: var(--ink);
   line-height: 1.4; cursor: pointer;
   display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
   overflow: hidden; word-break: break-all;
@@ -275,35 +275,35 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .card-title:hover { color: var(--blue); }
 .card-title mark { background: rgba(53, 158, 255, 0.16); color: inherit; padding: 0 1px; border-radius: 2px; }
 .card-meta {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
-  margin-top: 5px; font-size: 13px; color: var(--ink-3);
+  display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
+  margin-top: 6px; font-size: 14px; color: var(--ink-3);
 }
 .card-meta .sep { color: #D5DEE8; }
 .card-meta .topic { color: var(--blue); }
 .card-meta .vis { color: var(--ink-3); }
-.card-stats { display: flex; align-items: center; gap: 14px; margin-top: 7px; }
-.stat { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-3); white-space: nowrap; }
-.stat svg { width: 14px; height: 14px; }
+.card-stats { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+.stat { display: inline-flex; align-items: center; gap: 5px; font-size: 15px; color: var(--ink-3); white-space: nowrap; }
+.stat svg { width: 16px; height: 16px; }
 .stat--likebtn { cursor: pointer; transition: color 120ms ease, transform 120ms ease; }
 .stat--likebtn:hover { color: var(--up); }
 .stat--likebtn.is-liked { color: var(--up); }
 .stat--likebtn.is-liked svg { fill: var(--up); stroke: var(--up); }
 
 /* 热度区（biliboard 首页形制：本周分数 + 变化率胶囊） */
-.heat-zone { width: 116px; flex: none; text-align: right; }
-.heat-label { font-size: 12px; color: var(--ink-3); }
+.heat-zone { width: 132px; flex: none; text-align: right; }
+.heat-label { font-size: 14px; color: var(--ink-3); }
 .heat-value {
-  font-size: 24px; font-weight: 800; line-height: 1.2; white-space: nowrap;
+  font-size: 32px; font-weight: 800; line-height: 1.2; white-space: nowrap;
   color: var(--blue-pale-ink);
 }
-.heat-value .unit { font-size: 14px; font-weight: 600; margin-left: 1px; }
+.heat-value .unit { font-size: 17px; font-weight: 600; margin-left: 2px; }
 
 /* 变更比例胶囊（官网 Gm 组件形制；配色用本站涨红跌绿令牌）
    + 展开动画：max-width / opacity / padding 380ms，卡片入场时触发 */
 .rate-pill {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 18px; min-height: 16px; margin-top: 3px;
-  border-radius: var(--radius-pill); font-size: 12px; font-weight: 700;
+  min-width: 22px; min-height: 20px; margin-top: 4px;
+  border-radius: var(--radius-pill); font-size: 14px; font-weight: 700;
   overflow: hidden; white-space: nowrap;
   transition: background-color 380ms ease;
 }
@@ -318,8 +318,8 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .rate-pill--down { background: var(--down-soft); color: var(--down); }
 .rate-pill--flat { background: #EEF1F4; color: var(--ink-3); }
 
-/* 折线图区（88×48 SVG，官网 sparkline 形制；一期一个点，不额外标数值） */
-.card-spark { width: 88px; flex: none; display: flex; align-items: center; justify-content: center; }
+/* 折线图区（108×60 SVG，官网 sparkline 形制；一期一个点，不额外标数值） */
+.card-spark { width: 108px; flex: none; display: flex; align-items: center; justify-content: center; }
 .sparkline { position: relative; display: inline-block; vertical-align: middle; }
 .sparkline-tip {
   position: absolute; z-index: 20; pointer-events: none;
@@ -331,30 +331,30 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 }
 .sparkline-tip.is-visible { opacity: 1; }
 
-/* 最高区 74px */
-.peak-zone { width: 74px; flex: none; text-align: center; }
-.peak-label { font-size: 12px; color: var(--ink-3); }
+/* 最高区 84px */
+.peak-zone { width: 84px; flex: none; text-align: center; }
+.peak-label { font-size: 14px; color: var(--ink-3); }
 .peak-num {
-  font-size: 26px; font-weight: 800; color: transparent; line-height: 1.25;
-  -webkit-text-stroke: 1.6px var(--rank-n);
+  font-size: 32px; font-weight: 800; color: transparent; line-height: 1.25;
+  -webkit-text-stroke: 1.8px var(--rank-n);
 }
 .peak-num--top { -webkit-text-stroke-color: var(--accent); }
 
 /* 最高区双榜（我的留言视图：周榜最高 + 新帖最高 并排两栈） */
-.peak-zone--dual { width: 112px; display: flex; justify-content: flex-end; gap: 14px; }
-.peak-stack { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.peak-zone--dual .peak-label { font-size: 10px; white-space: nowrap; }
-.peak-zone--dual .peak-num { font-size: 20px; }
+.peak-zone--dual { width: 128px; display: flex; justify-content: flex-end; gap: 16px; }
+.peak-stack { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.peak-zone--dual .peak-label { font-size: 12px; white-space: nowrap; }
+.peak-zone--dual .peak-num { font-size: 26px; }
 /* 无历史记录：虚线空态徽标，避免把 0 误读成“第 0 名” */
 .peak-num--empty {
   display: inline-flex; align-items: center; justify-content: center;
-  min-width: 44px; height: 30px; margin-top: 3px;
-  border: 1px dashed var(--line); border-radius: 8px;
+  min-width: 52px; height: 36px; margin-top: 4px;
+  border: 1px dashed var(--line); border-radius: 9px;
   background: var(--bg); color: var(--ink-3);
-  font-size: 17px; font-weight: 700; letter-spacing: .06em;
+  font-size: 20px; font-weight: 700; letter-spacing: .06em;
   -webkit-text-stroke: 0;
 }
-.peak-zone--dual .peak-num--empty { min-width: 36px; height: 26px; font-size: 15px; }
+.peak-zone--dual .peak-num--empty { min-width: 42px; height: 32px; font-size: 18px; }
 
 /* ---------- 骨架卡 ---------- */
 .skeleton-card {
@@ -467,7 +467,7 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
   .card-spark { display: none; }
 }
 @media (max-width: 760px) {
-  .heat-zone { width: 92px; }
-  .heat-value { font-size: 20px; }
+  .heat-zone { width: 108px; }
+  .heat-value { font-size: 25px; }
   .peak-zone { display: none; }
 }

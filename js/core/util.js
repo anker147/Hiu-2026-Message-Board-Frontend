@@ -359,7 +359,7 @@
         return (i === 0 ? "M " : "L ") + p.x.toFixed(2) + " " + p.y.toFixed(2);
       }).join(" ");
       var attrs = {
-        d: d, fill: "none", stroke: stroke, "stroke-width": "2.2",
+        d: d, fill: "none", stroke: stroke, "stroke-width": "2.6",
         "stroke-linecap": "round", "stroke-linejoin": "round"
       };
       if (seg.kind === "dashed") attrs["stroke-dasharray"] = "3 3";
@@ -368,8 +368,8 @@
     // 只有一期真实数据时画单个圆点，不编造折线转折
     if (valid.length === 1) {
       g.appendChild(svgEl("circle", {
-        cx: valid[0].x.toFixed(2), cy: valid[0].y.toFixed(2), r: "3.6",
-        fill: stroke, stroke: "#ffffff", "stroke-width": "1.2"
+        cx: valid[0].x.toFixed(2), cy: valid[0].y.toFixed(2), r: "4.4",
+        fill: stroke, stroke: "#ffffff", "stroke-width": "1.4"
       }));
     }
     svg.appendChild(g);

@@ -72,7 +72,7 @@
   --h-topbar: 60px;
   --h-banner: 230px;
   --h-toolbar: 42px;
-  --h-card: 104px;
+  --h-card: 118px;
 }
 
 /* reduced-motion：全量降级为纯状态切换（PRD 9.5） */
