@@ -60,9 +60,9 @@
     els.issueText = $("issueText");
     els.boardView = $("boardView");
 
-    // URL → tab（gm 为岛内管理视图，与 about 同级）
+    // URL → tab（about / all / gm 均为岛内视图）
     var m = window.location.search.match(/[?&]tab=(\w+)/);
-    if (m && ["hot", "latest", "mine", "about", "gm"].indexOf(m[1]) >= 0) state.tab = m[1];
+    if (m && ["hot", "latest", "mine", "about", "all", "gm"].indexOf(m[1]) >= 0) state.tab = m[1];
 
     // 图标（静态 SVG 常量）
     els.searchIcon.appendChild(U.icon("search"));
@@ -80,9 +80,11 @@
       renderTopbarIfNeeded();
       bindToolbar();
       bindFloatActions();
-      if (state.tab === "about" || state.tab === "gm") {   // ?tab=about / ?tab=gm 直达：显示岛内视图，跳过列表
+      bindGotoTabs();
+      if (state.tab === "about" || state.tab === "all" || state.tab === "gm") {   // 岛内视图直达：跳过榜单列表
         if (els.boardView) els.boardView.hidden = true;
         if (state.tab === "about" && HMB.pages.about) HMB.pages.about.show();
+        if (state.tab === "all" && HMB.pages.all) HMB.pages.all.show();
         if (state.tab === "gm" && HMB.pages.gm) HMB.pages.gm.show();
         return;
       }
@@ -184,6 +186,19 @@
         state.q = els.searchInput.value.trim();
         loadList();
       }
+    });
+  }
+
+  /* 工具栏/身份菜单里的岛内视图入口（data-goto-tab）：拦截跳转，改走岛内软切换 */
+  function bindGotoTabs() {
+    document.querySelectorAll("[data-goto-tab]").forEach(function (a) {
+      a.addEventListener("click", function (e) {
+        var key = a.getAttribute("data-goto-tab");
+        if (HMB.pages.board && typeof HMB.pages.board.switchTab === "function") {
+          e.preventDefault();
+          HMB.pages.board.switchTab(key);
+        }
+      });
     });
   }
 
@@ -364,7 +379,7 @@
          当前 scrollY 超过它 → 换页时滚动位置会被钳制硬切 → 应走编排转场；
          mock 数据本地即回，判定失败返回 Infinity → 保持线性回顶旧路径。 —— */
     predictTargetMaxScroll: function (key) {
-      if (key === "about" || key === "gm") return Promise.resolve(0);   // 全视口固定场景
+      if (key === "about" || key === "all" || key === "gm") return Promise.resolve(0);   // 全视口固定场景
       if (key === "mine" && !session.loggedIn) return Promise.resolve(0);  // 未登录仅一个状态框
       return api.getMessages({
         tab: key,
@@ -380,24 +395,25 @@
       }).catch(function () { return Infinity; });
     },
     switchTab: function (key) {
-      if (["hot", "latest", "mine", "about", "gm"].indexOf(key) < 0 || state.tab === key) return;
+      if (["hot", "latest", "mine", "about", "all", "gm"].indexOf(key) < 0 || state.tab === key) return;
       state.tab = key;
       state._topbarTab = key;
       updateView();
       renderPeriodDropdown(); // 期次下拉按新 tab 的条目/选中项重建
-      if (key === "about" || key === "gm") {
+      // 岛内视图（about / all / gm）：统一先收起全部，再显示目标
+      if (key === "about" || key === "all" || key === "gm") {
         listReqSeq++;                                  // 使在途列表响应过期
         if (els.boardView) els.boardView.hidden = true;
-        if (key === "about") {
-          if (HMB.pages.gm) HMB.pages.gm.hide();
-          if (HMB.pages.about) HMB.pages.about.show();
-        } else {
-          if (HMB.pages.about) HMB.pages.about.hide();
-          if (HMB.pages.gm) HMB.pages.gm.show();
-        }
+        if (HMB.pages.about) HMB.pages.about.hide();
+        if (HMB.pages.all) HMB.pages.all.hide();
+        if (HMB.pages.gm) HMB.pages.gm.hide();
+        if (key === "about" && HMB.pages.about) HMB.pages.about.show();
+        if (key === "all" && HMB.pages.all) HMB.pages.all.show();
+        if (key === "gm" && HMB.pages.gm) HMB.pages.gm.show();
         return;
       }
       if (HMB.pages.about) HMB.pages.about.hide();
+      if (HMB.pages.all) HMB.pages.all.hide();
       if (HMB.pages.gm) HMB.pages.gm.hide();
       if (els.boardView) els.boardView.hidden = false;
       loadList({ skipTopbar: true });

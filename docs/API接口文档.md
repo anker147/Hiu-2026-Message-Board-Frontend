@@ -589,8 +589,11 @@ out.isMine = (session != null && session.userId == message.ownerId)
 | `role` | `user` \| `admin`；未登录会话返回 `user` |
 | `isAdmin` | `role === 'admin' && status === 'active'`，未登录恒 `false` |
 
-岛内项定义（前端顺序固定）：`hot → latest → mine → about → gm`，
-其中 `gm` 项仅在 `isAdmin=true` 时渲染，标签文案 `GM`，角标文案 `管理员`。
+岛内项定义（前端顺序固定）：`hot → latest → mine → all → about → gm`，
+其中 `all`（全部留言）、`about`（关于）为全用户可见的岛内视图，`gm` 项仅在 `isAdmin=true` 时渲染，
+标签文案 `GM`，角标文案 `管理员`。`all`/`about`/`gm` 均为 `index.html` 内的软切换视图（挂载点
+`#allView` / `#aboutView` / `#gmView`，URL 形式 `?tab=<key>`），非独立页面；对应 `all.html`/`gm.html`
+仅作兼容入口保留。
 
 `gm` 与 `about` 同为**岛内软切换视图**（非独立页面）：点击后在当前 `index.html` 内切换
 到 `#gmView` 挂载点（`?tab=gm#<panel>`，无文档导航），由 `HMB.pages.gm.show()/hide()` 控制；
@@ -811,7 +814,7 @@ GM 为导航岛第五项 tag 的岛内视图（`index.html?tab=gm#<panel>`），
 | `gm#content` | 内容表格 / 隐藏 / 删除 | G9 G10 G11 G12 G13 |
 | `gm#actions` | 审计日志 | G14 |
 | `gm#settings` | 敏感词 / 期次 / 重置演示数据 | G15 G16 G17 |
-| `all.html` | 全部留言列表 + 搜索（零新接口，复用 `GET /api/messages`） | API-04 |
+| `all`（岛内 tag） | 全部留言列表 + 搜索，列表样式延续「我的留言」简洁卡（零新接口，复用 `GET /api/messages`）；`all.html` 仅兼容 | API-04 |
 
 前端文案键建议：`gm.title`、`gm.tabUsers`、`gm.tabContent`、`gm.tabActions`、`gm.tabSettings`、
 `gm.badge`（"管理员"）、`gm.action.ban`、`gm.action.unban`、`gm.action.mute`、`gm.action.unmute`、

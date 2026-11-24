@@ -421,7 +421,8 @@
     play: '<svg ' + SVG_ATTRS + '><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>',
     users: '<svg ' + SVG_ATTRS + '><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
     link2: '<svg ' + SVG_ATTRS + '><path d="M15 7h3a5 5 0 0 1 0 10h-3M9 17H6a5 5 0 0 1 0-10h3M8 12h8"/></svg>',
-    gift: '<svg ' + SVG_ATTRS + ' width="15" height="15"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M12 8s-1.5-4-4-4-2.5 3 0 4M12 8s1.5-4 4-4 2.5 3 0 4"/></svg>'
+    gift: '<svg ' + SVG_ATTRS + ' width="15" height="15"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M12 8s-1.5-4-4-4-2.5 3 0 4M12 8s1.5-4 4-4 2.5 3 0 4"/></svg>',
+    layers: '<svg ' + SVG_ATTRS + '><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg>'
   };
 
   function icon(name) {

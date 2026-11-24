@@ -23,7 +23,12 @@
   }
 
   function showErr(input, errEl, msg) {
-    if (input) input.classList.add("field-input--error");
+    if (input) {
+      // Stella 式登录卡：错误态加在图标输入框容器上（深色玻璃），普通表单回退旧 class
+      var field = input.closest ? input.closest(".login-field") : null;
+      if (field) field.classList.add("is-error");
+      else input.classList.add("field-input--error");
+    }
     if (errEl) {
       errEl.textContent = msg;
       errEl.classList.add("is-visible");
@@ -31,7 +36,8 @@
   }
 
   function clearErrs(form) {
-    form.querySelectorAll(".field-input").forEach(function (i) { i.classList.remove("field-input--error"); });
+    form.querySelectorAll(".login-field.is-error").forEach(function (f) { f.classList.remove("is-error"); });
+    form.querySelectorAll(".field-input--error").forEach(function (i) { i.classList.remove("field-input--error"); });
     form.querySelectorAll(".field-error").forEach(function (e) { e.textContent = ""; e.classList.remove("is-visible"); });
   }
 
@@ -58,6 +64,12 @@
     // ?phone= 来自注册页 1002 引导（保留已填手机号）
     var prefill = qs("phone");
     if (prefill) phone.value = prefill;
+    // 记住账号：勾选后本地保存，下次进入预填
+    var remember = $("rememberMe");
+    try {
+      var savedAccount = window.localStorage.getItem("hmb_remember_account");
+      if (savedAccount && !prefill) { phone.value = savedAccount; if (remember) remember.checked = true; }
+    } catch (e) { /* localStorage 不可用：静默跳过 */ }
 
     function fail(msg) {
       errBar.textContent = msg;
@@ -95,6 +107,10 @@
         btn.textContent = t("login.submit");
 
         if (resp.success) {
+          try {
+            if (remember && remember.checked) window.localStorage.setItem("hmb_remember_account", account);
+            else window.localStorage.removeItem("hmb_remember_account");
+          } catch (e) { /* noop */ }
           U.toast(t("toast.loginSuccess"), "success");
           gotoAfterAuth();
           return;
@@ -220,10 +236,14 @@
     var card = document.querySelector(".login-window") || document.querySelector(".login-card");
     if (!card) return;
     var wrap = card.querySelector(".login-forms");
-    var sub = $("lwSub");
-    if (sub) {
-      sub.textContent = t(which === "register" ? "login.regWindowSub" : "login.windowSub");
-      sub.setAttribute("data-text", which === "register" ? "login.regWindowSub" : "login.windowSub");
+    // Stella 式滑动 tab：同步 data-active 驱动滑块；标题随 tab 切换
+    var tabsBar = card.querySelector(".login-tabs");
+    if (tabsBar) tabsBar.setAttribute("data-active", which);
+    var title = $("lwSub");
+    if (title) {
+      var titleKey = which === "register" ? "login.regWindowSub" : "login.windowTitle";
+      title.textContent = t(titleKey);
+      title.setAttribute("data-text", titleKey);
     }
     var lf = card.querySelector("#loginForm"), rf = card.querySelector("#regForm");
     if ((which === "login" && !lf.hidden) || (which === "register" && !rf.hidden)) return;

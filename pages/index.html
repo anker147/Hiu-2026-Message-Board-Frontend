@@ -10,10 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/tokens.css?v=20261124f">
-  <link rel="stylesheet" href="../css/base.css?v=20261124f">
-  <link rel="stylesheet" href="../css/components.css?v=20261124f">
-  <link rel="stylesheet" href="../css/pages.css?v=20261124f">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261124g">
+  <link rel="stylesheet" href="../css/base.css?v=20261124g">
+  <link rel="stylesheet" href="../css/components.css?v=20261124g">
+  <link rel="stylesheet" href="../css/pages.css?v=20261124g">
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
@@ -59,7 +59,7 @@
                placeholder="搜索留言内容 / 作者 / 话题" aria-label="搜索留言">
       </div>
       <div class="dropdown" id="periodDropdown"></div>
-      <a class="btn btn--soft toolbar-all" href="all.html" data-text="common.allMessages">全部留言</a>
+      <a class="btn btn--soft toolbar-all" href="index.html?tab=all" data-goto-tab="all" data-text="common.allMessages">全部留言</a>
     </section>
 
     <div class="list-caption" id="listCaption" aria-live="polite"></div>
@@ -80,17 +80,21 @@
   <!-- 关于视图：岛内“关于”项软切换的挂载点（js/pages/about.js 惰性构建） -->
   <div id="aboutView" hidden></div>
 
+  <!-- 全部留言视图：岛内“全部留言”tag 软切换的挂载点（js/pages/all.js 惰性构建） -->
+  <div id="allView" hidden></div>
+
   <!-- 管理视图：岛内“管理员”tag 软切换的挂载点（js/pages/gm.js 惰性构建，仅 admin 可见） -->
   <div id="gmView" hidden></div>
 
-  <script src="../js/ui-text.js?v=20261124f"></script>
-  <script src="../js/mock/seed.js?v=20261124f"></script>
-  <script src="../js/mock/db.js?v=20261124f"></script>
-  <script src="../js/mock/api.js?v=20261124f"></script>
-  <script src="../js/core/util.js?v=20261124f"></script>
-  <script src="../js/components.js?v=20261124f"></script>
-  <script src="../js/pages/board.js?v=20261124f"></script>
-  <script src="../js/pages/about.js?v=20261124f"></script>
-  <script src="../js/pages/gm.js?v=20261124f"></script>
+  <script src="../js/ui-text.js?v=20261124g"></script>
+  <script src="../js/mock/seed.js?v=20261124g"></script>
+  <script src="../js/mock/db.js?v=20261124g"></script>
+  <script src="../js/mock/api.js?v=20261124g"></script>
+  <script src="../js/core/util.js?v=20261124g"></script>
+  <script src="../js/components.js?v=20261124g"></script>
+  <script src="../js/pages/board.js?v=20261124g"></script>
+  <script src="../js/pages/about.js?v=20261124g"></script>
+  <script src="../js/pages/all.js?v=20261124g"></script>
+  <script src="../js/pages/gm.js?v=20261124g"></script>
 </body>
 </html>

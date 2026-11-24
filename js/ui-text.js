@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 8; // v8：登录页改为左右分栏（左侧文字区 + 右侧深色玻璃登录窗）
+  var VERSION = 9; // v9：Stella 式沉浸登录页（全屏 KV + 品牌宣传 + 亚克力卡）+ 全部留言岛内 tag
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -355,6 +355,11 @@
     "login.toRegister": "还没有账号",
     "login.registerLink": "去注册",
     "login.demoHint": "演示账号见左下角演示面板",
+    "login.title": "登录 · 留言板",
+    "login.heroTitle": "把想说的话，留在榜上",
+    "login.heroDesc": "热度周榜、盲盒祝福、隐私脱敏——一站式记录你的每一次表达。",
+    "login.declaration": "本站为课程演示项目，所有数据仅保存在你的浏览器中",
+    "login.remember": "记住账号",
     "login.windowTitle": "欢迎回来",
     "login.windowSub": "登录你的留言板账号",
     "login.regWindowSub": "创建账号，开始留下你的足迹",

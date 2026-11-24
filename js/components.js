@@ -62,12 +62,12 @@
     var pill = el("span", "nav-pill");
     pill.style.width = "0px";
     nav.appendChild(pill);
-    var TAB_ICONS = { hot: "flame", latest: "clock", mine: "user", about: "info", gm: "shield" };
-    var TAB_SUBS = { hot: "HOT", latest: "NEW", mine: "MINE", about: "ABOUT", gm: "GM" };
-    // 管理员 GM = 导航岛第五项，仅 session.isAdmin=true 时渲染（服务端也必须校验角色）
+    var TAB_ICONS = { hot: "flame", latest: "clock", mine: "user", all: "layers", about: "info", gm: "shield" };
+    var TAB_SUBS = { hot: "HOT", latest: "NEW", mine: "MINE", all: "ALL", about: "ABOUT", gm: "GM" };
+    // 「全部留言」为岛内 tag（mine 之后）；管理员 GM 仅 session.isAdmin=true 时追加（服务端也校验角色）
     var TAB_DEFS = [
       ["hot", "common.hot"], ["latest", "common.latest"],
-      ["mine", "common.mine"], ["about", "common.about"]
+      ["mine", "common.mine"], ["all", "common.allMessages"], ["about", "common.about"]
     ];
     if (session && session.isAdmin) TAB_DEFS.push(["gm", "gm.badge"]);
     var current = activeTab;
@@ -310,7 +310,7 @@
       if (session.displayId) menuItem("common.viewProfile", "zone.html?u=" + encodeURIComponent(session.displayId));
       menuItem("common.editProfile", "profile.html");
       menuItem("common.myMessages", "index.html?tab=mine");
-      menuItem("common.allMessages", "all.html");
+      menuItem("common.allMessages", "index.html?tab=all");
       var logoutItem = menuItem("common.logout", "#", true);
 
       idPill.addEventListener("click", function (e) {
