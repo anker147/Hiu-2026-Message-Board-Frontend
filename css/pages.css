@@ -903,10 +903,15 @@ body[data-page="login"] {
   pointer-events: none; transform-origin: left center;
   transition: top .2s var(--ease-out), transform .2s var(--ease-out), color .2s var(--ease-out);
 }
-/* 聚焦 或 已有内容（placeholder 仅留一个空格，:placeholder-shown 即“空”）→ 缩小上移 */
+/* 聚焦 或 已有内容 → 缩小并骑到输入框上边框上（描边式浮动标签），
+   背景色用于遮住穿过文字的边框线；left 补偿 padding 后与输入文字左对齐 */
 .login-field:focus-within .float-label,
 .login-field .input:not(:placeholder-shown) ~ .float-label {
-  top: 2px;
+  top: -9px;
+  left: 34px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: #2c3038;
   transform: translateY(0) scale(.76);
   color: #8fd0ff;
 }
@@ -925,8 +930,8 @@ body[data-page="login"] {
 .field-ico { flex: 0 0 16px; width: 16px; height: 16px; color: rgba(238,242,247,.55); transition: color .22s var(--ease-out); }
 .login-field:focus-within .field-ico { color: #8fd0ff; }
 .login-field .input {
-  /* 顶部留白让输入文字下沉，给上移后的浮动标签让出空间 */
-  height: 40px; flex: 1; min-width: 0; padding: 22px 0 0;
+  /* 标签已移到边框上，输入文字恢复垂直居中 */
+  height: 40px; flex: 1; min-width: 0; padding: 0;
   border: 0; background: transparent; color: #fff; font-size: 13.5px;
 }
 .login-field .input:focus { outline: none; box-shadow: none; }
