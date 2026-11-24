@@ -200,84 +200,13 @@
     return null;
   }
 
-  /* ---------------- 周榜得分公式（结构参照 biliboard.uk 公示口径，字段为留言板自有语义） ----------------
-   * biliboard 官方公示（B站第 100 期动态，2026.05）：
-   *   1、数据统计周期为上周周二12点至本周周二12点
-   *   2、时间修正 t = LOG(EXP(投稿时间 − 前一期统计截止时间)/86400 + 1) + 1（时间精确到秒）
-   *   3、播放基数 = 新增播放 × t；得分 = 播放基数 + 新增收藏×30 + 新增点赞×3 + 新增硬币×15
-   * 留言板适配（权重按本站口径：浏览 1 倍 / 评论 1 倍 / 点赞 2 倍 / 收藏 5 倍）：
-   *   1）双榜统计范围（biliboard 式“在榜”口径，周界：一周 = 周日 00:00 → 周六 24:00）：
-   *      周榜（热榜 tab）= 全量帖子按折合分排序，不限于本期新帖；
-   *      新帖榜（最新 tab）= 所选期次（默认本周）的新帖按折合分排序。
-   *      留言随期次归属，本期帖子的 stats 即本周新增互动（公示“新增”口径），
-   *      时间修正 d 按各帖所属期次的统计起点计算
-   *   2）时间修正 t = ln(e^d + 1) + 1，d = 投稿时间 − 本期统计起点（天，精确到秒）：
-   *      越临近期末发布的留言累计时间越短，浏览基数按 t 外推补足；
-   *      softplus 保证 t > 1 恒为正且单调；d 钳制到 [0, 7]（一个期次窗口长度，防演示数据漂移溢出）
-   *   3）浏览基数 = 浏览 × 1 × t（与公示一致：时间修正只乘浏览项）
-   *      得分 = 浏览基数 + 评论×1 + 点赞×2 + 收藏×5
-   * 得分为绝对分值，出口层以“万”为展示单位（fmtHeat），不做归一化 —— 参照公示口径
+  /* ---------------- 榜单计算职责：全在前端（util.js rankBoard） ----------------
+   * mock api 只回传原始统计字段（stats：views/likes/comments/favorites + period + createdAt），
+   * 折合分公式、排序、历史最高维护统一由 HMB.util.rankBoard 在前端完成。
+   * biliboard 公示口径（仅供前端公式参考，后端不参与）：
+   *   t = ln(e^d + 1) + 1（d = 投稿 − 期次起点，天，钳制 [0,7]）
+   *   得分 = 浏览×1×t + 评论×1 + 点赞×2 + 收藏×5
    * ============================================================ */
-  var SCORE_WEIGHTS = { views: 1, comments: 1, likes: 2, favorites: 5 };
-  var DAY_MS = 86400000;
-
-  /** 期次统计起点 = 期次区间起始日 00:00（周界口径：起始日为周日，即周日 00:00 → 周六 24:00；
-   *  公示口径为周二 12:00，此处按留言板自有周界适配）。
-   *  range 形如 "2026.11.22–11.28"，解析失败返回 null（该期不做时间修正）。 */
-  function periodStartTime(periodNo) {
-    var p = seed.PERIODS.find(function (x) { return x.no === periodNo; });
-    if (!p) return null;
-    var m = String(p.range || "").match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/);
-    if (!m) return null;
-    return new Date(+m[1], +m[2] - 1, +m[3]).getTime(); // 周日 00:00
-  }
-
-  /** 时间修正 t = ln(e^d + 1) + 1（公示公式；d = 投稿 − 统计起点，天）。无期次起点 → t = 1 */
-  function viewTimeFactor(periodNo, createdAt) {
-    var start = periodStartTime(periodNo);
-    if (start === null) return 1;
-    var d = Math.min(Math.max((createdAt - start) / DAY_MS, 0), 7);
-    return Math.log(Math.exp(d) + 1) + 1;
-  }
-
-  /** 周榜得分 = 浏览基数（×时间修正）+ 评论×1 + 点赞×2 + 收藏×5（绝对分值） */
-  function messageScore(m) {
-    var s = m.stats || {};
-    return (s.views || 0) * SCORE_WEIGHTS.views * viewTimeFactor(m.period, m.createdAt) +
-      (s.comments || 0) * SCORE_WEIGHTS.comments +
-      (s.likes || 0) * SCORE_WEIGHTS.likes +
-      (s.favorites || 0) * SCORE_WEIGHTS.favorites;
-  }
-
-  /**
-   * 榜单排序器（当前排名唯一口径，榜单列表与名次映射共用）：
-   * latest/likes/comments 直取单字段；heat（默认）用周榜得分公式（含时间修正）。
-   * 同分按发布时间新者在前，保证并列名次确定性。
-   */
-  function boardComparator(sort) {
-    switch (sort) {
-      case "latest": return function (a, b) { return b.createdAt - a.createdAt; };
-      case "likes": return function (a, b) { return b.stats.likes - a.stats.likes; };
-      case "comments": return function (a, b) { return b.stats.comments - a.stats.comments; };
-      default: return function (a, b) {
-        var d = messageScore(b) - messageScore(a);
-        return d !== 0 ? d : b.createdAt - a.createdAt;
-      };
-    }
-  }
-
-  /** 历史最高名次刷新：当前名次更优（数值更小）才写入，只降不升。返回是否有变更 */
-  function maintainPeak(list, field) {
-    var changed = false;
-    list.forEach(function (m, i) {
-      var cur = i + 1;
-      if (m[field] <= 0 || cur < m[field]) {
-        m[field] = cur;
-        changed = true;
-      }
-    });
-    return changed;
-  }
 
   /* ---------------- 数据出口（6.5 字段白名单 + F6 掩码） ---------------- */
 
@@ -297,7 +226,7 @@
         views: m.stats.views, likes: m.stats.likes,
         comments: m.stats.comments, favorites: m.stats.favorites
       },
-      heat: messageScore(m) / 10000, // 得分绝对值以“万”为展示单位（fmtHeat）→ 卡片 "X.X 万"
+      // heat 不落库、不由后端计算：前端 rankBoard 按原始 stats 实时折算（万分制展示）
       heatDelta: m.heatDelta, peakRank: m.peakRank, peakNewRank: m.peakNewRank || 0,
       // 展示辅助（非后端契约，页面渲染用）
       no: m.no, isNew: !!m.isNew, isPublic: m.isPublic !== false, period: m.period,
@@ -307,14 +236,6 @@
       maskedEmail: owner && owner.flagEmail ? maskEmail(owner.email) : "",
       maskedPhone: owner && owner.flagPhone ? maskPhone(owner.account) : ""
     };
-  }
-
-  function messageRankMap(messages) {
-    // 周榜分数公式降序 → 当前名次（备用：榜单外场景需要名次语义时使用）
-    var sorted = messages.slice().sort(boardComparator("heat"));
-    var map = {};
-    sorted.forEach(function (m, i) { map[m.resourceId] = i + 1; });
-    return map;
   }
 
   /* ---------------- F1 注册（API-01） ---------------- */
@@ -439,7 +360,10 @@
       var period = opts.period;
       var messages = db.getMessages(); // 全量引用：filter 元素共享引用，历史最高刷新后整体回写
       var list = messages.filter(function (m) {
-        if (period && m.period !== period) return false;
+        // 热榜 = 全站所有公开帖子的排行（周榜公示口径），不受期次过滤：
+        // 期次只是榜单的“统计周”标签，不是筛选条件；得分与名次由前端按原始 stats 计算。
+        // 新帖榜（latest）仍按期次过滤“本周新帖”。
+        if (period && opts.tab !== "hot" && m.period !== period) return false;
         // 帖子可见类型（isPublic=false 仅自己可见）：不进入他人可见的任何列表视图
         if (m.isPublic === false &&
             !(session && session.userId === m.ownerId)) return false;
@@ -452,20 +376,9 @@
         return true;
       });
 
-      var sort = opts.sort || (opts.tab === "latest" ? "latest" : "heat");
-      list.sort(boardComparator(sort));
-
-      // 双榜历史最高排名维护（peakRank / peakNewRank 的唯一写入口）：
-      // 仅各自榜单的完整视图（折合分排序 + 无搜索词 + 非“我的留言”子集）名次才具榜单语义；
-      // 当前名次更优（数值更小）时刷新，只降不升。
-      // - 热榜（周榜）：全量帖子按折合分排序 → peakRank
-      // - 最新（新帖榜）：所选期次的新帖按折合分排序 → peakNewRank
-      var peakDirty = false;
-      if (sort === "heat" && !opts.q) {
-        if (opts.tab === "hot") peakDirty = maintainPeak(list, "peakRank");
-        if (opts.tab === "latest") peakDirty = maintainPeak(list, "peakNewRank");
-      }
-      if (peakDirty) db.saveMessages(messages);
+      // 排行榜计算（折合分 / 排序 / 历史最高）全在前端 HMB.util.rankBoard 完成：
+      // api 只回传原始 stats + period + createdAt，不排序、不算分、不写 peak。
+      // 前端按 sort / tab / 搜索词决定是否维护 peak，口径见 util.js rankBoard。
 
       var likedIds = [];
       if (session) {

@@ -322,6 +322,8 @@
   function afterNewPost(resp, t0) {
     var wait = Math.max(0, 200 - (performance.now() - t0));
     setTimeout(function () {
+      // api 只回传原始 stats，卡片折合分由前端计算（万分制展示）
+      resp.data.heat = U.messageScore(resp.data) / 10000;
       var card = C.renderCard(resp.data, {
         rank: 1, q: "", session: session, likedSet: {},
         onLike: handleLike,

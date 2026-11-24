@@ -49,6 +49,80 @@
     return String(v);
   }
 
+  /* ---------------- 榜单得分与排序（前端权威计算层） ----------------
+   * 结构参照 biliboard.uk 公示口径，权重为留言板自有语义。
+   * mock api 只回传原始统计（views/likes/comments/favorites + period + createdAt），
+   * 折合分、排序、历史最高全部由前端按此处公式计算 —— 后端零排行逻辑。
+   *
+   * t = ln(e^d + 1) + 1，d = 投稿 − 该帖所属期次统计起点（天，钳制 [0,7]）
+   * 得分 = 浏览 × 1 × t + 评论 × 1 + 点赞 × 2 + 收藏 × 5（绝对分）
+   * ============================================================ */
+  var BOARD_WEIGHTS = { views: 1, comments: 1, likes: 2, favorites: 5 };
+  var BOARD_DAY_MS = 86400000;
+
+  /** 期次统计起点（周日 00:00）；期次区间取自 HMB.SEED.PERIODS.range。解析失败 → null（不做时间修正） */
+  function periodStartTime(periodNo) {
+    var periods = HMB.SEED && HMB.SEED.PERIODS;
+    if (!periods) return null;
+    var p = periods.find(function (x) { return x.no === periodNo; });
+    if (!p) return null;
+    var m = String(p.range || "").match(/(\d{4})\.(\d{1,2})\.(\d{1,2})/);
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : null;
+  }
+
+  /** 时间修正 t = ln(e^d + 1) + 1；无期次起点 → t = 1 */
+  function viewTimeFactor(periodNo, createdAt) {
+    var start = periodStartTime(periodNo);
+    if (start === null) return 1;
+    var d = Math.min(Math.max((createdAt - start) / BOARD_DAY_MS, 0), 7);
+    return Math.log(Math.exp(d) + 1) + 1;
+  }
+
+  /** 折合分（绝对分）：浏览 × t + 评论 + 点赞×2 + 收藏×5 */
+  function messageScore(m) {
+    var s = m.stats || {};
+    return (s.views || 0) * BOARD_WEIGHTS.views * viewTimeFactor(m.period, m.createdAt) +
+      (s.comments || 0) * BOARD_WEIGHTS.comments +
+      (s.likes || 0) * BOARD_WEIGHTS.likes +
+      (s.favorites || 0) * BOARD_WEIGHTS.favorites;
+  }
+
+  /** 榜单比较器：heat 用折合分（同分新者在前）；其余直取原始字段 */
+  function boardComparator(sort) {
+    switch (sort) {
+      case "latest": return function (a, b) { return b.createdAt - a.createdAt; };
+      case "likes": return function (a, b) { return b.stats.likes - a.stats.likes; };
+      case "comments": return function (a, b) { return b.stats.comments - a.stats.comments; };
+      default: return function (a, b) {
+        var d = messageScore(b) - messageScore(a);
+        return d !== 0 ? d : b.createdAt - a.createdAt;
+      };
+    }
+  }
+
+  /** 前端榜单装配：注入 heat（万分制）→ 排序 →（可选）维护历史最高并写回 db。
+   *  opts: { sort:"heat"|"latest"|..., peakField:"peakRank"|"peakNewRank" }
+   *  peakField 仅在“完整榜单视图”（heat 排序 + 无搜索 + 非我的留言）传入。 */
+  function rankBoard(list, opts) {
+    opts = opts || {};
+    list.forEach(function (m) { m.heat = messageScore(m) / 10000; });
+    list.sort(boardComparator(opts.sort || "heat"));
+    if (opts.peakField && HMB.db) {
+      var all = HMB.db.getMessages();
+      var changed = false;
+      list.forEach(function (m, i) {
+        var raw = all.find(function (x) { return x.resourceId === m.resourceId; });
+        if (raw && (raw[opts.peakField] <= 0 || i + 1 < raw[opts.peakField])) {
+          raw[opts.peakField] = i + 1;
+          m[opts.peakField] = i + 1;
+          changed = true;
+        }
+      });
+      if (changed) HMB.db.saveMessages(all);
+    }
+    return list;
+  }
+
   function pad2(n) { return n < 10 ? "0" + n : "" + n; }
 
   function fmtDate(ts) {
@@ -471,6 +545,11 @@
     highlightMatch: highlightMatch,
     fmtViews: fmtViews,
     fmtHeat: fmtHeat,
+    periodStartTime: periodStartTime,
+    viewTimeFactor: viewTimeFactor,
+    messageScore: messageScore,
+    boardComparator: boardComparator,
+    rankBoard: rankBoard,
     fmtDate: fmtDate,
     timeAgo: timeAgo,
     debounce: debounce,

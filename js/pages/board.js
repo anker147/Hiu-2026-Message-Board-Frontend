@@ -91,10 +91,10 @@
 
   /* ---------------- 视图外壳随 tab 切换（Banner + 工具栏） ---------------- */
 
-  /** 双榜视图语义（周榜按期次出版，biliboard 式）：
-   *  - 热榜（周榜）：已发布存档榜，默认显示上一期（“上一周的数据”），期次下拉可回看往期，
-   *    当前期标注“统计中”可实时预览；
-   *  - 新帖（新帖榜）：本周新帖按折合分实时排序，期次下拉可回看往期；
+  /** 双榜视图语义（热榜 = 全站排行，得分前端实时计算）：
+   *  - 热榜（周榜）：全站所有公开帖子按折合分排序（不限发帖期次），得分/名次由前端
+   *    util.rankBoard 按原始 stats 实时算出；期次徽章仅作“统计周”标签，不筛选列表；
+   *  - 新帖（新帖榜）：所选期次（默认本期）的新帖按折合分实时排序，期次下拉可回看往期；
    *  - 我的留言：隐藏 banner 与两个下拉（固定最新优先，无期次语义，卡片无排名显示）；
    *  - 关于视图由 boardView 整体隐藏承接 */
   function updateView() {
@@ -113,7 +113,7 @@
     els.periodDropdown.hidden = state.tab === "mine";
   }
 
-  /** 期次徽章：热榜随所选期次（默认上一期已发布榜），新帖随所选期次（默认本期） */
+  /** 期次徽章：热榜显示统计周（默认上一期，仅标签不筛选），新帖随所选期次（默认本期） */
   function refreshIssueBadge() {
     var periodNo = state.tab === "hot" ? state.hotPeriod
       : (state.tab === "latest" ? state.period : currentPeriod);
@@ -123,7 +123,7 @@
   }
 
   /** 期次下拉按 tab 重建（makeDropdown 不清空挂载点，切 tab 需显式重渲染）：
-   *  热榜当前期标注“统计中”，新榜当前期标注“本期” */
+   *  热榜期次仅作统计周标签（不筛选全站排行），新榜期次筛选新帖 */
   function renderPeriodDropdown() {
     els.periodDropdown.textContent = "";   // makeDropdown 不清空挂载点：切 tab 重建前必须先清，否则 btn/menu 逐次叠加
     var isHot = state.tab === "hot";
@@ -283,7 +283,15 @@
         return;
       }
 
-      var list = resp.data.list;
+      // 前端权威排行：折合分 / 排序 / 历史最高全在 util.rankBoard 计算
+      // （api 只回传原始 stats）。peak 仅在各自榜单的完整视图（heat 排序 + 无搜索）维护。
+      var sort = state.tab === "mine" ? "latest" : state.sortKey;
+      var list = U.rankBoard(resp.data.list, {
+        sort: sort,
+        peakField: (sort === "heat" && !state.q)
+          ? (state.tab === "hot" ? "peakRank" : (state.tab === "latest" ? "peakNewRank" : null))
+          : null
+      });
       likedSet = {};
       resp.data.likedIds.forEach(function (id) { likedSet[id] = true; });
 
