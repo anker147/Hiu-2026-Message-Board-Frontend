@@ -71,7 +71,9 @@
       errBar.classList.add("hint-bar--hidden");
 
       // 前端拦截：非法手机号不发请求，固定文案（PRD F1 验收）
-      if (!PHONE_RE.test(phone.value.trim())) {
+      // 内置管理员账号 admin 不是手机号，放行（接口侧按 account 精确匹配，非手机号注册）
+      var account = phone.value.trim();
+      if (account !== "admin" && !PHONE_RE.test(account)) {
         showErr(phone, phoneErr, t("error.1001"));
         phone.focus();
         return;
@@ -86,7 +88,7 @@
       btn.disabled = true;
       btn.textContent = t("common.submitting");
 
-      api.login({ phone: phone.value.trim(), password: pwd.value }).then(function (resp) {
+      api.login({ phone: account, password: pwd.value }).then(function (resp) {
         busy = false;
         btn.disabled = false;
         btn.setAttribute("data-text", "login.submit");
