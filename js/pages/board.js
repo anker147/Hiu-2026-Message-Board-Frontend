@@ -262,7 +262,7 @@
     api.getMessages({
       tab: state.tab,
       sort: sort,
-      // 热度周榜不受期次筛选（全站排行）；本周新帖按所选期次（默认本周）
+      // 热度周榜取 period ≤ 所选期次的全站帖子（截止该周的历史榜）；本周新帖严格等于该期
       period: state.tab === "hot" ? state.hotPeriod
         : (state.tab === "latest" ? state.period : undefined),
       q: state.q
