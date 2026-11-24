@@ -63,8 +63,9 @@ img, svg { display: block; }
 
 ::selection { background: rgba(53, 158, 255, 0.18); }
 
-/* —— 焦点环：所有可交互元素（PRD 9.4：0 0 0 3px + --blue 12%）—— */
-button:focus-visible, input:focus-visible, textarea:focus-visible,
+/* —— 焦点环：按钮/链接/可聚焦项保留蓝色键盘环（无障碍必需）；
+   输入框/文本域不在此列——它们由各自组件的 :focus 提供中性灰边框反馈，无蓝框 —— */
+button:focus-visible,
 a:focus-visible, [tabindex]:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
