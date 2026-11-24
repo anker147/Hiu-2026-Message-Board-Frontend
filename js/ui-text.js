@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 22; // v22：搜索下拉文案
+  var VERSION = 23; // v23：GM 版资料编辑卡文案
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -691,6 +691,15 @@
     "gm.user.resetPassword": "重置密码",
     "gm.user.reasonPlaceholder": "处置原因（选填）",
     "gm.user.profileTitle": "修改用户资料",
+    "gm.profile.account": "登录账号",
+    "gm.profile.displayId": "展示 ID",
+    "gm.profile.joined": "注册时间",
+    "gm.profile.lastActive": "最近活跃",
+    "gm.profile.privacyNote": "GM 可代改以下公开开关；姓名 / 邮箱 / 手机在列表出口仍按开关掩码返回",
+    "gm.profile.quick": "快捷管理",
+    "gm.profile.auditTip": "GM 修改资料会写入操作审计（只记字段名，不记明文值）",
+    "gm.profile.save": "保存修改",
+    "gm.profile.saved": "用户资料已保存",
     "gm.user.resetPwdTitle": "重置登录密码",
     "gm.user.newPwdPlaceholder": "8–32 位，需含字母和数字",
     "gm.user.mustChange": "该用户下次登录需要修改密码",
