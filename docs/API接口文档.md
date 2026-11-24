@@ -73,13 +73,15 @@
 | 级别校验 | 评论最多二级：对 `depth>=2` 的评论回复 → 5003 |
 | owner 校验 | 改/删/编辑前必须校验 `owner_id == 当前用户`，否则 5002（防 IDOR） |
 
-### 0.5 ⚠️ 排行榜计算边界（重要，别在后端算分）
+### 0.5 ⚠️ 排行榜计算边界（重要）
 
-**后端只回传原始统计字段，不要计算 heat / 排名 / 历史最高。**
+**后端只回传原始统计字段与真实历史数据；前端只算当前期的折合分与排序。**
 
 ```
-后端提供:  stats{views, likes, comments, favorites} + period + createdAt + heatDelta
-前端计算:  折合分(heat) / 排序 / peakRank / peakNewRank / 趋势折线图
+后端提供:  stats{views, likes, comments, favorites} + period + createdAt
+           + heatDelta + heatHistory[] + lastRank + peakRank + peakNewRank
+前端计算:  折合分(heat) / 当前期排序
+前端展示:  历史字段只按后端返回值展示；缺失一律显示 0（上周排名显示 --）
 ```
 
 原因：得分公式与时间修正由前端 `HMB.util.rankBoard` 统一实现，biliboard 公示口径：
@@ -89,9 +91,28 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 得分 = 浏览×1×t + 评论×1 + 点赞×2 + 收藏×5     （绝对分，前端以「万」展示）
 ```
 
-- `heatDelta` 是**前端演示用的相对上周变动百分比**（如 12.4 表示 +12.4%），由后端原样透传即可。
+- `heatDelta`：相对上周变动百分比（12.4 表示 +12.4%），后端原样透传；缺失时前端胶囊显示 `0%`。
+- `heatHistory[]`：近 8 期真实热度序列（每项 `{value:number}`），**缺失的期次前端补 0，不做反推/扰动/估算**。
+- `lastRank`：上周名次；没有就是 `0`，展示为 `--`。**不得用 peakRank、当前名次或变化率倒推。**
+- `peakRank` / `peakNewRank`：历史最高名次，由后端在周榜结算时写入并透传；**前端不再在浏览时反写补算**。
 - **不要**在响应里返回 `heat` 字段——前端会自行计算并覆盖。
-- **不要**对 `getMessages` 的结果做排序——前端按 `sort` 参数自行排序。后端按 `createdAt DESC` 返回即可。
+- **不要**对 `getMessages` 的结果做排序——前端按固定规则自行排序，后端按 `createdAt DESC` 返回即可。
+- 排名规则由榜单类型固定，不向用户开放选择：热度周榜 / 本周新帖按折合分，我的留言按最新。
+
+### 0.6 正文内容格式（富文本排版）
+
+编辑器提供 Word 式排版（字体 / 字号 / 标题 / 有序无序列表 / 首行缩进 / 对齐 / 加粗斜体下划线）。
+`content` 字段改为**受限 HTML 片段**，后端按以下规则处理：
+
+1. **字数与敏感词按可见纯文本计算**：去标签后 1~500 字，标签本身不计入字数。
+2. **白名单标签**：`p div span br b strong i em u h1~h6 ol ul li blockquote`。
+3. **白名单样式属性**：`font-family / font-size / text-indent / text-align / font-weight / font-style / text-decoration / color`。
+4. 必须剔除 `script / style / iframe / object / embed / svg / img / video / audio` 等标签，
+   以及所有 `on*` 事件属性、`javascript:` / `url()` / `expression` 等危险值。
+5. 历史纯文本数据保持兼容，前端会按纯文本渲染；不需要数据迁移。
+
+字体选择使用系统字体或本地打包的免费开源字体（思源黑体 / 霞鹜文楷 / Fusion Pixel，OFL 许可），
+**不得引入需要商业授权的字体文件**。
 
 ---
 
@@ -161,14 +182,14 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 
 ### API-04 留言列表（含"所有帖子"） `GET /api/messages`
 
-> ⭐ 这是"所有帖子"功能依赖的核心接口，前端所有列表视图（热榜/新帖/我的留言/搜索/全站页）共用它。
+> ⭐ 这是"所有帖子"功能依赖的核心接口，前端所有列表视图（留言板热度周榜/本周新帖/我的留言/搜索/全站页）共用它。
 
 **查询参数**
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
 | `tab` | enum | `hot` \| `latest` \| `mine`，默认 `hot` |
-| `sort` | enum | `heat` \| `latest` \| `likes` \| `comments` |
+| `sort` | enum | 兼容字段，可忽略。当前前端固定传 `heat`（我的留言为 `latest`），不向用户开放排序选择 |
 | `period` | int | 期次号（21~24）。**仅 `latest` 生效**，筛选该期新帖；`hot` 忽略此参数 |
 | `q` | string | 搜索词，匹配 haystack = `title + content + nicknameSnapshot + topicTag`（不区分大小写） |
 | `csrf` | — | 不需要 |
@@ -177,7 +198,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 
 | tab | 数据范围 | 鉴权 |
 |---|---|---|
-| `hot` | **全站所有公开帖子**（不限发帖期次）—— 即"所有帖子" | 无需登录 |
+| `hot` | **全站所有公开帖子**（不限发帖期次）—— 即"所有帖子"，前端命名为「留言板热度周榜」 | 无需登录 |
 | `latest` | `period` 指定期次的新帖 | 无需登录 |
 | `mine` | 当前用户自己的帖子 | **未登录 → 401** |
 
@@ -195,7 +216,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
     {
       "resourceId": "string",
       "title": "string（选填，≤48）",
-      "content": "string（≤500）",
+      "content": "string（可见文字≤500，可为白名单 HTML 排版片段）",
       "nicknameSnapshot": "string（发帖时昵称快照）",
       "avatarEnum": 1,
       "displayId": "20849317",
@@ -203,6 +224,8 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
       "createdAt": 1730000000000,
       "stats": { "views": 12000, "likes": 328, "comments": 46, "favorites": 89 },
       "heatDelta": 12.4,
+      "heatHistory": [{ "value": 0 }, { "value": 0 }],
+      "lastRank": 0,
       "peakRank": 0,
       "peakNewRank": 0,
       "no": "7f3a9c21",
@@ -225,8 +248,10 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 |---|---|
 | `isMine` | ⭐ **新增字段**（本次"所有帖子"功能需要）：当前用户是否为作者。未登录恒 `false`。前端据此显示"编辑/删除"入口 |
 | `maskedXxx` | F6 掩码，受用户三项公开开关控制；未开启时返回空串 |
-| `heatDelta` | 相对上周变动百分比，后端原样透传；前端用于变更胶囊与趋势图 |
-| `peakRank` / `peakNewRank` | 历史最高名次，后端存储并透传（首次为 0）；**前端负责更新**，但需后端提供写接口或由前端直接写（见 §5） |
+| `heatDelta` | 相对上周变动百分比，后端原样透传；缺失时前端显示 `0%` |
+| `heatHistory` | 近 8 期真实热度序列，缺期由前端补 0；**不接受估算值** |
+| `lastRank` | 上周名次；`0` = 无数据，前端显示 `--`；**禁止用其他字段倒推** |
+| `peakRank` / `peakNewRank` | 历史最高名次，由后端结算写入并透传；前端只展示，首次为 `0` |
 | `likedIds` | 当前用户点过赞的 targetId 列表；未登录为 `[]` |
 
 > **不要返回**：`ownerId`、`account`、`email`、`password`、`realName` 明文、`heat`、`rank`。
@@ -240,7 +265,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 | 字段 | 类型 | 必填 | 校验 |
 |---|---|---|---|
 | title | string | 否 | ≤48 字，过敏感词 |
-| content | string | 是 | 1~500 字，过敏感词 + 限流 |
+| content | string | 是 | 可见文字 1~500 字，可为白名单 HTML 排版片段；过敏感词 + 限流（见 §0.6） |
 | nickname | string | 否 | 1~20 字；非空且与现昵称不同时**更新用户昵称** |
 | topic | string | 否 | 必须在 `TOPICS` 白名单：校园日常/互助/食堂/求助/盲盒/日常 |
 | csrf | string | 是 | — |
@@ -255,7 +280,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 
 ### API-05 发表评论 `POST /api/comments`
 
-**入参** `messageId`(必填)、`content`(1~500)、`nickname`(选填)、`csrf`
+**入参** `messageId`(必填)、`content`(可见文字 1~500，白名单 HTML)、`nickname`(选填)、`csrf`
 
 **逻辑**：一级评论 `depth=1, parentId=null`；`atDisplayId` 留空。敏感词门（无限流）。`message.stats.comments += 1`。
 
@@ -275,7 +300,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 
 ### API-07a 编辑内容 `PUT /api/content/{resourceId}`
 
-**入参** `content`(必填,1~500)、`title`(选填,≤48)、`topic`(选填,白名单)、`isPublic`(选填,bool)、`csrf`
+**入参** `content`(必填,可见文字 1~500 的白名单 HTML)、`title`(选填,≤48)、`topic`(选填,白名单)、`isPublic`(选填,bool)、`csrf`
 
 **逻辑**：
 - 先查帖子，再查评论（同一接口按 resourceId 分发）；
@@ -407,11 +432,28 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
   },
   "messages": [ { "...": "公开帖子列表（他人不可见私密帖）" } ],
   "comments": [ { "...": "非匿名评论 + 引用原帖摘要" } ],
-  "topics": [ { "tag": "校园日常", "count": 3 } ]
+  "topics": [ { "tag": "校园日常", "count": 3 } ],
+  "blindboxMessages": [
+    {
+      "replyId": "comment-uuid",
+      "content": "祝你每天都开心",
+      "createdAt": 1730000000000,
+      "target": {
+        "resourceId": "message-uuid",
+        "title": "一起去看晚霞吧",
+        "excerpt": "正文前 60 字"
+      }
+    }
+  ]
 }
 ```
 
-**红线**：匿名回复绝不出现在主页；私密帖对他人不可见；掩码字段受本人开关控制。
+| 字段 | 说明 |
+|---|---|
+| `blindboxMessages` | ⭐ 本次新增：**仅 `isSelf=true` 时返回自己送出的盲盒匿名回复**（按 `blindbox_replies.real_owner_id` 关联），他人访问恒为 `[]`。回复内容来自匿名评论本身，不返回真实身份以外的作者信息 |
+
+**红线**：匿名回复绝不出现在作者主页的公开动态里；只有发送者本人在自己主页的独立区块可见自己的送出记录；
+私密帖对他人不可见；掩码字段受本人开关控制。
 
 ---
 
@@ -445,7 +487,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 
 | 需求 | 落地方式 |
 |---|---|
-| 显示全站所有帖子 | `GET /api/messages?tab=hot&sort=latest` —— hot 已忽略 period、返回全站 |
+| 显示全站所有帖子 | `GET /api/messages?tab=hot` —— hot 已忽略 period、返回全站（前端命名为「留言板热度周榜」） |
 | 可搜索 | 同一接口加 `q=关键词`，haystack 已含标题/正文/昵称/话题 |
 | 属主改删入口 | `list[].isMine` 新字段（见 API-04 出参），前端据此显示按钮 |
 | 列表形制 | 前端复用 profile 页 `.mymsg-item` 组件，后端无需关心 |
@@ -478,8 +520,8 @@ out.isMine = (session != null && session.userId == message.ownerId)
 
 ## 5. 待后端确认的开放项
 
-1. **peakRank / peakNewRank 的写入**：当前前端直接写 localStorage。接后端后需要：(a) 后端提供批量更新接口，或 (b) 后端在列表查询时计算并持久化。建议 (b)，前端只透传展示。
-2. **heatDelta 来源**：目前是种子里的演示值。真实系统需要后端按"本周分 vs 上周分"计算 `(本周−上周)/上周×100`，浮点保留 1 位。
+1. **peakRank / peakNewRank 的写入**：改由后端在周榜结算时计算并持久化；前端**不再**在浏览时用当前名次反写（无数据就是 0）。确认是否需要独立的结算任务/接口。
+2. **heatDelta / heatHistory / lastRank 来源**：目前 `heatDelta` 是种子演示值，`heatHistory` 与 `lastRank` 全缺失 → 前端按红线显示 0 / `--`。真实系统需要后端按"本周分 vs 上周分"计算 `(本周−上周)/上周×100`（浮点保留 1 位），并提供近 8 期真实序列与上周名次；**任何字段缺失都不能由前端估算**。
 3. **分页**：当前 Mock 一次性返回全量。数据量上来后建议 API-04 加 `page`/`pageSize`，前端列表改为滚动加载（**需前端配合改代码**）。
 4. **统计口径**：`stats` 的"新增互动"语义 —— 帖子 `period` 归属期次，stats 即该期新增。真实后端需按周窗口聚合，不能是历史累计值。
 5. **`no` 字段**：8 位随机展示号（非主键），用于卡片 "NO.7f3a9c21" 展示；是否保留请确认。

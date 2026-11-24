@@ -397,13 +397,13 @@
    *  rate 为小数（0.019 = +1.9%）；正数=涨(--up 红) / 负数=跌(--down 绿) / 0=平(--ink-3)。
    *  胶囊带 max-width / opacity / padding 展开动画（CSS .rate-pill）。 */
   function deltaChip(rate) {
-    var val = (typeof rate === "number" && isFinite(rate)) ? rate : 0;
-    var pct = Math.round(val * 1000) / 10;
+    var has = (typeof rate === "number" && isFinite(rate));
+    var pct = has ? Math.round(rate * 1000) / 10 : 0;
     var kind = pct > 0 ? "up" : (pct < 0 ? "down" : "flat");
+    var txt = has ? (pct > 0 ? "+" : "") + pct.toFixed(1) + "%" : "0%";
     var chip = el("span", "rate-pill rate-pill--" + kind);
-    chip.appendChild(el("span", "rate-pill-inner",
-      (pct > 0 ? "+" : "") + pct.toFixed(1) + "%"));
-    chip.setAttribute("aria-label", t("board.changeRate") + " " + (pct > 0 ? "+" : "") + pct.toFixed(1) + "%");
+    chip.appendChild(el("span", "rate-pill-inner", txt));
+    chip.setAttribute("aria-label", t("board.changeRate") + " " + txt);
     return chip;
   }
 
@@ -414,7 +414,7 @@
     label.setAttribute("data-text", labelKey);
     stack.appendChild(label);
     var n = el("div", "peak-num" + (num <= 3 && num > 0 ? " peak-num--top" : ""));
-    n.textContent = num > 0 ? String(num < 10 ? "0" + num : num) : "—";
+    n.textContent = num > 0 ? String(num < 10 ? "0" + num : num) : "0";
     stack.appendChild(n);
     return stack;
   }
@@ -449,7 +449,7 @@
     var mainZone = el("div", "main-zone");
     var title = el("h3", "card-title");
     // 有选填标题时主标题行显示标题（正文入卡片正文位由详情承载）
-    title.appendChild(U.highlightMatch(msg.title || msg.content, ctx.q));
+    title.appendChild(U.highlightMatch(msg.title || U.richTextToPlain(msg.content), ctx.q));
     title.tabIndex = 0;
     title.setAttribute("role", "link");
     var openFn = function () { if (ctx.onOpen) ctx.onOpen(msg); };
@@ -503,7 +503,7 @@
     card.appendChild(mainZone);
 
     /* 05 热度区（biliboard 首页形制：本周分数 + 变更胶囊 + 折线图）
-     * 列①：本周热度标签 + 分数 + 变更比例胶囊；列②：8 期趋势折线图（前端推导） */
+     * 列①：本周热度标签 + 分数 + 变更比例胶囊；列②：8 期趋势折线图（只画真实数据，缺失为 0） */
     var heatZone = el("div", "heat-zone");
     var heatLabel = el("div", "heat-label");
     heatLabel.setAttribute("data-text", "board.heatLabel");
@@ -524,7 +524,8 @@
     }));
     card.appendChild(sparkWrap);
 
-    /* 06 最高区：单榜显示本榜历史最高；双榜（我的留言）并排显示周榜/新帖两榜历史最高 */
+    /* 06 最高区：单榜显示本榜历史最高；双榜（我的留言）并排显示周榜/新帖两榜历史最高。
+     * 没有数据时显示 0，不做任何推导赋值。 */
     var peakZone = el("div", "peak-zone" + (ctx.peakMode === "dual" ? " peak-zone--dual" : ""));
     if (ctx.peakMode === "dual") {
       peakZone.appendChild(peakStack("board.peakHot", msg.peakRank));
@@ -534,18 +535,6 @@
         ctx.peakMode === "new" ? (msg.peakNewRank || 0) : msg.peakRank));
     }
     card.appendChild(peakZone);
-
-    /* 07 上周排名卡（biliboard 首页形制：描边小卡 + 名次数字 + “上周排名”标签） */
-    var lastRank = U.deriveLastRank(msg, ctx.rank);
-    var lastRankZone = el("div", "last-rank-zone");
-    var lrc = el("div", "last-rank-card" + (lastRank > 0 && lastRank <= 3 ? " last-rank-card--top" : ""));
-    var lrcNum = el("div", "last-rank-num");
-    lrcNum.textContent = lastRank > 0 ? String(lastRank < 10 ? "0" + lastRank : lastRank) : "—";
-    var lrcLabel = el("div", "last-rank-label");
-    lrcLabel.setAttribute("data-text", "board.lastRank");
-    lrc.appendChild(lrcNum); lrc.appendChild(lrcLabel);
-    lastRankZone.appendChild(lrc);
-    card.appendChild(lastRankZone);
 
     HMB.i18n.apply(card);
     return card;
@@ -897,7 +886,9 @@
         current = resp.data.message;
         drawArea.textContent = "";
         drawArea.appendChild(el("div", "drawn-label", t("blindbox.drawnLabel")));
-        drawArea.appendChild(el("div", "drawn-content", current.content));
+        var drawn = el("div", "drawn-content rich-content");
+        drawn.appendChild(U.renderRich(current.content, ""));
+        drawArea.appendChild(drawn);
         drawArea.appendChild(el("div", "drawn-meta",
           t("blindbox.drawnMeta", { name: current.authorNickname })));
         drawArea.style.display = "block";

@@ -203,7 +203,7 @@
     if (m.title) {
       content.appendChild(el("b", null, m.title + "  "));
     }
-    content.appendChild(document.createTextNode(m.content));
+    content.appendChild(document.createTextNode(U.richTextToPlain(m.content)));
     content.tabIndex = 0;
     content.setAttribute("role", "link");
     content.addEventListener("click", function () { openDetail(detailHref(m.resourceId)); });
@@ -321,24 +321,79 @@
     about.appendChild(sideRow(t("zone.aboutJoined"), U.fmtDate(zone.user.createdAt)));
     side.appendChild(about);
 
-    /* 留言生涯（映射「游戏生涯」三列大数字块） */
-    var career = el("div", "zone-side-card");
-    career.appendChild(el("div", "zone-side-title", t("zone.careerTitle")));
-    var grid = el("div", "zone-career-grid");
+    /* 留言足迹：一个主数字 + 三项明细，弱化为卡片式数据展示 */
+    var career = el("div", "zone-side-card zone-career-card");
+    var careerHead = el("div", "zone-career-head");
+    careerHead.appendChild(el("div", "zone-side-title", t("zone.careerTitle")));
+    var since = el("span", "zone-career-since");
+    since.setAttribute("data-text", "zone.careerSince");
+    careerHead.appendChild(since);
+    career.appendChild(careerHead);
+
+    var hero = el("div", "zone-career-hero");
+    var heroMain = el("div", "zone-career-main");
+    heroMain.appendChild(el("div", "zone-career-hero-num", U.fmtViews(zone.stats.messages)));
+    var heroLabel = el("div", "zone-career-hero-label");
+    heroLabel.setAttribute("data-text", "zone.careerMessages");
+    heroMain.appendChild(heroLabel);
+    hero.appendChild(heroMain);
+    hero.appendChild(el("div", "zone-career-hero-mark", "✍️"));
+    career.appendChild(hero);
+
+    var metrics = el("div", "zone-career-metrics");
     [
-      { key: "zone.careerMessages", num: zone.stats.messages },
-      { key: "zone.careerComments", num: zone.stats.comments },
-      { key: "zone.careerLikes", num: zone.stats.likesReceived }
+      { key: "zone.careerComments", num: zone.stats.comments, icon: "💬", cls: "violet" },
+      { key: "zone.careerLikes", num: zone.stats.likesReceived, icon: "❤️", cls: "rose" },
+      { key: "zone.aboutDays", num: zone.memberDays, icon: "📅", cls: "amber" }
     ].forEach(function (d) {
-      var col = el("div", "zone-career-col");
-      col.appendChild(el("div", "zone-career-num", U.fmtViews(d.num)));
-      var lb = el("div", "zone-career-label");
+      var m = el("div", "zone-career-metric zone-career-metric--" + d.cls);
+      var top = el("div", "zone-career-metric-top");
+      top.appendChild(el("span", "zone-career-metric-icon", d.icon));
+      top.appendChild(el("span", "zone-career-metric-num", U.fmtViews(d.num)));
+      m.appendChild(top);
+      var lb = el("div", "zone-career-metric-label");
       lb.setAttribute("data-text", d.key);
-      col.appendChild(lb);
-      grid.appendChild(col);
+      m.appendChild(lb);
+      m.appendChild(el("div", "zone-career-metric-bar"));
+      metrics.appendChild(m);
     });
-    career.appendChild(grid);
+    career.appendChild(metrics);
     side.appendChild(career);
+
+    /* 我送出的盲盒祝福：仅本人可见，他人访问不渲染这一卡 */
+    if (zone.isSelf) {
+      var bb = el("div", "zone-side-card zone-blindbox-card");
+      var bbHead = el("div", "zone-blindbox-head");
+      bbHead.appendChild(el("span", "zone-blindbox-emoji", "🎁"));
+      var bbTitle = el("div", "zone-side-title");
+      bbTitle.setAttribute("data-text", "zone.blindboxTitle");
+      bbHead.appendChild(bbTitle);
+      bb.appendChild(bbHead);
+
+      var bbDesc = el("div", "zone-blindbox-desc");
+      bbDesc.setAttribute("data-text", "zone.blindboxDesc");
+      bb.appendChild(bbDesc);
+
+      var bbList = zone.blindboxMessages || [];
+      if (!bbList.length) {
+        var empty = el("div", "zone-blindbox-empty");
+        empty.setAttribute("data-text", "zone.blindboxEmpty");
+        bb.appendChild(empty);
+      } else {
+        bbList.slice(0, 5).forEach(function (item) {
+          var row = el("a", "zone-blindbox-item");
+          row.href = detailHref(item.target.resourceId);
+          var tgt = el("div", "zone-bb-target");
+          tgt.appendChild(el("span", "zone-bb-label", t("zone.blindboxTarget")));
+          tgt.appendChild(el("span", "zone-bb-title", item.target.title || item.target.excerpt));
+          row.appendChild(tgt);
+          row.appendChild(el("div", "zone-bb-quote", item.content));
+          row.appendChild(el("div", "zone-bb-date", U.fmtDate(item.createdAt)));
+          bb.appendChild(row);
+        });
+      }
+      side.appendChild(bb);
+    }
 
     /* 话题足迹（映射「关注论坛」卡：话题 + 条数；无话题时不渲染空卡） */
     if (zone.topics.length > 0) {

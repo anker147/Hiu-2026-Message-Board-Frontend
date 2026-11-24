@@ -7,10 +7,10 @@
   <link rel="icon" href="data:,">
   <meta name="description" content="帖子编辑器 — 新建与编辑统一入口（参照好游快爆 sendThreadShow 形制）">
   <title>帖子编辑器 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css?v=20261124b">
-  <link rel="stylesheet" href="../css/base.css?v=20261124b">
-  <link rel="stylesheet" href="../css/components.css?v=20261124b">
-  <link rel="stylesheet" href="../css/pages.css?v=20261124b">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261124c">
+  <link rel="stylesheet" href="../css/base.css?v=20261124c">
+  <link rel="stylesheet" href="../css/components.css?v=20261124c">
+  <link rel="stylesheet" href="../css/pages.css?v=20261124c">
 </head>
 <body data-page="edit">
   <div class="grain" aria-hidden="true"></div>
@@ -30,14 +30,52 @@
       </div>
     </section>
 
-    <!-- 图标工具栏（白条贴顶）：表情可用；图片/视频/投票/@/引用为原型禁用态 -->
+    <!-- 排版工具栏（Word 式）：字体 / 字号 / 标题 / 序号 / 缩进 / 对齐 + 原有表情与禁用态 -->
     <section class="editor-toolbar-bar" id="toolbarBar" hidden>
-      <button type="button" class="tb-btn" id="emojiBtn" aria-haspopup="true" aria-label="表情">😊</button>
-      <button type="button" class="tb-btn is-disabled" id="tbImage" data-text-title="editPage.disabledImageTip" aria-label="图片"></button>
-      <button type="button" class="tb-btn is-disabled" id="tbVideo" data-text-title="editPage.disabledVideoTip" aria-label="视频"></button>
-      <button type="button" class="tb-btn is-disabled" id="tbPoll" data-text-title="editPage.disabledPollTip" aria-label="投票"></button>
-      <button type="button" class="tb-btn is-disabled" id="tbAt" data-text-title="editPage.disabledAtTip" aria-label="@"></button>
-      <button type="button" class="tb-btn is-disabled" id="tbQuote" data-text-title="editPage.disabledQuoteTip" aria-label="引用"></button>
+      <div class="rich-tools" id="richTools" role="toolbar" aria-label="正文排版">
+        <select class="rt-select rt-font" id="rtFont" data-text-title="edit.rich.font" aria-label="字体">
+          <option value="" data-text="edit.rich.fontDefault">默认字体</option>
+          <option value="'Microsoft YaHei','PingFang SC',sans-serif" data-text="edit.rich.fontSans">黑体</option>
+          <option value="SimSun,'Songti SC',serif" data-text="edit.rich.fontSerif">宋体</option>
+          <option value="'KaiTi','STKaiti',serif" data-text="edit.rich.fontKai">楷体</option>
+          <option value="'Source Han Sans SC','Noto Sans CJK SC',sans-serif">思源黑体</option>
+          <option value="'LXGW WenKai','KaiTi',serif">霞鹜文楷</option>
+          <option value="fusion-pixel,monospace" data-text="edit.rich.fontPixel">像素字体</option>
+        </select>
+        <select class="rt-select rt-size" id="rtSize" data-text-title="edit.rich.size" aria-label="字号">
+          <option value="14px">14</option>
+          <option value="16px" selected>16</option>
+          <option value="18px">18</option>
+          <option value="24px">24</option>
+          <option value="32px">32</option>
+          <option value="48px">48</option>
+        </select>
+        <span class="rt-sep" aria-hidden="true"></span>
+        <select class="rt-select rt-title" id="rtTitle" data-text-title="edit.rich.title" aria-label="标题层级">
+          <option value="p" data-text="edit.rich.body">正文</option>
+          <option value="h2">标题 1</option>
+          <option value="h3">标题 2</option>
+        </select>
+        <button type="button" class="rt-btn rt-btn--text" data-cmd="bold" data-text-title="edit.rich.bold" aria-label="加粗"><b>B</b></button>
+        <button type="button" class="rt-btn rt-btn--text" data-cmd="italic" data-text-title="edit.rich.italic" aria-label="斜体"><i>I</i></button>
+        <button type="button" class="rt-btn rt-btn--text" data-cmd="underline" data-text-title="edit.rich.underline" aria-label="下划线"><u>U</u></button>
+        <span class="rt-sep" aria-hidden="true"></span>
+        <button type="button" class="rt-btn" data-cmd="insertOrderedList" data-text-title="edit.rich.olist" aria-label="编号">1.</button>
+        <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-text-title="edit.rich.ulist" aria-label="项目符号">•</button>
+        <button type="button" class="rt-btn" id="rtIndent" data-text-title="edit.rich.indent" aria-label="首行缩进">↦</button>
+        <span class="rt-sep" aria-hidden="true"></span>
+        <button type="button" class="rt-btn" data-cmd="justifyLeft" data-text-title="edit.rich.alignLeft" aria-label="左对齐">左</button>
+        <button type="button" class="rt-btn" data-cmd="justifyCenter" data-text-title="edit.rich.alignCenter" aria-label="居中对齐">中</button>
+        <button type="button" class="rt-btn" data-cmd="justifyRight" data-text-title="edit.rich.alignRight" aria-label="右对齐">右</button>
+      </div>
+      <div class="address-tools">
+        <button type="button" class="tb-btn" id="emojiBtn" aria-haspopup="true" aria-label="表情">😊</button>
+        <button type="button" class="tb-btn is-disabled" id="tbImage" data-text-title="editPage.disabledImageTip" aria-label="图片"></button>
+        <button type="button" class="tb-btn is-disabled" id="tbVideo" data-text-title="editPage.disabledVideoTip" aria-label="视频"></button>
+        <button type="button" class="tb-btn is-disabled" id="tbPoll" data-text-title="editPage.disabledPollTip" aria-label="投票"></button>
+        <button type="button" class="tb-btn is-disabled" id="tbAt" data-text-title="editPage.disabledAtTip" aria-label="@"></button>
+        <button type="button" class="tb-btn is-disabled" id="tbQuote" data-text-title="editPage.disabledQuoteTip" aria-label="引用"></button>
+      </div>
       <div class="emoji-pop" id="emojiPop" role="menu" aria-label="插入表情"></div>
     </section>
 
@@ -57,8 +95,10 @@
           <span class="editor-title-max" aria-hidden="true">48</span>
         </div>
         <div class="editor-divider" aria-hidden="true"></div>
-        <textarea id="editContent" class="editor-content-input" maxlength="500"
-                  data-text-placeholder="editPage.contentPlaceholder" aria-label="正文"></textarea>
+        <div id="editContent" class="editor-content-input editor-rich-input" contenteditable="true"
+             role="textbox" aria-multiline="true" spellcheck="false"
+             data-text-placeholder="editPage.contentPlaceholder" data-placeholder="请输入内容"
+             aria-label="正文"></div>
       </section>
 
       <!-- 设置封面（原型禁用形制：无后端图片存储） -->
@@ -107,7 +147,7 @@
     <!-- 最新发布（仅新建模式）：提交成功后新卡插入并 --blue 高亮 1800ms（F5 两阶段定位） -->
     <h2 class="comment-section-title" id="newListTitle" hidden>
       <span data-text="post.latestTitle">最新发布</span>
-      <a href="index.html" style="font-size:12px;font-weight:400;margin-left:10px" data-text="post.backBoard">返回热榜 →</a>
+      <a href="index.html" style="font-size:12px;font-weight:400;margin-left:10px" data-text="post.backBoard">返回热度周榜 →</a>
     </h2>
     <section class="board-list stagger" id="newList" style="margin-top:12px" hidden></section>
   </main>
@@ -120,12 +160,12 @@
     </div>
   </div>
 
-  <script src="../js/ui-text.js?v=20261124b"></script>
-  <script src="../js/mock/seed.js?v=20261124b"></script>
-  <script src="../js/mock/db.js?v=20261124b"></script>
-  <script src="../js/mock/api.js?v=20261124b"></script>
-  <script src="../js/core/util.js?v=20261124b"></script>
-  <script src="../js/components.js?v=20261124b"></script>
-  <script src="../js/pages/edit.js?v=20261124b"></script>
+  <script src="../js/ui-text.js?v=20261124c"></script>
+  <script src="../js/mock/seed.js?v=20261124c"></script>
+  <script src="../js/mock/db.js?v=20261124c"></script>
+  <script src="../js/mock/api.js?v=20261124c"></script>
+  <script src="../js/core/util.js?v=20261124c"></script>
+  <script src="../js/components.js?v=20261124c"></script>
+  <script src="../js/pages/edit.js?v=20261124c"></script>
 </body>
 </html>

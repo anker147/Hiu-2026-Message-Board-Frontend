@@ -19,16 +19,26 @@
   var likeIntent = {};
   var currentPeriod = HMB.db.getSettings().currentPeriod;
 
+  /** 有统计数据的期次才可出现在下拉菜单；当前期（尚未结算）一律不进周榜下拉。
+   *  这里只做“有无数据”的判断，不对缺失数据做任何推算。 */
+  function publishedPeriods() {
+    var counts = {};
+    HMB.db.getMessages().forEach(function (m) {
+      if (m.isPublic === false) return;
+      counts[m.period] = (counts[m.period] || 0) + 1;
+    });
+    return HMB.SEED.PERIODS.filter(function (p) {
+      return p.no < currentPeriod && counts[p.no] > 0;
+    });
+  }
+
   var state = {
     tab: "hot",       // hot | latest | mine
-    sortKey: "heat",  // heat | latest | likes | comments
     period: currentPeriod,   // 新帖榜所选期次（默认本期）
-    // 热榜所选期次（周榜按期次出版：默认最新已发布期次 = 上一期，即“上一周的数据”）
+    // 热度周榜所选统计周：默认最新一份“已发布且有数据”的榜单
     hotPeriod: (function () {
-      var prev = HMB.SEED.PERIODS.filter(function (p) { return p.no < currentPeriod; })
-        .map(function (p) { return p.no; })
-        .sort(function (a, b) { return b - a; })[0];
-      return prev || currentPeriod; // 无更早期次时回退本期（统计中预览）
+      var list = publishedPeriods();
+      return list.length ? list[0].no : currentPeriod;
     })(),
     q: ""
   };
@@ -41,7 +51,6 @@
     els.topbar = $("topbar");
     els.searchInput = $("searchInput");
     els.searchIcon = $("searchIcon");
-    els.sortDropdown = $("sortDropdown");
     els.periodDropdown = $("periodDropdown");
     els.listCaption = $("listCaption");
     els.boardList = $("boardList");
@@ -91,11 +100,11 @@
 
   /* ---------------- 视图外壳随 tab 切换（Banner + 工具栏） ---------------- */
 
-  /** 双榜视图语义（热榜 = 全站排行，得分前端实时计算）：
-   *  - 热榜（周榜）：全站所有公开帖子按折合分排序（不限发帖期次），得分/名次由前端
+  /** 双榜视图语义（排名规则固定，用户不可选）：
+   *  - 留言板热度周榜：全站所有公开帖子按折合分排序（不限发帖期次），得分/名次由前端
    *    util.rankBoard 按原始 stats 实时算出；期次徽章仅作“统计周”标签，不筛选列表；
-   *  - 新帖（新帖榜）：所选期次（默认本期）的新帖按折合分实时排序，期次下拉可回看往期；
-   *  - 我的留言：隐藏 banner 与两个下拉（固定最新优先，无期次语义，卡片无排名显示）；
+   *  - 本周新帖：所选期次的新帖按折合分实时排序，期次下拉可回看往期；
+   *  - 我的留言：隐藏 banner 与期次下拉（固定最新优先，无期次语义，卡片无排名显示）；
    *  - 关于视图由 boardView 整体隐藏承接 */
   function updateView() {
     if (!els.banner || !els.bannerTitle) return;
@@ -108,8 +117,7 @@
     els.bannerTitle.textContent = t(key);
     els.banner.setAttribute("aria-label", t(latest ? "banner.ariaNew" : "banner.ariaHot"));
     refreshIssueBadge();
-    // 工具栏：排序下拉在我的留言隐藏（固定最新优先）；期次下拉仅双榜视图需要
-    els.sortDropdown.hidden = state.tab === "mine";
+    // 排名规则固定：不再提供排序下拉；期次下拉仅双榜视图需要
     els.periodDropdown.hidden = state.tab === "mine";
   }
 
@@ -122,18 +130,32 @@
     els.issueText.textContent = t("banner.issue", { n: periodNo, range: period ? period.range : "" });
   }
 
+  /** 该期次真实的上周排名；没有数据返回 0 → 下拉显示 --（不估算） */
+  function periodLastRank(p) {
+    var found = 0;
+    HMB.db.getMessages().forEach(function (m) {
+      if (!found && m.period === p.no && typeof m.lastRank === "number" && m.lastRank > 0) {
+        found = m.lastRank;
+      }
+    });
+    return found;
+  }
+
   /** 期次下拉按 tab 重建（makeDropdown 不清空挂载点，切 tab 需显式重渲染）：
-   *  热榜期次仅作统计周标签（不筛选全站排行），新榜期次筛选新帖 */
+   *  热度周榜只列“已发布且有数据”的统计周；本周新帖保留本周但不再标注“统计中”；
+   *  没有上周排名的统一显示 --。 */
   function renderPeriodDropdown() {
     els.periodDropdown.textContent = "";   // makeDropdown 不清空挂载点：切 tab 重建前必须先清，否则 btn/menu 逐次叠加
     var isHot = state.tab === "hot";
-    var items = HMB.SEED.PERIODS.map(function (p) {
-      return {
-        key: String(p.no),
-        label: p.no === currentPeriod
-          ? t(isHot ? "common.periodOngoing" : "common.periodCurrent", { n: p.no })
-          : t("common.periodN", { n: p.no })
-      };
+    var pool = isHot ? publishedPeriods() : HMB.SEED.PERIODS;
+    if (isHot && !pool.some(function (p) { return p.no === state.hotPeriod; }) && pool.length) {
+      state.hotPeriod = pool[0].no;
+    }
+    var items = pool.map(function (p) {
+      var rankText = periodLastRank(p) > 0 ? String(periodLastRank(p)) : "--";
+      var key = (!isHot && p.no === currentPeriod)
+        ? "common.periodThisWeekWithRank" : "common.periodWithRank";
+      return { key: String(p.no), label: t(key, { n: p.no, r: rankText }) };
     });
     U.makeDropdown(els.periodDropdown, items,
       String(isHot ? state.hotPeriod : state.period),
@@ -148,15 +170,7 @@
   /* ---------------- 工具栏：下拉 + 搜索 ---------------- */
 
   function bindToolbar() {
-    U.makeDropdown(els.sortDropdown, [
-      { key: "heat", label: t("common.sortHeat") },
-      { key: "latest", label: t("common.sortLatest") },
-      { key: "likes", label: t("common.sortLikes") },
-      { key: "comments", label: t("common.sortComments") }
-    ], state.sortKey, function (key) {
-      state.sortKey = key;
-      loadList();
-    });
+    // 排名规则由榜单类型固定（周榜/新帖榜按热度，我的留言按最新），不向用户开放排序选择。
     // 期次下拉由 renderPeriodDropdown 按 tab 重建（bindToolbar 仅在会话就绪时调用一次）
 
     var debounced = U.debounce(function () {
@@ -260,10 +274,11 @@
     }
 
     var seq = ++listReqSeq;
+    var sort = state.tab === "mine" ? "latest" : "heat";  // 规则固定，用户不可选
     api.getMessages({
       tab: state.tab,
-      sort: state.tab === "mine" ? "latest" : state.sortKey,  // 我的留言固定最新优先
-      // 热榜=所选期次的已发布周榜（默认上一期）；新帖榜=所选期次（默认本期）
+      sort: sort,
+      // 热度周榜不受期次筛选（全站排行）；本周新帖按所选期次（默认本周）
       period: state.tab === "hot" ? state.hotPeriod
         : (state.tab === "latest" ? state.period : undefined),
       q: state.q
@@ -283,15 +298,9 @@
         return;
       }
 
-      // 前端权威排行：折合分 / 排序 / 历史最高全在 util.rankBoard 计算
-      // （api 只回传原始 stats）。peak 仅在各自榜单的完整视图（heat 排序 + 无搜索）维护。
-      var sort = state.tab === "mine" ? "latest" : state.sortKey;
-      var list = U.rankBoard(resp.data.list, {
-        sort: sort,
-        peakField: (sort === "heat" && !state.q)
-          ? (state.tab === "hot" ? "peakRank" : (state.tab === "latest" ? "peakNewRank" : null))
-          : null
-      });
+      // 前端权威排行：折合分 / 排序由 util.rankBoard 按原始 stats 计算；
+      // 历史最高等历史数据只认接口返回值，没有就是 0，不在浏览时反写补算。
+      var list = U.rankBoard(resp.data.list, { sort: sort });
       likedSet = {};
       resp.data.likedIds.forEach(function (id) { likedSet[id] = true; });
 
@@ -358,7 +367,7 @@
       if (key === "mine" && !session.loggedIn) return Promise.resolve(0);  // 未登录仅一个状态框
       return api.getMessages({
         tab: key,
-        sort: key === "mine" ? "latest" : state.sortKey,
+        sort: key === "mine" ? "latest" : "heat",
         period: key === "hot" ? state.hotPeriod
           : (key === "latest" ? state.period : undefined),
         q: state.q

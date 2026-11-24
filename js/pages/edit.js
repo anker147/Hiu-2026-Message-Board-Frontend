@@ -22,6 +22,80 @@
   var el = U.el;
   var $ = function (id) { return document.getElementById(id); };
 
+  /* ---------------- 富文本正文读写（白名单清洗后再提交/回填） ---------------- */
+
+  function contentEl() { return $("editContent"); }
+  function getContentHtml() { return U.sanitizeRichHtml(contentEl().innerHTML); }
+  function getPlainContent() { return U.richTextToPlain(contentEl().innerHTML); }
+
+  function setContent(raw) {
+    var node = contentEl();
+    var s = String(raw == null ? "" : raw);
+    if (/<[a-z][\s\S]*>/i.test(s)) node.innerHTML = U.sanitizeRichHtml(s);
+    else node.textContent = s;
+    updateWordCount();
+  }
+
+  /** 光标处插入纯文本（表情） */
+  function insertTextAtCursor(text) {
+    var done = false;
+    try { done = document.execCommand("insertText", false, text); } catch (err) { /* noop */ }
+    if (!done) {
+      var sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        var r = sel.getRangeAt(0);
+        r.deleteContents();
+        r.insertNode(document.createTextNode(text));
+        r.collapse(false);
+        sel.removeAllRanges(); sel.addRange(r);
+      }
+    }
+    updateWordCount();
+  }
+
+  /** 选区所在的块级元素（缩进作用于整段，符合 Word 习惯） */
+  function currentBlock() {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    var n = sel.getRangeAt(0).commonAncestorContainer;
+    if (n.nodeType === 3) n = n.parentNode;
+    var root = contentEl();
+    while (n && n !== root && n.nodeType === 1) {
+      var tag = n.tagName.toUpperCase();
+      if (tag === "P" || tag === "DIV" || tag === "H1" || tag === "H2" ||
+          tag === "H3" || tag === "LI" || tag === "BLOCKQUOTE") return n;
+      n = n.parentNode;
+    }
+    return null;
+  }
+
+  function execRich(cmd, value) {
+    var node = contentEl();
+    node.focus();
+    try { document.execCommand("styleWithCSS", false, true); } catch (err) { /* noop */ }
+    document.execCommand(cmd, false, value);
+    syncRichState();
+    updateWordCount();
+  }
+
+  function toggleIndent() {
+    var block = currentBlock();
+    if (!block) { execRich("formatBlock", "<p>"); block = currentBlock(); }
+    if (!block || !block.style) return;
+    block.style.textIndent = block.style.textIndent === "2em" ? "" : "2em";
+    updateWordCount();
+  }
+
+  function syncRichState() {
+    var btns = document.querySelectorAll("#richTools .rt-btn[data-cmd]");
+    for (var i = 0; i < btns.length; i++) {
+      var cmd = btns[i].getAttribute("data-cmd");
+      var on = false;
+      try { on = document.queryCommandState(cmd); } catch (err) { /* noop */ }
+      btns[i].classList.toggle("is-active", on);
+    }
+  }
+
   var session = { loggedIn: false };
   var msg = null;
   var msgId = "";
@@ -160,15 +234,6 @@
 
   /* ---------------- 图标工具栏：表情弹层（光标处插入）+ 禁用态 ---------------- */
 
-  function insertAtCursor(ta, text) {
-    var s = typeof ta.selectionStart === "number" ? ta.selectionStart : ta.value.length;
-    var e = typeof ta.selectionEnd === "number" ? ta.selectionEnd : s;
-    ta.value = ta.value.slice(0, s) + text + ta.value.slice(e);
-    try { ta.setSelectionRange(s + text.length, s + text.length); } catch (err) { /* noop */ }
-    ta.focus();
-    updateWordCount();
-  }
-
   function buildEmojiPop() {
     var pop = $("emojiPop");
     pop.textContent = "";
@@ -176,15 +241,40 @@
       var b = el("button", "emoji-pop-item", em);
       b.type = "button";
       b.title = em;
-      b.addEventListener("click", function (e) {
-        e.stopPropagation();
-        insertAtCursor($("editContent"), em);
-      });
+        b.addEventListener("click", function (e) {
+          e.stopPropagation();
+          insertTextAtCursor(em);
+        });
       pop.appendChild(b);
     });
   }
 
   function bindToolbar() {
+    // Word 式排版工具栏：mousedown 阻止默认行为，避免点击按钮丢失正文选区
+    var rich = $("richTools");
+    var rbtns = rich.querySelectorAll("button");
+    for (var bi = 0; bi < rbtns.length; bi++) {
+      (function (btn) {
+        btn.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        btn.addEventListener("click", function () {
+          if (btn.id === "rtIndent") toggleIndent();
+          else execRich(btn.getAttribute("data-cmd"), null);
+        });
+      })(rbtns[bi]);
+    }
+    $("rtFont").addEventListener("change", function () {
+      var v = this.value;
+      execRich("fontName", v || "'Microsoft YaHei',sans-serif");
+    });
+    $("rtSize").addEventListener("change", function () { execRich("fontSize", this.value); });
+    $("rtTitle").addEventListener("change", function () {
+      var v = this.value;
+      execRich("formatBlock", v === "p" ? "<p>" : "<" + v + ">");
+      this.value = "p";
+    });
+    contentEl().addEventListener("keyup", syncRichState);
+    contentEl().addEventListener("mouseup", syncRichState);
+
     // 禁用态图标注入（静态 SVG 常量，非用户内容）
     [["tbImage", "image"], ["tbVideo", "video"], ["tbPoll", "poll"], ["tbAt", "at"], ["tbQuote", "quote"]]
       .forEach(function (pair) {
@@ -238,7 +328,10 @@
   /* ---------------- 正文字数（底部固定条，实时） ---------------- */
 
   function updateWordCount() {
-    $("wordCount").textContent = String($("editContent").value.length);
+    var n = getPlainContent().length;
+    $("wordCount").textContent = String(n);
+    var counter = $("wordCount").parentNode;
+    if (counter && counter.classList) counter.classList.toggle("is-over", n > 500);
   }
 
   /* ---------------- 提交（新建 postMessage / 编辑 updateContent，防重锁） ---------------- */
@@ -253,11 +346,16 @@
 
   function save() {
     if (submitting) return; // 防重锁
-    var ta = $("editContent");
-    var content = ta.value.trim();
-    if (!content) {
+    var ta = contentEl();
+    var content = getContentHtml();
+    var plain = U.richTextToPlain(content);
+    if (!plain) {
       ta.classList.add("is-error");
       ta.focus();
+      return;
+    }
+    if (plain.length > 500) {
+      U.toast(t("post.contentMax"), "error");
       return;
     }
     if (!session.loggedIn) { C.openGuideModal("publish"); return; }
@@ -342,7 +440,7 @@
       }, 1800);
 
       // 成功复位：标题/内容清空、开关复位、昵称保留（F5 验收）
-      $("editContent").value = "";
+      setContent("");
       $("editTitle").value = "";
       $("editContent").classList.remove("is-error");
       selectedTag = "";
@@ -390,7 +488,7 @@
     C.openConfirmModal({
       titleKey: "confirm.deleteTitle",
       warnKey: "confirm.deleteWarn",
-      preview: ($("editTitle").value ? $("editTitle").value + "：" : "") + $("editContent").value.trim(),
+      preview: ($("editTitle").value ? $("editTitle").value + "：" : "") + getPlainContent(),
       note: t("confirm.ownerNote"),
       onConfirm: function () {
         api.deleteContent({ resourceId: msg.resourceId, csrf: session.csrf }).then(function (resp) {
@@ -414,19 +512,19 @@
     area.textContent = "";
     area.hidden = true;
 
-    var ta = $("editContent");
+    var ta = contentEl();
     var titleInput = $("editTitle");
     if (mode === "edit") {
       renderOrigin();
       originalContent = msg.content;
       originalTitle = msg.title || "";
-      ta.value = msg.content;
+      setContent(msg.content);
       titleInput.value = originalTitle;
       selectedTag = msg.topicTag || "";
       isPublic = msg.isPublic !== false;
       $("backLink") && ($("backLink").href = detailHref());
     } else {
-      ta.value = "";
+      setContent("");
       titleInput.value = "";
       selectedTag = "";
       isPublic = true;
@@ -448,6 +546,7 @@
     HMB.i18n.apply($("toolbarBar"));
     HMB.i18n.apply(document.querySelector(".editor-canvas"));
     HMB.i18n.apply($("footerBar"));
+    ta.setAttribute("data-placeholder", t("editPage.contentPlaceholder"));
 
     ta.addEventListener("input", function () {
       ta.classList.remove("is-error");

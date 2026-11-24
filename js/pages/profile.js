@@ -233,7 +233,7 @@
 
         var content = el("div", "mymsg-content");
         // 有选填标题时列表优先展示标题（与榜单卡口径一致）
-        content.textContent = (m.title ? m.title + "： " : "") + m.content + (m.topicTag ? "  #" + m.topicTag : "");
+        content.textContent = (m.title ? m.title + "： " : "") + U.richTextToPlain(m.content) + (m.topicTag ? "  #" + m.topicTag : "");
         content.tabIndex = 0;
         content.setAttribute("role", "link");
         content.addEventListener("click", function () {
@@ -260,7 +260,7 @@
           C.openConfirmModal({
             titleKey: "confirm.deleteTitle",
             warnKey: "confirm.deleteWarn",
-            preview: m.content,
+            preview: U.richTextToPlain(m.content),
             note: t("confirm.ownerNote"),
             onConfirm: function () {
               api.deleteContent({ resourceId: m.resourceId, csrf: session.csrf }).then(function (r) {

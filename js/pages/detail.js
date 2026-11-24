@@ -118,8 +118,8 @@
       var msgTitle = el("div", "msg-card-title", msg.title);
       body.appendChild(msgTitle);
     }
-    var content = el("div", "msg-card-content");
-    content.appendChild(U.highlightMatch(msg.content, ""));
+    var content = el("div", "msg-card-content rich-content");
+    content.appendChild(U.renderRich(msg.content, ""));
     body.appendChild(content);
     head.appendChild(body);
     card.appendChild(head);
@@ -228,7 +228,7 @@
     C.openConfirmModal({
       titleKey: "confirm.deleteTitle",
       warnKey: "confirm.deleteWarn",
-      preview: msg.content,
+      preview: U.richTextToPlain(msg.content),
       note: t("confirm.ownerNote"),
       onConfirm: function () {
         api.deleteContent({ resourceId: msg.resourceId, csrf: session.csrf }).then(function (resp) {

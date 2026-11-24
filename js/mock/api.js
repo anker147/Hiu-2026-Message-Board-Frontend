@@ -192,6 +192,16 @@
     return null;
   }
 
+  /** 富文本 → 纯文本：字数、敏感词、搜索都按用户真正看到的文字计算，不按标签算。 */
+  function plainContent(content) {
+    var stripped = String(content == null ? "" : content)
+      .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<[^>]*>/g, " ");
+    var box = document.createElement("div");
+    box.innerHTML = stripped;
+    return (box.textContent || box.innerText || "").replace(/\u00a0/g, " ").trim();
+  }
+
   function messageSecurityGate(userId, content) {
     var sens = sensitiveGate(content);
     if (sens) return sens;
@@ -202,7 +212,8 @@
 
   /* ---------------- 榜单计算职责：全在前端（util.js rankBoard） ----------------
    * mock api 只回传原始统计字段（stats：views/likes/comments/favorites + period + createdAt），
-   * 折合分公式、排序、历史最高维护统一由 HMB.util.rankBoard 在前端完成。
+   * 折合分公式与排序由 HMB.util.rankBoard 在前端完成；历史数据（历史最高/上周排名/趋势）
+   * 只按接口返回值展示，缺失就是 0，不在浏览时反推补写。
    * biliboard 公示口径（仅供前端公式参考，后端不参与）：
    *   t = ln(e^d + 1) + 1（d = 投稿 − 期次起点，天，钳制 [0,7]）
    *   得分 = 浏览×1×t + 评论×1 + 点赞×2 + 收藏×5
@@ -370,7 +381,7 @@
         if (opts.tab === "mine" && m.ownerId !== session.userId) return false;
         if (opts.q) {
           var q = opts.q.toLowerCase();
-          var hay = ((m.title ? m.title + " " : "") + m.content + " " + m.nicknameSnapshot + " " + (m.topicTag || "")).toLowerCase();
+          var hay = ((m.title ? m.title + " " : "") + plainContent(m.content) + " " + m.nicknameSnapshot + " " + (m.topicTag || "")).toLowerCase();
           if (hay.indexOf(q) < 0) return false;
         }
         return true;
@@ -427,12 +438,13 @@
       if (auth.err) return auth.err;
       var s = auth.session;
 
-      var content = (args.content || "").trim();
-      if (!content || content.length > 500) return fail(9001, "error.9001");
+      var content = String(args.content || "").trim();
+      var plain = plainContent(content);                 // 富文本按可见文字计字数
+      if (!plain || plain.length > 500) return fail(9001, "error.9001");
       // 选填标题（参照 sendThreadShow「标题（选填）·48 字以内」），敏感词同检
       var title = (args.title || "").trim();
       if (title.length > 48) return fail(9001, "error.9001");
-      var gate = messageSecurityGate(s.userId, content + " " + title); // 发留言：敏感词 + 限流（F10）
+      var gate = messageSecurityGate(s.userId, plain + " " + title); // 发留言：敏感词 + 限流（F10）
       if (gate) return gate;
       rateRecord(s.userId);
 
@@ -604,15 +616,16 @@
       if (auth.err) return auth.err;
       var s = auth.session;
 
-      var content = (args.content || "").trim();
-      if (!content || content.length > 500) return fail(9001, "error.9001");
+      var content = String(args.content || "").trim();
+      var plain = plainContent(content);
+      if (!plain || plain.length > 500) return fail(9001, "error.9001");
 
       // 先查留言，再查评论（owner 校验防 IDOR）
       var messages = db.getMessages();
       var m = messages.find(function (x) { return x.resourceId === args.resourceId; });
       if (m) {
         if (m.ownerId !== s.userId) return fail(5002, "error.5002");
-        var gate = sensitiveGate(content); // 改删/编辑：仅敏感词门（F10）
+        var gate = sensitiveGate(plain); // 改删/编辑：仅敏感词门（F10）
         if (gate) return gate;
         m.content = content;
         if (args.title !== undefined) {
@@ -752,7 +765,7 @@
       // 候选集：他人的、公开的、未删除的、非空的留言（排除自己）
       var candidates = db.getMessages().filter(function (m) {
         return m.ownerId !== s.userId && m.isPublic !== false &&
-          m.content && m.content.trim().length > 0;
+          plainContent(m.content).length > 0;
       });
       if (candidates.length === 0) return ok({ message: null });
       var picked = candidates[Math.floor(Math.random() * candidates.length)];
@@ -843,6 +856,30 @@
       var likesReceived = messages.reduce(function (s, m) { return s + m.stats.likes; }, 0) +
         comments.reduce(function (s, c) { return s + (c.likes || 0); }, 0);
 
+      // 盲盒匿名回复：仅本人可见自己的送出记录（F9 不泄露给原作者以外的人；
+      // 这里只回给真实发送者本人，绝不回给接收者/访客）。
+      var blindboxMessages = [];
+      if (isSelf) {
+        var allComments = db.getComments();
+        blindboxMessages = db.getBlindboxReplies().filter(function (tr) {
+          return tr.realOwnerId === u.id;
+        }).map(function (tr) {
+          var c = allComments.find(function (x) { return x.resourceId === tr.replyId; });
+          var target = msgById[tr.messageId];
+          if (!c || !target) return null;
+          return {
+            replyId: c.resourceId,
+            content: c.content,
+            createdAt: c.createdAt,
+            target: {
+              resourceId: target.resourceId,
+              title: target.title || "",
+              excerpt: plainContent(target.content).slice(0, 60)
+            }
+          };
+        }).filter(Boolean).sort(function (a, b) { return b.createdAt - a.createdAt; });
+      }
+
       var topicsMap = {};
       messages.forEach(function (m) {
         if (m.topicTag) topicsMap[m.topicTag] = (topicsMap[m.topicTag] || 0) + 1;
@@ -871,6 +908,7 @@
           likesReceived: likesReceived
         },
         topics: topics,
+        blindboxMessages: blindboxMessages,   // 仅本人有值；他人恒为空数组
         messages: messages.map(toListMessage),
         comments: comments.map(function (c) {
           var m = msgById[c.messageId];

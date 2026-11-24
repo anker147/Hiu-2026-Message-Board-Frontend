@@ -36,6 +36,103 @@
     return node;
   }
 
+  /* ---------------- 富文本（编辑器 Word 式排版） ----------------
+   * 零依赖白名单清洗：只允许排版标签与有限的样式属性，
+   * 用户内容永不通过未清洗的 innerHTML 进入 DOM（延续 F10 安全基线）。 */
+  var RICH_TAGS = {
+    BR: 1, P: 1, DIV: 1, SPAN: 1, B: 1, STRONG: 1, I: 1, EM: 1, U: 1,
+    H1: 1, H2: 1, H3: 1, H4: 1, OL: 1, UL: 1, LI: 1, BLOCKQUOTE: 1
+  };
+  var RICH_STYLE_PROPS = [
+    "font-family", "font-size", "text-indent", "text-align",
+    "font-weight", "font-style", "text-decoration", "color"
+  ];
+  var FONT_SIZE_MAP = { "1": "12px", "2": "14px", "3": "16px", "4": "18px", "5": "24px", "6": "32px", "7": "48px" };
+  var RICH_DROP = { SCRIPT: 1, STYLE: 1, IFRAME: 1, OBJECT: 1, EMBED: 1, SVG: 1, LINK: 1, META: 1, IMG: 1, VIDEO: 1, AUDIO: 1 };
+
+  function sanitizeStyle(css) {
+    if (!css) return "";
+    var out = [];
+    String(css).split(";").forEach(function (part) {
+      var i = part.indexOf(":");
+      if (i < 0) return;
+      var k = part.slice(0, i).trim().toLowerCase();
+      var v = part.slice(i + 1).trim();
+      if (RICH_STYLE_PROPS.indexOf(k) < 0) return;
+      if (/[;{}<>]/.test(v) || /url\(/i.test(v) || /expression/i.test(v)) return;
+      out.push(k + ":" + v);
+    });
+    return out.join(";");
+  }
+
+  function sanitizeRichHtml(html) {
+    var src = String(html == null ? "" : html);
+    var doc;
+    try { doc = new DOMParser().parseFromString(src, "text/html"); }
+    catch (err) { doc = document.createElement("div"); doc.innerHTML = src; }
+    var root = doc.body || doc;
+
+    function walk(from, to) {
+      for (var i = 0; i < from.childNodes.length; i++) {
+        var n = from.childNodes[i];
+        if (n.nodeType === 3) { to.appendChild(document.createTextNode(n.nodeValue)); continue; }
+        if (n.nodeType !== 1) continue;
+        var tag = n.tagName.toUpperCase();
+        if (RICH_DROP[tag]) continue;                  // 危险/非排版标签整体丢弃
+        if (tag === "FONT") {                          // execCommand 产物归一化为 span
+          var st = n.getAttribute("style") || "";
+          var face = n.getAttribute("face"), size = n.getAttribute("size");
+          if (face) st += ";font-family:" + face;
+          if (size && FONT_SIZE_MAP[size]) st += ";font-size:" + FONT_SIZE_MAP[size];
+          var sp = document.createElement("span");
+          var spStyle = sanitizeStyle(st);
+          if (spStyle) sp.setAttribute("style", spStyle);
+          walk(n, sp); to.appendChild(sp); continue;
+        }
+        if (!RICH_TAGS[tag]) { walk(n, to); continue; } // 未知标签只留文本
+        var m = document.createElement(tag.toLowerCase());
+        var mStyle = sanitizeStyle(n.getAttribute("style") || "");
+        if (mStyle) m.setAttribute("style", mStyle);
+        walk(n, m); to.appendChild(m);
+      }
+    }
+
+    var box = document.createElement("div");
+    walk(root, box);
+    return box.innerHTML;
+  }
+
+  function richTextToPlain(html) {
+    var box = document.createElement("div");
+    box.innerHTML = sanitizeRichHtml(html);
+    return (box.textContent || box.innerText || "").replace(/\u00a0/g, " ").trim();
+  }
+
+  /** 富文本安全渲染：白名单保留排版，q 非空时对文本节点做命中高亮 */
+  function renderRich(html, q) {
+    var box = document.createElement("div");
+    box.innerHTML = sanitizeRichHtml(html);
+    var frag = document.createDocumentFragment();
+    function walk(from, to) {
+      for (var i = 0; i < from.childNodes.length; i++) {
+        var n = from.childNodes[i];
+        if (n.nodeType === 3) {
+          if (q) {
+            var hm = highlightMatch(n.nodeValue, q);
+            while (hm.firstChild) to.appendChild(hm.firstChild);
+          } else to.appendChild(document.createTextNode(n.nodeValue));
+        } else if (n.nodeType === 1) {
+          var c = document.createElement(n.tagName.toLowerCase());
+          var st = n.getAttribute("style");
+          if (st) c.setAttribute("style", st);
+          walk(n, c); to.appendChild(c);
+        }
+      }
+    }
+    walk(box, frag);
+    return frag;
+  }
+
   /* ---------------- 格式化 ---------------- */
 
   function fmtViews(n) {
@@ -100,70 +197,41 @@
     }
   }
 
-  /** 由本周分数 + 上周变动率反推近 8 期趋势序列（演示推导，不落库、无后端字段）。
-   *  heatDelta 语义为“相对上周变动百分比”：上周分 = 本周分 / (1 + delta/100)。
-   *  往前逐期用确定性正弦扰动回推（同一 resourceId 每次结果一致，不用随机数），
-   *  最近一期用真实值，早期标 synthetic=true 供折线图渲染虚线段。 */
+  /** 近 8 期热度序列：只认后端真实提供的 heatHistory，缺哪期就补 0。
+   *  不做任何反推/扰动/估算（用户红线：没有数据不要估算，没有数据就标记 0）。 */
   function deriveHistory(m) {
-    var cur = m.heat;
-    var delta = (typeof m.heatDelta === "number" && isFinite(m.heatDelta)) ? m.heatDelta : 0;
-    var prev = cur / (1 + delta / 100);
-    if (!isFinite(prev) || prev <= 0) prev = cur;
-    var seedNum = 0;
-    var id = String(m.resourceId || "");
-    for (var k = 0; k < id.length; k++) seedNum = (seedNum * 31 + id.charCodeAt(k)) % 997;
+    var src = m && (m.heatHistory || m.history);
     var values = [];
     for (var i = 0; i < 8; i++) {
-      if (i === 7) { values.push({ value: cur, isolated: false, synthetic: false }); continue; }
-      if (i === 6) { values.push({ value: prev, isolated: false, synthetic: false }); continue; }
-      // 回推到更早：以本周/上周为锚点，叠加随期次递增的确定性波动
-      var base = prev + (cur - prev) * (i / 6);
-      var wave = Math.sin(seedNum * 0.017 + i * 0.9) * base * 0.12;
-      values.push({
-        value: Math.max(base + wave, base * 0.35),
-        isolated: false,
-        synthetic: true   // 早期为推导值 → 折线图虚线段（与官网一致）
-      });
+      var raw = src && src[i];
+      var v = (raw && typeof raw.value === "number" && isFinite(raw.value))
+        ? raw.value
+        : (typeof raw === "number" && isFinite(raw) ? raw : 0);
+      values.push({ value: v, isolated: false, synthetic: false });
     }
     return values;
   }
 
-  /** 前端榜单装配：注入 heat / rate / rateHistory → 排序 →（可选）维护历史最高并写回 db。
-   *  opts: { sort:"heat"|"latest"|..., peakField:"peakRank"|"peakNewRank" }
-   *  peakField 仅在“完整榜单视图”（heat 排序 + 无搜索 + 非我的留言）传入。 */
+  /** 前端榜单装配：注入 heat / rate / rateHistory → 排序。
+   *  只做“由原始统计直接算出”的部分；历史最高/上周排名/多期趋势等历史数据
+   *  一律以接口返回为准，缺失就是 0，不在浏览时用当前名次反向补写。 */
   function rankBoard(list, opts) {
     opts = opts || {};
     list.forEach(function (m) {
       m.heat = messageScore(m) / 10000;
-      // 变更比例（官网语义）：(本周 − 上周) / 上周；heatDelta 即百分数值
+      // 变更比例：(本周 − 上周) / 上周；heatDelta 即百分数值，缺失为 null → 胶囊显示 0%
       m.rate = (typeof m.heatDelta === "number" && isFinite(m.heatDelta)) ? m.heatDelta / 100 : null;
       m.rateHistory = deriveHistory(m);
     });
     list.sort(boardComparator(opts.sort || "heat"));
-    if (opts.peakField && HMB.db) {
-      var all = HMB.db.getMessages();
-      var changed = false;
-      list.forEach(function (m, i) {
-        var raw = all.find(function (x) { return x.resourceId === m.resourceId; });
-        if (raw && (raw[opts.peakField] <= 0 || i + 1 < raw[opts.peakField])) {
-          raw[opts.peakField] = i + 1;
-          m[opts.peakField] = i + 1;
-          changed = true;
-        }
-      });
-      if (changed) HMB.db.saveMessages(all);
-    }
     return list;
   }
 
-  /** 上周名次：优先用已记录的 peakRank，否则按当前名次 + 变动率估算（演示推导）。
-   *  返回 0 表示无历史（新帖）。 */
-  function deriveLastRank(m, currentRank) {
-    if (m.peakRank > 0) return m.peakRank;
-    if (!currentRank) return 0;
-    if (!isFinite(m.rate)) return 0;
-    var shift = Math.round(m.rate * currentRank * 1.5); // 涨则上周更靠后，跌则更靠前
-    return Math.max(1, Math.min(99, currentRank + shift));
+  /** 上周名次：只认后端真实提供的 lastRank 字段，没有就是 0（展示层显示 --）。
+   *  不用历史最高、当前名次或变动率做任何估算。 */
+  function deriveLastRank(m) {
+    var v = m && m.lastRank;
+    return (typeof v === "number" && isFinite(v) && v > 0) ? v : 0;
   }
 
   /* ---------------- 折线图 sparkline（移植 biliboard.uk 首页设计，配色用本站令牌） ----------------
@@ -729,6 +797,9 @@
     el: el,
     frag: frag,
     highlightMatch: highlightMatch,
+    sanitizeRichHtml: sanitizeRichHtml,
+    richTextToPlain: richTextToPlain,
+    renderRich: renderRich,
     fmtViews: fmtViews,
     fmtHeat: fmtHeat,
     periodStartTime: periodStartTime,
@@ -760,7 +831,7 @@
      空格保持原位，字符从左到右逐位"解锁"；reduced-motion 不启用。 */
   (function () {
     if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    var POOL = "留言板热榜最新我的关于评论点赞盲盒抽取发布重试登录注册消息身份选择好友确认取消周更互动Hiu24码号中英混排01{}<>/#*+";
+    var POOL = "留言板热度周榜最新我的关于评论点赞盲盒抽取发布重试登录注册消息身份选择好友确认取消周更互动Hiu24码号中英混排01{}<>/#*+";
     var running = new WeakSet();
     var doneAt = new WeakMap();
     function play(el) {
