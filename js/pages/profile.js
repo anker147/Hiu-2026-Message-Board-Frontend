@@ -42,6 +42,8 @@
       bindPrivacy("flagName");
       bindPrivacy("flagEmail");
       bindPrivacy("flagPhone");
+      bindPrivacy("flagLiked");
+      bindPrivacy("flagFavorite");
       bindSave();
       bindCancel();
       bindAvatarPicker();
@@ -79,6 +81,8 @@
       $("flagName").checked = profile.flagName;
       $("flagEmail").checked = profile.flagEmail;
       $("flagPhone").checked = profile.flagPhone;
+      $("flagLiked").checked = profile.flagLiked;
+      $("flagFavorite").checked = profile.flagFavorite;
     });
   }
 
@@ -90,6 +94,8 @@
         flagName: $("flagName").checked,
         flagEmail: $("flagEmail").checked,
         flagPhone: $("flagPhone").checked,
+        flagLiked: $("flagLiked").checked,
+        flagFavorite: $("flagFavorite").checked,
         csrf: session.csrf
       }).then(function (resp) {
         if (resp.code === 401) { C.openGuideModal("privacy"); return; }

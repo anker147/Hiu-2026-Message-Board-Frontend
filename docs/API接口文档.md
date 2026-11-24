@@ -34,7 +34,7 @@
 | CSRF 缺失/错误 | 9002 |
 | 退出登录 | Token 立即失效；重放旧 Token → 401 |
 
-**需要 `csrf` 参数的接口**：postMessage / postComment / postReply / updateContent / deleteContent / like / blindboxReply / updatePrivacy / updateNickname / updateSensitive / logout。
+**需要 `csrf` 参数的接口**：postMessage / postComment / postReply / updateContent / deleteContent / like / favorite / blindboxReply / updatePrivacy / updateNickname / updateSensitive / logout。
 **不需要 csrf**：register / login / getMessages / getMessage / getComments / getProfile / getSession / getZone / getBlindbox。
 
 ### 0.3 错误码总表（code 固定，不可改）
@@ -137,6 +137,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 | 08 | 个人中心（明文唯一出口） | GET | `/api/profile` | 是 | 否 |
 | 09 | 评论树 | GET | `/api/messages/{resourceId}/comments` | 否 | 否 |
 | 10 | 点赞/取消 | POST | `/api/like` | 是 | 是 |
+| 10b | 收藏/取消 | POST | `/api/favorite` | 是 | 是 |
 | 11 | 抽取盲盒 | GET | `/api/blindbox` | 是 | 否 |
 | 12 | 盲盒匿名回复 | POST | `/api/blindbox/reply` | 是 | 是 |
 | E1 | 单条详情 | GET | `/api/messages/{resourceId}` | 否 | 否 |
@@ -389,6 +390,20 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 
 > 后端建议：`likes(user_id, target_id)` 唯一索引；`idem_keys(key, user_id, created_at)` 表或 Redis 去重。
 
+**详情/评论出口补充**：`GET /api/messages/{id}` 返回 `isLiked`、`isFavorite`（当前访问者视角）；`getComments` 每条评论返回 `isLiked`、`isFavorite`、`favorites`，供详情页点亮爱心/星标。未登录恒为 `false`。
+
+---
+
+### API-10b 收藏/取消 `POST /api/favorite`
+
+**入参** `targetId`（帖子或评论 ID）、`idemKey`（与点赞**分开**的幂等键，前端加 `fav-` 前缀）、`op`（`favorite`|`unfavorite`，选填，缺省按当前状态切换）、`csrf`
+
+**逻辑**：与 API-10 对称——未登录 401、CSRF 错 9002、目标不存在 5001；同一 `idemKey` 重复请求只返回当前状态；`favorite` 且未收藏 → 写关系 + 计数 +1，`unfavorite` 且已收藏 → 删关系 + 计数 −1（下限 0）。
+
+**出参** `{ "favorite": true, "count": 90 }`
+
+> 后端建议：`favorites(user_id, target_id, created_at)` 唯一索引；幂等键复用了 `idempotency_keys` 时务必按接口类型区分 key 命名空间，避免与点赞冲突。
+
 ---
 
 ### API-11 抽取盲盒 `GET /api/blindbox`
@@ -440,6 +455,10 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
     "peakComments": 5,
     "peakLikes": 120
   },
+  "canSeeLiked": true,
+  "canSeeFavorite": true,
+  "liked": { "posts": [], "comments": [] },
+  "favorite": { "posts": [], "comments": [] },
   "messages": [ { "...": "公开帖子列表（他人不可见私密帖）" } ],
   "comments": [ { "...": "非匿名评论 + 引用原帖摘要" } ],
   "topics": [ { "tag": "校园日常", "count": 3 } ],
@@ -461,6 +480,8 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 | 字段 | 说明 |
 |---|---|
 | `blindboxMessages` | ⭐ 本次新增：**仅 `isSelf=true` 时返回自己送出的盲盒匿名回复**（按 `blindbox_replies.real_owner_id` 关联），他人访问恒为 `[]`。回复内容来自匿名评论本身，不返回真实身份以外的作者信息 |
+| `canSeeLiked` / `canSeeFavorite` | 主页是否展示「我赞过的 / 我收藏的」主 tab：本人恒 `true`；他人按 `users.flagLiked` / `flagFavorite` 决定 |
+| `liked` / `favorite` | 对应互动域的 `{ posts[], comments[] }`，均按时间倒序；评论项沿用 `comments[]` 结构（含引用原帖）。他人且开关关闭时出口返回空列表，不泄露互动记录 |
 
 **红线**：匿名回复绝不出现在作者主页的公开动态里；只有发送者本人在自己主页的独立区块可见自己的送出记录；
 私密帖对他人不可见；掩码字段受本人开关控制。
@@ -469,7 +490,9 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 
 ### E3 隐私开关 `PUT /api/profile/privacy`
 
-**入参** `flagName`、`flagEmail`、`flagPhone`（均 bool）、`csrf`。**出参** `{}`
+**入参** `flagName`、`flagEmail`、`flagPhone`、`flagLiked`、`flagFavorite`（均 bool）、`csrf`。**出参** `{}`
+
+> `flagLiked` / `flagFavorite` 只控制**他人访问个人主页**时能否看到「我赞过的 / 我收藏的」；本人始终可见。缺省保留原值，默认 `true`。`getProfile` 同步返回这两个字段供设置页回填。
 
 ### E4 昵称/签名/头像 `PUT /api/profile/nickname`
 

@@ -394,9 +394,21 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
   background: #F5F9FD; border-radius: 10px; padding: 12px 16px;
 }
 .reply-item.is-anon-reply { background: #FFF4E8; }
+/* 评论操作区：整体靠右，回复 / 点赞 / 收藏均为图标 + 数量 */
+.comment-actions {
+  margin-left: auto; display: flex; align-items: center; gap: 12px;
+  flex: none; white-space: nowrap;
+}
+.comment-reply-btn { display: inline-flex; align-items: center; gap: 4px; }
+.comment-reply-btn svg { width: 14px; height: 14px; }
 .comment-like-btn { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.comment-like-btn .action-count { font-variant-numeric: tabular-nums; }
+.comment-like-btn svg { width: 15px; height: 15px; }
 .comment-like-btn:hover { color: var(--up); }
 .comment-like-btn.is-liked { color: var(--up); }
+.comment-like-btn.is-liked svg { fill: var(--up); stroke: var(--up); }
+.comment-fav-btn:hover, .comment-fav-btn.is-favorited { color: var(--warning); }
+.comment-fav-btn.is-favorited svg { fill: var(--warning); stroke: var(--warning); }
 
 /* ---------- 顶栏身份下拉 ---------- */
 .identity-wrap { position: relative; }

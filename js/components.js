@@ -633,36 +633,52 @@
     head.appendChild(el("span", "comment-time", U.timeAgo(c.createdAt)));
     if (c.edited) head.appendChild(el("span", "edited-mark", t("common.edited")));
 
+    /* 右侧操作区：编辑/删除/回复/点赞/收藏统一右对齐，图标 + 数量 */
+    var actions = el("div", "comment-actions");
+
     /* 属主操作（仅作者渲染，P-08 前置） */
     if (c.isMine) {
       var editBtn = el("button", "comment-action");
       editBtn.type = "button";
       editBtn.setAttribute("data-text", "detail.edit");
       editBtn.addEventListener("click", function () { if (ctx.onEdit) ctx.onEdit(c); });
-      head.appendChild(editBtn);
+      actions.appendChild(editBtn);
       var delBtn = el("button", "comment-action comment-action--danger");
       delBtn.type = "button";
       delBtn.setAttribute("data-text", "detail.delete");
       delBtn.addEventListener("click", function () { if (ctx.onDelete) ctx.onDelete(c); });
-      head.appendChild(delBtn);
+      actions.appendChild(delBtn);
     }
 
-    /* 回复入口 + 点赞 */
     if (ctx.onReply && !c.isAnonymous) {
-      var replyBtn = el("button", "comment-action");
+      var replyBtn = el("button", "comment-action comment-reply-btn");
       replyBtn.type = "button";
-      replyBtn.setAttribute("data-text", "detail.reply");
+      replyBtn.appendChild(U.icon("message"));
+      replyBtn.appendChild(el("span", null, t("detail.reply")));
       replyBtn.addEventListener("click", function () { if (ctx.onReply) ctx.onReply(c); });
-      head.appendChild(replyBtn);
+      actions.appendChild(replyBtn);
     }
     var likeBtn = el("span", "comment-like comment-like-btn" + (c.isLiked ? " is-liked" : ""));
     likeBtn.appendChild(U.icon("heart"));
-    likeBtn.appendChild(el("span", null, String(c.likes)));
+    likeBtn.appendChild(el("span", "action-count", String(c.likes)));
     likeBtn.tabIndex = 0;
     likeBtn.setAttribute("role", "button");
     likeBtn.setAttribute("aria-label", t("detail.like"));
     likeBtn.addEventListener("click", function () { if (ctx.onLike) ctx.onLike(c, likeBtn); });
-    head.appendChild(likeBtn);
+    actions.appendChild(likeBtn);
+
+    /* 匿名盲盒回复不提供收藏入口：互动列表遵守 F9 不收录匿名归属，避免收藏后看不到 */
+    if (ctx.onFavorite && !c.isAnonymous) {
+      var favBtn = el("span", "comment-like comment-fav-btn" + (c.isFavorite ? " is-favorited" : ""));
+      favBtn.appendChild(U.icon("star"));
+      favBtn.appendChild(el("span", "action-count", String(c.favorites || 0)));
+      favBtn.tabIndex = 0;
+      favBtn.setAttribute("role", "button");
+      favBtn.setAttribute("aria-label", t("detail.favorite"));
+      favBtn.addEventListener("click", function () { if (ctx.onFavorite) ctx.onFavorite(c, favBtn); });
+      actions.appendChild(favBtn);
+    }
+    head.appendChild(actions);
     node.appendChild(head);
 
     var content = el("div", "comment-content");
