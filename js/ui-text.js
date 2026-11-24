@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 9; // v9：Stella 式沉浸登录页（全屏 KV + 品牌宣传 + 亚克力卡）+ 全部留言岛内 tag
+  var VERSION = 10; // v10：登录表单浮动标签 + 注册必填/选填外显标记，修正选填文案重复
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -380,8 +380,9 @@
     "register.accountLabel": "手机号",
     "register.passwordLabel": "密码",
     "register.confirmLabel": "确认密码",
-    "register.nameLabel": "真实姓名（选填）",
-    "register.emailLabel": "邮箱地址（选填）",
+    "register.nameLabel": "真实姓名",
+    "register.emailLabel": "邮箱地址",
+    "register.optionalTag": "选填",
     "register.confirmMismatch": "两次输入的密码不一致",
     "register.namePlaceholder": "真实姓名",
     "register.emailPlaceholder": "邮箱地址",

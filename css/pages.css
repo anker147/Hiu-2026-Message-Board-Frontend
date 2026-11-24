@@ -755,7 +755,8 @@ body[data-page="login"] {
   align-items: center;
   gap: clamp(20px, 3vw, 44px);
   height: 100vh;
-  padding: clamp(28px, 5vh, 56px) clamp(40px, 12vw, 180px) clamp(28px, 5vh, 56px) clamp(32px, 7vw, 96px);
+  /* 右内边距 +5vw：登录卡整体向页面中心左移约 5% */
+  padding: clamp(28px, 5vh, 56px) calc(clamp(40px, 12vw, 180px) + 5vw) clamp(28px, 5vh, 56px) clamp(32px, 7vw, 96px);
 }
 
 /* ===== 左侧品牌核心展示（内容靠左上角，页脚沉底） ===== */
@@ -871,8 +872,9 @@ body[data-page="login"] {
 .login-form { grid-area: 1 / 1; align-self: start; display: grid; align-content: start; gap: 10px; }
 .login-form[hidden] { display: none; }
 
-/* 图标输入框 */
+/* 图标输入框（浮动标签：未输入显示在框内，聚焦/有内容后缩小上移并常驻） */
 .login-field {
+  position: relative;
   display: flex; align-items: center; gap: 10px;
   height: 46px; padding: 0 13px;
   border: 1px solid rgba(255,255,255,.14);
@@ -880,6 +882,25 @@ body[data-page="login"] {
   background: rgba(255,255,255,.06);
   transition: border-color .22s var(--ease-out), background .22s var(--ease-out), box-shadow .22s var(--ease-out), transform .22s var(--ease-out);
 }
+.float-label {
+  position: absolute; left: 39px; top: 50%;
+  transform: translateY(-50%);
+  display: flex; align-items: center; gap: 5px;
+  color: rgba(238,242,247,.48); font-size: 13.5px;
+  pointer-events: none; transform-origin: left center;
+  transition: top .2s var(--ease-out), transform .2s var(--ease-out), color .2s var(--ease-out);
+}
+/* 聚焦 或 已有内容（placeholder 仅留一个空格，:placeholder-shown 即“空”）→ 缩小上移 */
+.login-field:focus-within .float-label,
+.login-field .input:not(:placeholder-shown) ~ .float-label {
+  top: 2px;
+  transform: translateY(0) scale(.76);
+  color: #8fd0ff;
+}
+.float-label .req-star { color: #ff9a9a; font-size: 14px; font-weight: 700; line-height: 1; }
+.float-label .opt-tag { font-style: normal; font-size: 10px; color: rgba(238,242,247,.4); border: 1px solid rgba(255,255,255,.16); border-radius: 4px; padding: 0 4px; line-height: 14px; }
+.login-field:focus-within .opt-tag,
+.login-field .input:not(:placeholder-shown) ~ .float-label .opt-tag { color: rgba(143,208,255,.8); border-color: rgba(143,208,255,.35); }
 .login-field:hover { border-color: rgba(255,255,255,.26); background: rgba(255,255,255,.08); }
 .login-field:focus-within {
   transform: translateY(-2px);
@@ -891,7 +912,8 @@ body[data-page="login"] {
 .field-ico { flex: 0 0 16px; width: 16px; height: 16px; color: rgba(238,242,247,.55); transition: color .22s var(--ease-out); }
 .login-field:focus-within .field-ico { color: #8fd0ff; }
 .login-field .input {
-  height: 40px; flex: 1; min-width: 0; padding: 0;
+  /* 顶部留白让输入文字下沉，给上移后的浮动标签让出空间 */
+  height: 40px; flex: 1; min-width: 0; padding: 22px 0 0;
   border: 0; background: transparent; color: #fff; font-size: 13.5px;
 }
 .login-field .input:focus { outline: none; box-shadow: none; }
