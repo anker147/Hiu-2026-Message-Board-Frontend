@@ -10,10 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/tokens.css?v=20261124ai">
-  <link rel="stylesheet" href="../css/base.css?v=20261124ai">
-  <link rel="stylesheet" href="../css/components.css?v=20261124ai">
-  <link rel="stylesheet" href="../css/pages.css?v=20261124ai">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261124aj">
+  <link rel="stylesheet" href="../css/base.css?v=20261124aj">
+  <link rel="stylesheet" href="../css/components.css?v=20261124aj">
+  <link rel="stylesheet" href="../css/pages.css?v=20261124aj">
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
@@ -67,12 +67,12 @@
     <!-- 榜单卡片列表 -->
     <section class="board-list stagger" id="boardList" aria-label="留言榜单"></section>
   <!-- 悬浮操作组（属于榜单视图：关于视图激活时随 boardView 一并隐藏） -->
-  <div class="float-actions">
-    <button class="float-btn float-btn--blindbox" id="blindboxBtn" data-scramble type="button">
-      <span id="blindboxIcon"></span><span data-text="board.blindboxFloat">抽取今日盲盒</span>
+  <div class="float-actions" id="floatActions">
+    <button class="float-btn float-btn--blindbox" id="blindboxBtn" data-scramble type="button" aria-label="抽取今日盲盒">
+      <span class="float-btn-ico" id="blindboxIcon"></span><span class="float-btn-label" data-text="board.blindboxFloat">抽取今日盲盒</span>
     </button>
-    <button class="float-btn float-btn--publish" id="publishFloatBtn" data-scramble type="button">
-      <span id="publishIcon"></span><span data-text="board.publishFloat">发布一条留言</span>
+    <button class="float-btn float-btn--publish" id="publishFloatBtn" data-scramble type="button" aria-label="发布一条留言">
+      <span class="float-btn-ico" id="publishIcon"></span><span class="float-btn-label" data-text="board.publishFloat">发布一条留言</span>
     </button>
   </div>
   </main>
@@ -86,15 +86,15 @@
   <!-- 管理视图：岛内“管理员”tag 软切换的挂载点（js/pages/gm.js 惰性构建，仅 admin 可见） -->
   <div id="gmView" hidden></div>
 
-  <script src="../js/ui-text.js?v=20261124ai"></script>
-  <script src="../js/mock/seed.js?v=20261124ai"></script>
-  <script src="../js/mock/db.js?v=20261124ai"></script>
-  <script src="../js/mock/api.js?v=20261124ai"></script>
-  <script src="../js/core/util.js?v=20261124ai"></script>
-  <script src="../js/components.js?v=20261124ai"></script>
-  <script src="../js/pages/board.js?v=20261124ai"></script>
-  <script src="../js/pages/about.js?v=20261124ai"></script>
-  <script src="../js/pages/all.js?v=20261124ai"></script>
-  <script src="../js/pages/gm.js?v=20261124ai"></script>
+  <script src="../js/ui-text.js?v=20261124aj"></script>
+  <script src="../js/mock/seed.js?v=20261124aj"></script>
+  <script src="../js/mock/db.js?v=20261124aj"></script>
+  <script src="../js/mock/api.js?v=20261124aj"></script>
+  <script src="../js/core/util.js?v=20261124aj"></script>
+  <script src="../js/components.js?v=20261124aj"></script>
+  <script src="../js/pages/board.js?v=20261124aj"></script>
+  <script src="../js/pages/about.js?v=20261124aj"></script>
+  <script src="../js/pages/all.js?v=20261124aj"></script>
+  <script src="../js/pages/gm.js?v=20261124aj"></script>
 </body>
 </html>

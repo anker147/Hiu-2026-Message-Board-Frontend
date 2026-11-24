@@ -542,6 +542,14 @@
     $("toolbarBar").hidden = false;
     $("editorCanvas").hidden = false;
     $("footerBar").hidden = false;
+    // 编辑器各块逐层上浮淡入（追风杯 view-rise-in 语言）
+    ["editorTopbar", "toolbarBar", "editorCanvas", "footerBar"].forEach(function (id) {
+      var node = $(id);
+      if (!node) return;
+      node.classList.remove("view-in");
+      void node.offsetWidth;
+      node.classList.add("view-in");
+    });
     HMB.i18n.apply($("editorTopbar"));
     HMB.i18n.apply($("toolbarBar"));
     HMB.i18n.apply(document.querySelector(".editor-canvas"));

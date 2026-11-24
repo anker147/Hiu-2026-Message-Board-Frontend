@@ -462,6 +462,7 @@
     search: '<svg ' + SVG_ATTRS + '><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
     caret: '<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="12" height="12"><path d="M6 9l6 6 6-6"/></svg>',
     close: '<svg ' + SVG_ATTRS + ' width="14" height="14"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+    up: '<svg ' + SVG_ATTRS + ' width="18" height="18"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
     pencil: '<svg ' + SVG_ATTRS + ' width="15" height="15"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
     flame: '<svg ' + SVG_ATTRS + '><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
     clock: '<svg ' + SVG_ATTRS + '><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',

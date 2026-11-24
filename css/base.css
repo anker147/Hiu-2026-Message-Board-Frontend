@@ -83,6 +83,25 @@ a:focus-visible, [tabindex]:focus-visible {
   animation-delay: calc(var(--i, 0) * 25ms);
 }
 
+/* —— 表单/面板入场（追风杯 tp-reveal 上浮淡入语言）——
+   给表单容器加 .form-enter，其直接子元素逐行上浮淡入；
+   --i 由 CSS nth-child 兜底，也可由 JS 显式写入以控制错峰节奏。 */
+@keyframes form-field-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.form-enter > * {
+  animation: form-field-in var(--t-slow) var(--ease-std) backwards;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+.form-enter > *:nth-child(1) { --i: 0; }
+.form-enter > *:nth-child(2) { --i: 1; }
+.form-enter > *:nth-child(3) { --i: 2; }
+.form-enter > *:nth-child(4) { --i: 3; }
+.form-enter > *:nth-child(5) { --i: 4; }
+.form-enter > *:nth-child(6) { --i: 5; }
+.form-enter > *:nth-child(n+7) { --i: 6; }
+
 /* —— 软切换整页转场（当前滚动位置在目标页不存在时由 U.pageTransition 驱动）：
       逐层退出当前页 → 换页（此刻元素已隐去，瞬时回顶不可见）→ 逐级飞入目标页；
       线性柔和缓动，--i 由 JS 按块序号写入 —— */
