@@ -65,7 +65,7 @@
 |---|---|
 | 密码存储 | **PBKDF2 / bcrypt 加盐哈希**。Mock 里是明文演示，真实后端严禁明文 |
 | 脱敏（F6） | **列表类接口只返回掩码**：姓名 `王*`、邮箱 `abc***@qq.com`、手机 `138****5678`。明文**仅 `GET /profile` 本人可见** |
-| 敏感词（F10） | 覆盖：发留言 / 评论 / 回复 / 编辑 / 盲盒回复。词表可配置（当前 4 词：加微信/代考/办证/刷单） |
+| 敏感词（F10） | 覆盖：发留言 / 评论 / 回复 / 编辑 / 盲盒回复。词表可配置（种子 44 词，分广告引流 / 刷单诈骗 / 博彩 / 违禁服务 / 垃圾营销五类；后台 G15 可继续增删） |
 | 限流（F10） | **仅发留言**：同账号 10 秒滑窗 >3 次 → 4002，返回剩余秒数。评论/回复/盲盒回复只过敏感词，不过限流 |
 | 幂等（F8） | 点赞接口接收 `idemKey`，**同一 key 重复请求必须返回当前状态，不得 +2/-1 抖动**。建议 `(user_id, target_id)` 唯一约束兜底 |
 | 匿名红线（F9） | 盲盒匿名回复：输出层 `authorName` 固定为「热心同学」、`authorAvatar=0`、`authorDisplayId=""`、`isAnonymous=true`，且 `isMine=false`。**任何接口都不得返回匿名作者真实身份**；真实身份只留审计表 |
@@ -769,7 +769,10 @@ out.isMine = (session != null && session.userId == message.ownerId)
 | `hidden` | `all` \| `1` \| `0`，默认 `all` |
 | `page` / `pageSize` | 默认 1 / 20 |
 
-**出参** `list[]`：`{ type, resourceId, messageId, title, content, authorId, authorNickname, createdAt, hidden, stats }`。
+**出参** `list[]`：`{ type, resourceId, messageId, title, content, fullContent, comments, authorId, authorNickname, createdAt, hidden, hiddenReason, period, stats }`。
+- `content`：去标签正文摘要（≤160 字），只用于表格预览；
+- `fullContent`：`message` 类型的完整白名单 HTML 正文，供 GM 详情弹窗按富文本渲染；`comment` 类型无此字段；
+- `comments`：`message` 类型下方评论数组 `[{ authorName, content, createdAt, hidden }]`，按时间正序；匿名回复的 `authorName` 仍按匿名红线固定，**不得暴露真实身份**。
 
 #### G10 隐藏/显示帖子 `PUT /api/gm/messages/{resourceId}/hidden`
 
@@ -799,10 +802,21 @@ out.isMine = (session != null && session.userId == message.ownerId)
 **出参** `list[]`：`{ id, actorId, actorNickname, action, targetType, targetId, detail, ip, createdAt }`。
 **红线**：审计日志不可删除、不可修改；只有 `admin` 可读。
 
+**`detail` 文案规范（人类可读，禁止直接拼接口参数）**：
+- 应写成完整句子，例如 G2 读取敏感字段：`查看账号信息：搜索「关键词」，命中 7 条` / `查看账号信息：全部账号，共 7 条`；
+- 禁止出现 `q=xxx 共 N 条` 这类原始参数拼接；
+- 前端审计详情弹窗同时展示「功能简述」（`action` 映射的中文名，如"封禁账号"）与「原始记录」（`detail` 全文，不截断）。
+
 #### G15 / G16 配置修改
 
 - `PUT /api/gm/settings/sensitive-words`：`{ "words": ["加微信","代考"], "csrf": "..." }` → 写 `settings.sensitiveWords`，立即生效；
 - `PUT /api/gm/settings/current-period`：`{ "period": 25, "csrf": "..." }` → 写 `settings.currentPeriod`，`period` 必须 ≥ 当前值（不允许回退）。
+
+**期次修改的影响范围（务必按此实现）**：
+- **只影响新发布内容**：`POST /api/messages` 写入 `messages.period = settings.currentPeriod`；
+- **不改动历史数据**：已发布留言的 `period`、各帖 `weeklyStats`、历史热度与峰值、周榜统计周均不受影响；
+- **前端需同步**：GM 保存后刷新首页榜单的本地期次缓存与期次下拉；当新期次超出种子 `PERIODS` 清单时，动态补入该期，避免新帖在下拉与徽章中消失；
+- **周榜下拉口径不变**：仅列「`no < currentPeriod` 且该期有公开帖」的统计周。
 
 均写审计。
 

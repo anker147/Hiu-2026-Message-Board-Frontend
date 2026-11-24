@@ -1814,7 +1814,24 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
   border-radius: var(--radius-card); box-shadow: var(--shadow-card);
 }
 .gm-panel { display: none; }
-.gm-panel.is-active { display: block; }
+/* GM 面板切换：线性淡入/淡出，先退场再进场，避免硬切"卡手" */
+.gm-panel.is-active {
+  display: block;
+  animation: gmPanelIn 180ms linear both;
+}
+.gm-panel.is-leaving {
+  display: block;
+  animation: gmPanelOut 110ms linear both;
+  pointer-events: none;
+}
+@keyframes gmPanelIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes gmPanelOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
+}
 .gm-section-title { font-size: 21px; font-weight: 800; color: var(--ink); margin-bottom: 16px; }
 .gm-note { font-size: 14px; color: var(--ink-2); line-height: 1.6; margin: 8px 0 12px; }
 .gm-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(152px, 1fr)); gap: 12px; }
@@ -1856,8 +1873,8 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
 .gm-cell-sub { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
 .gm-content-cell { min-width: 280px; max-width: 480px; }
 .gm-content-title { font-size: 14.5px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
-.gm-actions-cell { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 210px; }
-.gm-actions-cell .btn { white-space: nowrap; }
+.gm-actions-cell { display: flex; align-items: center; flex-wrap: nowrap; gap: 6px; min-width: 0; }
+.gm-actions-cell .btn { white-space: nowrap; flex: none; }
 .gm-badge {
   display: inline-flex; align-items: center; width: fit-content;
   padding: 3px 10px; border-radius: 999px;
@@ -1887,10 +1904,35 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
   display: flex; align-items: center; justify-content: center;
   background: rgba(30, 41, 59, .42); backdrop-filter: blur(4px);
   padding: 18px;
+  animation: gmMaskIn 140ms linear both;
 }
 .gm-modal {
   width: min(520px, 100%); max-height: calc(100vh - 48px); overflow: auto;
   background: var(--card); border-radius: 14px; box-shadow: var(--shadow-pop);
+  animation: gmModalIn 180ms linear both;
+}
+.gm-modal--wide { width: min(680px, 100%); }
+
+/* GM 弹窗：线性淡入 + 轻微上浮，关闭时反向退出 */
+@keyframes gmMaskIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gmMaskOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes gmModalIn {
+  from { opacity: 0; transform: translateY(14px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes gmModalOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(8px) scale(.98); }
+}
+.gm-modal-mask.is-closing { animation: gmMaskOut 130ms linear both; }
+.gm-modal-mask.is-closing .gm-modal {
+  animation: gmModalOut 130ms linear both;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gm-panel.is-active, .gm-panel.is-leaving,
+  .gm-modal-mask, .gm-modal,
+  .gm-modal-mask.is-closing, .gm-modal-mask.is-closing .gm-modal { animation: none; }
 }
 .gm-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 12px; }
 .gm-modal-title { font-size: 18px; font-weight: 800; color: var(--ink); }
@@ -1945,10 +1987,28 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
   content: ""; display: inline-block; width: 6px; height: 6px;
   border-radius: 50%; margin-right: 6px; background: currentColor; opacity: .85;
 }
-.gm-actions-cell { gap: 8px; min-width: 250px; }
+.gm-actions-cell { gap: 6px; min-width: 0; }
+
+/* ===== 用户表重排：固定列宽，操作按钮不再压住昵称/账号/状态文字 ===== */
+.gm-table--users { table-layout: fixed; }
+.gm-table--users th:nth-child(1), .gm-table--users td:nth-child(1) { width: 26%; }
+.gm-table--users th:nth-child(2), .gm-table--users td:nth-child(2) { width: 10%; }
+.gm-table--users th:nth-child(3), .gm-table--users td:nth-child(3) { width: 16%; }
+.gm-table--users th:nth-child(4), .gm-table--users td:nth-child(4) { width: 18%; }
+.gm-table--users th:nth-child(5), .gm-table--users td:nth-child(5) { width: 30%; }
+.gm-table--users .gm-user-cell { min-width: 0; }
+.gm-table--users .gm-user-info { overflow: hidden; }
+.gm-table--users .gm-user-name,
+.gm-table--users .gm-user-sub { white-space: normal; word-break: break-word; }
+.gm-table--users .gm-cell-sub { overflow-wrap: anywhere; line-height: 1.45; }
+.gm-more-btn { padding: 0 10px !important; min-width: 36px; letter-spacing: .1em; }
+
 /* 菜单不能被表格容器的滚动裁剪；窄屏才恢复横向滚动 */
 .gm-table-wrap { overflow: visible; }
-@media (max-width: 1200px) { .gm-table-wrap { overflow-x: auto; } }
+@media (max-width: 1200px) {
+  .gm-table-wrap { overflow-x: auto; }
+  .gm-table--users { min-width: 860px; }
+}
 .gm-more { position: relative; }
 .gm-more-menu {
   display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
@@ -1962,6 +2022,50 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
   font: inherit; font-size: 13px;
 }
 .gm-more-item:hover { background: var(--blue-soft); color: var(--blue); }
+
+/* ===== GM 内容 / 审计：可点击详情 ===== */
+.gm-content-cell.is-clickable,
+.gm-cell-link { cursor: pointer; transition: color 140ms linear; }
+.gm-content-cell.is-clickable:hover .gm-content-title,
+.gm-cell-link:hover { color: var(--blue); }
+.gm-cell-link { text-decoration: underline dotted var(--line); text-underline-offset: 3px; }
+.gm-cell--detail { max-width: 300px; }
+.gm-cell--detail .gm-cell-sub {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* GM 详情弹窗（内容 / 审计共用） */
+.gm-detail-meta {
+  display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px 10px;
+  padding: 13px 15px; margin-bottom: 14px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  font-size: 13.5px;
+}
+.gm-detail-meta dt { color: var(--ink-3); font-weight: 700; }
+.gm-detail-meta dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
+.gm-detail-section-title {
+  font-size: 14px; font-weight: 800; color: var(--ink);
+  margin: 16px 0 8px;
+}
+.gm-detail-content {
+  padding: 14px 15px; max-height: 280px; overflow: auto;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  font-size: 14.5px; color: var(--ink); overflow-wrap: anywhere;
+}
+.gm-detail-content p:last-child { margin-bottom: 0; }
+.gm-comment-list { display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow: auto; }
+.gm-comment-item {
+  padding: 11px 13px; background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px;
+}
+.gm-comment-head {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 5px; font-size: 12.5px; color: var(--ink-3);
+}
+.gm-comment-author { font-weight: 700; color: var(--ink-2); }
+.gm-comment-text { font-size: 14px; line-height: 1.6; color: var(--ink); overflow-wrap: anywhere; }
+.gm-detail-empty { padding: 8px 0; font-size: 13.5px; color: var(--ink-3); }
 
 /* ===== GM 概览仪表盘 ===== */
 /* 顶部欢迎条 */

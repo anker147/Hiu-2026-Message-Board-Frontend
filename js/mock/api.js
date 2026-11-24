@@ -1234,7 +1234,10 @@
       }).map(toGmUser).sort(function (a, b) { return b.createdAt - a.createdAt; });
       var out = paginate(list, args.page, args.pageSize);
       // 读取敏感字段（完整手机号/邮箱）须写审计
-      audit(auth.user, "user.read_sensitive", "user", "list", "q=" + (args.q || "") + " 共 " + out.total + " 条");
+      var kw = String(args.q || "").trim();
+      audit(auth.user, "user.read_sensitive", "user", "list",
+        kw ? ("查看账号信息：搜索「" + kw + "」，命中 " + out.total + " 条")
+           : ("查看账号信息：全部账号，共 " + out.total + " 条"));
       return ok(out);
     });
   }
@@ -1392,9 +1395,20 @@
 
   function toGmContent(type, item) {
     if (type === "message") {
+      /* 列表只用 content 摘要；详情弹窗另取完整正文与下方评论。
+         盲盒匿名回复沿用匿名红线：GM 出口也不暴露真实身份。 */
+      var children = db.getComments().filter(function (c) {
+        return c.messageId === item.resourceId;
+      }).sort(function (a, b) { return a.createdAt - b.createdAt; }).map(function (c) {
+        return {
+          authorName: c.isAnonymous ? t("common.anonymous") : (c.authorName || ""),
+          content: c.content || "", createdAt: c.createdAt, hidden: !!c.hidden
+        };
+      });
       return {
         type: "message", resourceId: item.resourceId, messageId: item.resourceId,
         title: item.title || "", content: plainContent(item.content).slice(0, 160),
+        fullContent: item.content || "", comments: children,
         authorId: item.ownerId, authorNickname: item.nicknameSnapshot || "",
         createdAt: item.createdAt, hidden: !!item.hidden, hiddenReason: item.hiddenReason || "",
         period: item.period, stats: {

@@ -19,6 +19,16 @@
   var likeIntent = {};
   var currentPeriod = HMB.db.getSettings().currentPeriod;
 
+  /** 期次清单以种子为底；GM 把当前期推进到种子之外时动态补一期，
+     避免新留言的期次在下拉与徽章里"消失"（不改变历史期与周榜统计口径）。 */
+  function periodList() {
+    var list = HMB.SEED.PERIODS.slice();
+    if (!list.some(function (p) { return p.no === currentPeriod; })) {
+      list.unshift({ no: currentPeriod, range: t("common.periodThisWeek", { n: currentPeriod }) });
+    }
+    return list;
+  }
+
   /** 有统计数据的期次才可出现在下拉菜单；当前期（尚未结算）一律不进周榜下拉。
    *  这里只做“有无数据”的判断，不对缺失数据做任何推算。 */
   function publishedPeriods() {
@@ -27,7 +37,7 @@
       if (m.isPublic === false) return;
       counts[m.period] = (counts[m.period] || 0) + 1;
     });
-    return HMB.SEED.PERIODS.filter(function (p) {
+    return periodList().filter(function (p) {
       return p.no < currentPeriod && counts[p.no] > 0;
     });
   }
@@ -128,7 +138,7 @@
   function refreshIssueBadge() {
     var periodNo = state.tab === "hot" ? state.hotPeriod
       : (state.tab === "latest" ? state.period : currentPeriod);
-    var period = HMB.SEED.PERIODS.find(function (p) { return p.no === periodNo; });
+    var period = periodList().find(function (p) { return p.no === periodNo; });
     els.issueBadge.textContent = String(periodNo);
     els.issueText.textContent = t("banner.issue", { n: periodNo, range: period ? period.range : "" });
   }
@@ -139,7 +149,7 @@
   function renderPeriodDropdown() {
     els.periodDropdown.textContent = "";   // makeDropdown 不清空挂载点：切 tab 重建前必须先清，否则 btn/menu 逐次叠加
     var isHot = state.tab === "hot";
-    var pool = isHot ? publishedPeriods() : HMB.SEED.PERIODS;
+    var pool = isHot ? publishedPeriods() : periodList();
     if (isHot && !pool.some(function (p) { return p.no === state.hotPeriod; }) && pool.length) {
       state.hotPeriod = pool[0].no;
     }
@@ -363,6 +373,17 @@
   // 顶栏"岛"软切换入口：只重载列表，导航动画由 renderTopbar 内部处理
   HMB.pages = HMB.pages || {};
   HMB.pages.board = {
+    /** GM 后台改了当前期次后同步：刷新缓存、下拉与列表，无需用户手动刷新页面 */
+    syncPeriod: function () {
+      var next = HMB.db.getSettings().currentPeriod;
+      if (!isFinite(next) || next < 1 || next === currentPeriod) return false;
+      currentPeriod = next;
+      state.period = next;
+      renderPeriodDropdown();
+      refreshIssueBadge();
+      loadList();
+      return true;
+    },
     /* —— 预判目标页的最大滚动值（软切换转场选路用）：
          非列表区实测高度 + 目标 tab 列表估高（单卡 104px + 间距）- 视口。
          当前 scrollY 超过它 → 换页时滚动位置会被钳制硬切 → 应走编排转场；
