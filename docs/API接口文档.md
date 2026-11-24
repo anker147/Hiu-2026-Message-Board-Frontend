@@ -789,13 +789,15 @@ out.isMine = (session != null && session.userId == message.ownerId)
 | `role` | enum | `all` \| `user` \| `admin`，默认 `all` |
 | `page` / `pageSize` | int | 默认 1 / 20 |
 
-**出参** `list[]`：`id, account（仅管理员可见完整）, displayId, nickname, avatarEnum, role, status, muteUntil, bio, realName, email, createdAt, lastActive, messageCount, commentCount`。
+**出参** `list[]`：`id, account（仅管理员可见完整）, displayId, nickname, avatarEnum, avatarUrl, role, status, muteUntil, bio, realName, email, createdAt, lastActive, messageCount, commentCount`。
 
+> `avatarUrl` 为用户上传头像的字符串引用（见 §0.7），空串表示使用 `avatarEnum` emoji 头像。GM 用户列表与用户自助端同口径渲染，上传头像不会在后台退化为默认头像。
+>
 > 普通用户接口仍只返回掩码；GM 接口可返回完整手机号/邮箱，但**必须写审计日志**（`action=user.read_sensitive`）。
 
 #### G3 用户详情 `GET /api/gm/users/{id}`
 
-在 G2 字段基础上增加：`flagName/flagEmail/flagPhone`、`banReason`、`muteReason`、`lastLoginAt`、`recentActionIds[]`。
+在 G2 字段基础上增加：`flagName/flagEmail/flagPhone`、`flagLiked/flagFavorite`、`banReason`、`muteReason`、`lastLoginAt`、`recentActionIds[]`。
 
 #### G4 封禁/解封 `PUT /api/gm/users/{id}/status`
 
@@ -843,15 +845,19 @@ out.isMine = (session != null && session.userId == message.ownerId)
 ```json
 {
   "nickname": "新昵称", "bio": "新签名", "avatarEnum": 3,
+  "avatarUrl": "localimg://img-xxx",
   "realName": "张三", "email": "a@b.com",
   "flagName": true, "flagEmail": false, "flagPhone": false,
+  "flagLiked": true, "flagFavorite": false,
   "csrf": "..."
 }
 ```
 
 **校验**：昵称 1~20、签名 ≤60、头像 1~8、邮箱格式、`account`（手机号）只读不可改。
+`avatarUrl` 规则与 API-08 完全一致：非空必须是合法引用（当前实现为 `localimg://` 前缀），传空串 `""` = 恢复默认 emoji 头像，未传则保持原值。
+`flagLiked/flagFavorite` 控制他人访问个人主页时是否可见"我赞过的/我收藏的"，本人始终可见。
 **逻辑**：写审计（`action=user.profile_update`，`detail` 只记字段名不记明文值）；
-历史留言的 `nicknameSnapshot` 保持不变（D-03）。
+历史留言的 `nicknameSnapshot` 保持不变（D-03）。前端 GM 资料卡以 G3 详情回填，保存后由 G2 列表即时反映新头像。
 
 **出参** `{ "id": 123, "nickname": "新昵称", "bio": "新签名", "avatarEnum": 3 }`
 

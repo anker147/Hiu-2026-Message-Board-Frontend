@@ -2674,6 +2674,40 @@ body[data-page="login"] :is(button, a, [tabindex]):focus-visible { outline: 2px 
   .pe-sensitive-grid label[for="phoneInput"], .pe-sensitive-grid #phoneInput { grid-column: auto; }
 }
 
+/* ===== GM 版资料编辑卡：复用 pe-* 结构，叠加身份条 / 快捷操作 / 审计提示 ===== */
+.gm-profile-card { padding: 2px; }
+.gm-profile-idbar {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px;
+  padding: 14px 16px; margin-bottom: 20px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+}
+.gm-profile-idcell { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.gm-profile-idlabel { font-size: 11px; font-weight: 700; color: var(--ink-3); letter-spacing: .2px; }
+.gm-profile-idvalue {
+  font-size: 13px; font-weight: 700; color: var(--ink-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.gm-profile-avatar { display: inline-flex; }
+.gm-profile-card .pe-avatar-wrap { margin-bottom: 18px; }
+.gm-profile-card .pe-row { grid-template-columns: 112px minmax(0, 1fr); padding: 12px 0; }
+.gm-profile-card .pe-sensitive-grid { grid-template-columns: 92px minmax(0, 1fr) 62px minmax(0, 1fr); }
+.gm-profile-card .pe-sensitive-grid label[for="gmPfPhone"] { grid-column: 1 / 2; }
+.gm-profile-card .pe-sensitive-grid #gmPfPhone { grid-column: 2 / -1; }
+.gm-profile-quick {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line);
+}
+.gm-profile-quick-label { font-size: 13px; font-weight: 800; color: var(--ink-2); }
+.gm-profile-card .gm-note { margin: 10px 0 0; }
+@media (max-width: 640px) {
+  .gm-profile-idbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gm-profile-card .pe-row { grid-template-columns: 1fr; gap: 6px; }
+  .gm-profile-card .pe-label { padding-top: 0; }
+  .gm-profile-card .pe-sensitive-grid { grid-template-columns: 1fr; }
+  .gm-profile-card .pe-sensitive-grid label[for="gmPfPhone"],
+  .gm-profile-card .pe-sensitive-grid #gmPfPhone { grid-column: auto; }
+}
+
 /* ===== 个人主页主 tab：动态 / 我赞过的 / 我收藏的 ===== */
 .zone-maintabs {
   display: flex; align-items: center; gap: 24px;

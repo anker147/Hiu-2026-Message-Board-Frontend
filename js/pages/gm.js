@@ -511,35 +511,233 @@
     });
   }
 
+  /** 从 G3 详情取全字段（G2 不含互动隐私开关），再渲染 GM 版资料编辑卡 */
   function openProfile(u) {
-    var nick = el("input", "gm-input"); nick.value = u.nickname || ""; nick.maxLength = 20;
-    var bio = el("input", "gm-input"); bio.value = u.bio || ""; bio.maxLength = 60;
-    var real = el("input", "gm-input"); real.value = u.realName || ""; real.maxLength = 20;
-    var mail = el("input", "gm-input"); mail.value = u.email || ""; mail.maxLength = 60;
-    var av = el("select", "gm-select");
-    HMB.SEED.AVATARS.forEach(function (emoji, i) {
-      var opt = el("option", null, emoji + " " + (i + 1));
-      opt.value = String(i + 1);
-      if (u.avatarEnum === i + 1) opt.selected = true;
-      av.appendChild(opt);
+    api.gmUserDetail(u.id).then(function (resp) {
+      if (!resp.success) { toastFail(resp); return; }
+      renderGmProfile(resp.data);
     });
-    var body = el("div", "gm-modal-fields");
-    body.appendChild(field(t("profile.nicknameLabel"), nick));
-    body.appendChild(field(t("profile.bioLabel"), bio));
-    body.appendChild(field(t("profile.realNameLabel"), real));
-    body.appendChild(field(t("profile.emailLabel"), mail));
-    body.appendChild(field(t("profile.avatarTip"), av));
+  }
+
+  /* 把用户「编辑资料」页（P-06）整卡复制到 GM：同一套 pe-* 结构与头像选择器，
+     GM 适配 = 只读身份条 + 五项隐私代改 + 管理快捷操作 + 审计留痕提示。 */
+  function renderGmProfile(u) {
+    var pendingAvatar = null;      // null=未改；数字=emoji 头像
+    var pendingAvatarUrl = null;   // null=未改；""=回退 emoji；localimg://=上传图
+    var card = el("div", "gm-profile-card form-enter");
+
+    // —— GM 只读身份条（用户自己是看不到这些的）——
+    var idbar = el("div", "gm-profile-idbar");
+    [
+      [t("gm.profile.account"), u.account],
+      [t("gm.profile.displayId"), "ID " + (u.displayId || "—")],
+      [t("gm.user.colRole"), t(u.role === "admin" ? "gm.user.roleAdmin" : "gm.user.roleUser")],
+      [t("gm.user.colStatus"), t(u.status === "banned" ? "gm.user.statusBanned" : "gm.user.statusActive")],
+      [t("gm.profile.joined"), u.createdAt ? U.fmtDate(u.createdAt) : "—"],
+      [t("gm.profile.lastActive"), u.lastActive ? U.fmtDate(u.lastActive) : "—"]
+    ].forEach(function (pair) {
+      var cell = el("div", "gm-profile-idcell");
+      cell.appendChild(el("span", "gm-profile-idlabel", pair[0]));
+      cell.appendChild(el("span", "gm-profile-idvalue", String(pair[1] || "—")));
+      idbar.appendChild(cell);
+    });
+    card.appendChild(idbar);
+
+    // —— 头像：84px 预览 + 相机角标，选择器与用户资料页同一套 ——
+    var avWrap = el("div", "pe-avatar-wrap");
+    var avHolder = el("div", "gm-profile-avatar");
+    avWrap.appendChild(avHolder);
+    var cam = el("button", "pe-avatar-cam", "📷");
+    cam.type = "button";
+    cam.setAttribute("aria-label", t("profile.avatarTitle"));
+    avWrap.appendChild(cam);
+    card.appendChild(avWrap);
+
+    function paintAvatar() {
+      avHolder.textContent = "";
+      var previewUrl = pendingAvatarUrl !== null ? pendingAvatarUrl : (u.avatarUrl || "");
+      avHolder.appendChild(U.avatar(pendingAvatar || u.avatarEnum, "pe-avatar", previewUrl));
+    }
+    paintAvatar();
+    cam.addEventListener("click", function () {
+      openGmAvatarPicker(u, function (kind, val) {
+        if (kind === "emoji") {
+          // 选 emoji 即回退图片头像：否则已有 avatarUrl 会继续覆盖 emoji，预览看起来没反应
+          pendingAvatar = val;
+          pendingAvatarUrl = "";
+        } else {
+          pendingAvatarUrl = val;
+          pendingAvatar = null;
+        }
+        paintAvatar();
+      });
+    });
+
+    // —— 表单行 helper（与 profile.html 的 .pe-row 同构）——
+    function row(label, ctrl) {
+      var r = el("div", "pe-row");
+      r.appendChild(el("span", "pe-label", label));
+      var c = el("div", "pe-ctrl");
+      c.appendChild(ctrl);
+      r.appendChild(c);
+      return r;
+    }
+
+    var nick = el("input", "pe-input"); nick.id = "gmPfNick"; nick.value = u.nickname || ""; nick.maxLength = 20;
+    var nickBox = el("div");
+    nickBox.appendChild(nick);
+    nickBox.appendChild(el("p", "pe-note", t("profile.nicknameRule")));
+    var nickErr = el("div", "field-error"); nickErr.id = "gmPfErr";
+    nickBox.appendChild(nickErr);
+    card.appendChild(row(t("profile.nicknameLabel"), nickBox));
+
+    var bio = el("input", "pe-input"); bio.id = "gmPfBio"; bio.value = u.bio || ""; bio.maxLength = 60;
+    card.appendChild(row(t("profile.bioLabel"), bio));
+
+    // —— 敏感信息：实名 / 邮箱可改，手机号（登录账号）只读 ——
+    var grid = el("div", "pe-sensitive-grid");
+    var real = el("input", "pe-input"); real.id = "gmPfReal"; real.value = u.realName || ""; real.maxLength = 20;
+    var mail = el("input", "pe-input"); mail.id = "gmPfMail"; mail.value = u.email || ""; mail.maxLength = 60;
+    var phone = el("input", "pe-input"); phone.id = "gmPfPhone"; phone.value = u.account || "";
+    phone.readOnly = true; phone.disabled = true;
+    [["gmPfReal", t("profile.realNameLabel"), real],
+     ["gmPfMail", t("profile.emailLabel"), mail],
+     ["gmPfPhone", t("profile.accountLabel"), phone]].forEach(function (item) {
+      var lab = el("label", "pe-sub-label", item[1]);
+      lab.setAttribute("for", item[0]);
+      grid.appendChild(lab);
+      grid.appendChild(item[2]);
+    });
+    var sensBox = el("div");
+    sensBox.appendChild(grid);
+    sensBox.appendChild(el("p", "pe-note", t("profile.phoneNote")));
+    sensBox.appendChild(el("p", "pe-note", t("profile.sensitiveNote")));
+    card.appendChild(row(t("profile.sensitiveLabel"), sensBox));
+
+    // —— 隐私开关：三项脱敏 + 两项互动展示，GM 可代用户调整 ——
+    function switchItem(id, key, checked) {
+      var lab = el("label", "privacy-item");
+      var sw = el("span", "switch switch--sm");
+      var inp = el("input"); inp.type = "checkbox"; inp.id = id; inp.checked = !!checked;
+      sw.appendChild(inp);
+      sw.appendChild(el("span", "switch-track"));
+      lab.appendChild(sw);
+      var txt = el("span", null, t(key));
+      txt.setAttribute("data-text", key);
+      lab.appendChild(txt);
+      return lab;
+    }
+    var priv = el("div");
+    priv.appendChild(el("p", "pe-masked", t("gm.profile.privacyNote")));
+    var row1 = el("div", "pe-privacy-row");
+    row1.appendChild(switchItem("gmPfFlagName", "profile.flagName", u.flagName));
+    row1.appendChild(switchItem("gmPfFlagEmail", "profile.flagEmail", u.flagEmail));
+    row1.appendChild(switchItem("gmPfFlagPhone", "profile.flagPhone", u.flagPhone));
+    var row2 = el("div", "pe-privacy-row pe-privacy-row--interaction");
+    row2.appendChild(switchItem("gmPfFlagLiked", "profile.flagLiked", u.flagLiked));
+    row2.appendChild(switchItem("gmPfFlagFavorite", "profile.flagFavorite", u.flagFavorite));
+    priv.appendChild(row1);
+    priv.appendChild(row2);
+    priv.appendChild(el("p", "privacy-desc", t("profile.interactionPrivacyDesc")));
+    card.appendChild(row(t("profile.privacyValues"), priv));
+
+    // —— GM 快捷操作：关闭当前资料卡后打开对应管理弹窗 ——
+    var quick = el("div", "gm-profile-quick");
+    quick.appendChild(el("span", "gm-profile-quick-label", t("gm.profile.quick")));
+    quick.appendChild(btn(u.status === "banned" ? "gm.user.unban" : "gm.user.ban",
+      "btn--soft btn--sm", function () { u.status === "banned" ? openUnban(u) : openBan(u); }));
+    var muted = !!(u.muteUntil && u.muteUntil > Date.now());
+    quick.appendChild(btn(muted ? "gm.user.unmute" : "gm.user.mute",
+      "btn--soft btn--sm", function () { muted ? openUnmute(u) : openMute(u); }));
+    quick.appendChild(btn(u.role === "admin" ? "gm.user.demote" : "gm.user.promote",
+      "btn--soft btn--sm", function () { openRole(u); }));
+    quick.appendChild(btn("gm.user.resetPassword", "btn--soft btn--sm", function () { openResetPwd(u); }));
+    card.appendChild(quick);
+    card.appendChild(el("p", "gm-note", t("gm.profile.auditTip")));
+
+    function showErr(msg) {
+      nickErr.textContent = msg || "";
+      nickErr.classList.toggle("is-visible", !!msg);
+    }
+    function invalid(msg) { showErr(msg); return Promise.resolve({ success: false }); }
+
     openModal({
       title: t("gm.user.profileTitle") + " · " + u.nickname,
-      content: body, okText: t("common.ok"),
+      content: card, okText: t("gm.profile.save"), wide: true,
       onOk: function () {
-        return api.gmUpdateUserProfile(u.id, {
-          nickname: nick.value.trim(), bio: bio.value.trim(),
-          realName: real.value.trim(), email: mail.value.trim(),
-          avatarEnum: Number(av.value), csrf: session.csrf
+        var nv = nick.value.trim();
+        if (!nv || nv.length > 20) return invalid(t("profile.nicknameTooLong"));
+        var bv = bio.value.trim();
+        if (bv.length > 60) return invalid(t("profile.bioTooLong"));
+        var ev = mail.value.trim();
+        if (ev && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ev)) return invalid(t("profile.emailInvalid"));
+        showErr("");
+        var args = {
+          nickname: nv, bio: bv,
+          realName: real.value.trim(), email: ev,
+          flagName: $("gmPfFlagName").checked,
+          flagEmail: $("gmPfFlagEmail").checked,
+          flagPhone: $("gmPfFlagPhone").checked,
+          flagLiked: $("gmPfFlagLiked").checked,
+          flagFavorite: $("gmPfFlagFavorite").checked,
+          csrf: session.csrf
+        };
+        if (pendingAvatar !== null) args.avatarEnum = pendingAvatar;
+        if (pendingAvatarUrl !== null) args.avatarUrl = pendingAvatarUrl;
+        return api.gmUpdateUserProfile(u.id, args).then(function (resp) {
+          if (resp && resp.success) U.toast(t("gm.profile.saved"), "success");
+          return resp;
         });
       }
     });
+  }
+
+  /** GM 头像选择器：复用用户资料页的 emoji + 上传 + 恢复默认，仅抬高层级以盖住 GM 弹窗 */
+  function openGmAvatarPicker(u, onPick) {
+    var content = el("div");
+    var title = el("h3", "modal-title");
+    title.setAttribute("data-text", "profile.avatarTitle");
+    content.appendChild(title);
+    var grid = el("div", "pe-avatar-grid");
+    HMB.SEED.AVATARS.forEach(function (em, i) {
+      var opt = el("button", "pe-avatar-opt", em);
+      opt.type = "button";
+      opt.title = em;
+      opt.addEventListener("click", function () { onPick("emoji", i + 1); modal.close(); });
+      grid.appendChild(opt);
+    });
+    content.appendChild(grid);
+
+    var upRow = el("div", "pe-avatar-upload-row");
+    var upInput = document.createElement("input");
+    upInput.type = "file";
+    upInput.accept = HMB.media ? HMB.media.ACCEPT.join(",") : "image/*";
+    upInput.className = "pe-avatar-file";
+    upInput.addEventListener("change", function () {
+      var f = upInput.files && upInput.files[0];
+      if (!f || !HMB.media) return;
+      HMB.media.save(f, function (r) {
+        if (!r.ok) { U.toast(t("profile.avatarUploadFail") || "图片读取失败", "error"); return; }
+        onPick("url", r.ref);
+        modal.close();
+        U.toast(t("profile.avatarUploaded") || "头像已更新，保存后生效", "success");
+      });
+    });
+    var upBtn = el("button", "btn btn--soft btn--sm", t("profile.avatarUpload") || "上传图片");
+    upBtn.type = "button";
+    upBtn.addEventListener("click", function () { upInput.click(); });
+    upRow.appendChild(upBtn);
+    upRow.appendChild(upInput);
+    if (u.avatarUrl) {
+      var resetBtn = el("button", "btn btn--ghost btn--sm", t("profile.avatarReset") || "恢复默认头像");
+      resetBtn.type = "button";
+      resetBtn.addEventListener("click", function () { onPick("url", ""); modal.close(); });
+      upRow.appendChild(resetBtn);
+    }
+    content.appendChild(upRow);
+    HMB.i18n.apply(content);
+    var modal = U.openModal(content, { modalCls: "pe-avatar-modal" });
+    modal.mask.style.zIndex = "1000";   // GM 弹窗 z-index=900，头像选择器必须盖在其上
   }
 
   function openResetPwd(u) {

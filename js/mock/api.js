@@ -228,12 +228,13 @@
       .sort(function (a, b) { return b.lastActive - a.lastActive; });
     return {
       id: u.id, account: u.account, displayId: u.displayId,
-      nickname: u.nickname, avatarEnum: u.avatarEnum, bio: u.bio || "",
+      nickname: u.nickname, avatarEnum: u.avatarEnum, avatarUrl: u.avatarUrl || "", bio: u.bio || "",
       role: u.role || "user", status: u.status || "active",
       muteUntil: u.muteUntil || 0, muted: !!(u.muteUntil && u.muteUntil > Date.now()),
       banReason: u.banReason || "", muteReason: u.muteReason || "",
       realName: u.realName || "", email: u.email || "",
       flagName: !!u.flagName, flagEmail: !!u.flagEmail, flagPhone: !!u.flagPhone,
+      flagLiked: u.flagLiked !== false, flagFavorite: u.flagFavorite !== false,
       mustChangePassword: !!u.mustChangePassword,
       createdAt: u.createdAt || 0, lastActive: sessions.length ? sessions[0].lastActive : 0,
       lastLoginAt: u.lastLoginAt || 0,
@@ -1478,6 +1479,12 @@
         if (!(av >= 1 && av <= seed.AVATARS.length)) return fail(6005, "error.6005");
         u.avatarEnum = av; fields.push("avatarEnum");
       }
+      // 与用户自助接口同口径：localimg:// 引用；空串 = 回退 emoji 头像
+      if (args.avatarUrl !== undefined) {
+        var au = String(args.avatarUrl || "");
+        if (au && au.indexOf("localimg://") !== 0) return fail(6005, "error.6005");
+        u.avatarUrl = au; fields.push("avatarUrl");
+      }
       if (args.realName !== undefined) {
         var rn = String(args.realName).trim();
         if (rn.length > 20) return fail(6005, "error.6005");
@@ -1488,13 +1495,13 @@
         if (em.length > 60 || (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em))) return fail(6005, "error.6005");
         u.email = em; fields.push("email");
       }
-      ["flagName", "flagEmail", "flagPhone"].forEach(function (k) {
+      ["flagName", "flagEmail", "flagPhone", "flagLiked", "flagFavorite"].forEach(function (k) {
         if (args[k] !== undefined) { u[k] = !!args[k]; fields.push(k); }
       });
       if (!fields.length) return fail(6005, "error.6005");
       db.saveUsers(db.getUsers().map(function (x) { return x.id === u.id ? u : x; }));
       audit(auth.user, "user.profile_update", "user", u.id, fields.join(","));
-      return ok({ id: u.id, nickname: u.nickname, bio: u.bio, avatarEnum: u.avatarEnum });
+      return ok({ id: u.id, nickname: u.nickname, bio: u.bio, avatarEnum: u.avatarEnum, avatarUrl: u.avatarUrl || "" });
     });
   }
 
