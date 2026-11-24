@@ -2223,6 +2223,28 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
 .gm-table thead th { position: sticky; top: 0; z-index: 2; }
 .gm-table tbody tr { transition: background 140ms ease; }
 .gm-table tbody tr:hover { background: var(--blue-soft); }
+/* GM 表格行逐条上浮淡入（追风杯 tp-reveal 语言）：--i 由 JS 按行序写入，封顶 14 */
+.gm-table tbody tr.gm-row-in {
+  animation: gm-row-in 380ms var(--ease-std) backwards;
+  animation-delay: calc(var(--i, 0) * 38ms);
+}
+@keyframes gm-row-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* 重试按钮改为圆形图标按钮 */
+.gm-icon-btn {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--card); color: var(--ink-2); cursor: pointer;
+  transition: background 160ms var(--ease-std), color 160ms var(--ease-std), border-color 160ms var(--ease-std);
+}
+.gm-icon-btn .ico { display: inline-flex; }
+.gm-icon-btn .ico svg { width: 16px; height: 16px; }
+.gm-icon-btn:hover { background: var(--blue-soft); color: var(--blue); border-color: var(--blue-pale); }
+.gm-icon-btn:active { transform: scale(.94); }
+.gm-icon-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .gm-badge::before {
   content: ""; display: inline-block; width: 6px; height: 6px;
   border-radius: 50%; margin-right: 6px; background: currentColor; opacity: .85;
@@ -2298,6 +2320,18 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
   font-size: 14.5px; color: var(--ink); overflow-wrap: anywhere;
 }
 .gm-detail-content p:last-child { margin-bottom: 0; }
+/* 审计原始记录：按代码呈现（等宽、保留空白、深色代码块） */
+.gm-detail-code {
+  margin: 0; padding: 15px 16px; max-height: 320px; overflow: auto;
+  background: #1d2433; border: 1px solid #2d374b; border-radius: 10px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px; line-height: 1.65; color: #d7e2f2;
+  white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2;
+}
+.gm-detail-code code {
+  font-family: inherit; font-size: inherit; color: inherit;
+  background: none; padding: 0;
+}
 .gm-comment-list { display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow: auto; }
 .gm-comment-item {
   padding: 11px 13px; background: var(--bg);
