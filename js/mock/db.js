@@ -52,6 +52,7 @@
     write("loginFails", {});          // {account: {count, lockUntil}}
     write("rateWindow", {});          // {userIdKey: [timestamps]}
     write("blindboxReplies", []);     // 匿名回复留痕（服务端留痕语义）
+    write("adminActions", []);        // GM 操作审计（只增不改不删）
     write("settings", {
       sensitiveWords: SEED.SENSITIVE_WORDS,
       currentPeriod: SEED.CURRENT_PERIOD,
@@ -114,6 +115,26 @@
     /* —— 盲盒留痕 —— */
     getBlindboxReplies: function () { return read("blindboxReplies", []); },
     saveBlindboxReplies: function (b) { write("blindboxReplies", b); },
+
+    /* —— GM 审计（只增不改不删） —— */
+    getAdminActions: function () { return read("adminActions", []); },
+    saveAdminActions: function (a) { write("adminActions", a); },
+    appendAdminAction: function (entry) {
+      var list = this.getAdminActions();
+      list.push({
+        id: entry.id || ("A" + Date.now().toString(36) + Math.floor(Math.random() * 1000)),
+        actorId: entry.actorId,
+        actorNickname: entry.actorNickname || "",
+        action: entry.action,
+        targetType: entry.targetType || "",
+        targetId: entry.targetId || "",
+        detail: entry.detail || "",
+        ip: entry.ip || "127.0.0.1",
+        createdAt: entry.createdAt || Date.now()
+      });
+      this.saveAdminActions(list);
+      return list[list.length - 1];
+    },
 
     /* —— 设置 —— */
     getSettings: function () {

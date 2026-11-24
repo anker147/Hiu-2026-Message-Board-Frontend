@@ -112,6 +112,13 @@
     var i = sessions.findIndex(function (s) { return s.token === active.token; });
     if (i < 0) { writeActive(null); return null; } // 退出后令牌重放 → 失效
     var s = sessions[i];
+    // GM 封禁：目标账号的所有会话立即失效（旧 token 重放 → 401）
+    var owner = db.findUserById(s.userId);
+    if (isBanned(owner)) {
+      db.saveSessions(sessions.filter(function (x) { return x.userId !== s.userId; }));
+      writeActive(null);
+      return null;
+    }
     if (Date.now() - s.lastActive > SESSION_TTL) {
       sessions.splice(i, 1);
       db.saveSessions(sessions);
@@ -149,6 +156,99 @@
     if (!s) return { err: fail(401, "error.401") };
     if (!csrf || csrf !== s.csrf) return { err: fail(9002, "error.9002") };
     return { session: s };
+  }
+
+  /* ---------------- GM 权限基础设施（文档 §6） ---------------- */
+
+  function isAdmin(u) { return !!u && u.role === "admin"; }
+
+  /** 封禁账号的旧会话立即作废：所有令牌从 sessions 中移除（文档 §6.5） */
+  function isBanned(u) { return !!u && u.status === "banned"; }
+
+  function revokeUserSessions(userId) {
+    db.saveSessions(db.getSessions().filter(function (s) { return s.userId !== userId; }));
+  }
+
+  /** 禁言拦截：仅写内容受限，点赞等交互不受影响；永久禁言以 9999-12-31 时间戳表示 */
+  function muteGate(userId) {
+    var u = db.findUserById(userId);
+    if (u && u.muteUntil && u.muteUntil > Date.now()) return fail(6004, "error.6004");
+    return null;
+  }
+
+  /** GM 路由统一鉴权：非 admin → 6001（前端隐藏入口不算权限） */
+  function requireAdmin(csrf) {
+    var auth = requireAuth(csrf);
+    if (auth.err) return auth;
+    var u = db.findUserById(auth.session.userId);
+    if (!isAdmin(u)) return { err: fail(6001, "error.6001") };
+    return { session: auth.session, user: u };
+  }
+
+  /** GM 只读接口：会话 + 角色校验，读操作不要求 csrf（与文档 G1/G2/G3/G9/G14 一致） */
+  function requireAdminRead() {
+    var s = currentSession(true);
+    if (!s) return { err: fail(401, "error.401") };
+    var u = db.findUserById(s.userId);
+    if (!isAdmin(u)) return { err: fail(6001, "error.6001") };
+    return { session: s, user: u };
+  }
+
+  /** 受保护对象 / 自身 / 最后一名管理员：返回错误 Promise 或 null */
+  function guardTarget(actor, target, action) {
+    if (!target) return fail(5001, "error.5001");
+    if (seed.isProtectedUser(target.id)) return fail(6003, "error.6003");
+    if (target.id === actor.id) return fail(6002, "error.6002");
+    if (action === "demote" || action === "ban") {
+      if (isAdmin(target) && countActiveAdmins() <= 1) return fail(6003, "error.6003");
+    }
+    return null;
+  }
+
+  function countActiveAdmins() {
+    return db.getUsers().filter(function (u) {
+      return isAdmin(u) && u.status !== "banned" && !seed.isProtectedUser(u.id);
+    }).length + 1; // +1 = 内置账号 9999 常驻
+  }
+
+  /** 审计写入：所有 GM 写操作留痕，只增不改不删 */
+  function audit(actor, action, targetType, targetId, detail) {
+    return db.appendAdminAction({
+      actorId: actor.id, actorNickname: actor.nickname || "",
+      action: action, targetType: targetType, targetId: String(targetId || ""),
+      detail: detail || "", createdAt: Date.now()
+    });
+  }
+
+  /** GM 用户出口：文档 G2 字段（mock 演示直接返回完整字段，由页面承担脱敏展示） */
+  function toGmUser(u) {
+    var messages = db.getMessages().filter(function (m) { return m.ownerId === u.id; });
+    var comments = db.getComments().filter(function (c) { return c.ownerId === u.id; });
+    var sessions = db.getSessions().filter(function (s) { return s.userId === u.id; })
+      .sort(function (a, b) { return b.lastActive - a.lastActive; });
+    return {
+      id: u.id, account: u.account, displayId: u.displayId,
+      nickname: u.nickname, avatarEnum: u.avatarEnum, bio: u.bio || "",
+      role: u.role || "user", status: u.status || "active",
+      muteUntil: u.muteUntil || 0, muted: !!(u.muteUntil && u.muteUntil > Date.now()),
+      banReason: u.banReason || "", muteReason: u.muteReason || "",
+      realName: u.realName || "", email: u.email || "",
+      flagName: !!u.flagName, flagEmail: !!u.flagEmail, flagPhone: !!u.flagPhone,
+      mustChangePassword: !!u.mustChangePassword,
+      createdAt: u.createdAt || 0, lastActive: sessions.length ? sessions[0].lastActive : 0,
+      lastLoginAt: u.lastLoginAt || 0,
+      messageCount: messages.length, commentCount: comments.length,
+      protected: seed.isProtectedUser(u.id)
+    };
+  }
+
+  function paginate(list, page, pageSize) {
+    var p = Math.max(1, parseInt(page, 10) || 1);
+    var size = Math.max(1, Math.min(100, parseInt(pageSize, 10) || 20));
+    return {
+      list: list.slice((p - 1) * size, p * size),
+      total: list.length, page: p, pageSize: size
+    };
   }
 
   /* ---------------- F10 敏感词 + 限流 ---------------- */
@@ -242,6 +342,8 @@
       // 展示辅助（非后端契约，页面渲染用）
       no: m.no, isNew: !!m.isNew, isPublic: m.isPublic !== false, period: m.period,
       edited: !!m.edited,
+      // GM 隐藏：作者本人仍可在「我的留言」看到并收到提示，其他视图一律排除
+      hidden: !!m.hidden, hiddenReason: m.hiddenReason || "",
       // F6：列表只返回掩码，且受三项公开开关控制（未勾选 → 空串）
       maskedName: owner && owner.flagName ? maskName(owner.realName) : "",
       maskedEmail: owner && owner.flagEmail ? maskEmail(owner.email) : "",
@@ -290,6 +392,8 @@
         email: (args.email || "").trim(),
         flagName: false, flagEmail: false, flagPhone: false,
         bio: "",
+        role: "user", status: "active", muteUntil: 0, muteReason: "",
+        banReason: "", bannedAt: 0, lastLoginAt: 0, mustChangePassword: false,
         createdAt: Date.now()
       };
       users.push(user);
@@ -334,8 +438,12 @@
         return fail(2001, "error.2001");
       }
 
+      if (isBanned(user)) return fail(2003, "error.2003", { reason: user.banReason || "" });
+
       delete fails[phone];
       db.saveLoginFails(fails);
+      user.lastLoginAt = Date.now();
+      db.saveUsers(db.getUsers().map(function (u) { return u.id === user.id ? user : u; }));
       createSession(user.id);
       return ok({
         displayId: user.displayId,
@@ -378,6 +486,9 @@
         // 帖子可见类型（isPublic=false 仅自己可见）：不进入他人可见的任何列表视图
         if (m.isPublic === false &&
             !(session && session.userId === m.ownerId)) return false;
+        // GM 隐藏：公开视图排除；作者本人的「我的留言」保留并带"已被隐藏"提示
+        if (m.hidden === true &&
+            !(opts.tab === "mine" && session && session.userId === m.ownerId)) return false;
         if (opts.tab === "mine" && m.ownerId !== session.userId) return false;
         if (opts.q) {
           var q = opts.q.toLowerCase();
@@ -420,6 +531,8 @@
       var session = currentSession(true);
       if (m.isPublic === false &&
           !(session && session.userId === m.ownerId)) return fail(5001, "error.5001");
+      if (m.hidden === true &&
+          !(session && session.userId === m.ownerId)) return fail(5001, "error.5001");
       if (opts.countView !== false) {
         m.stats.views += 1;
         db.saveMessages(messages);
@@ -437,6 +550,8 @@
       var auth = requireAuth(args.csrf);
       if (auth.err) return auth.err;
       var s = auth.session;
+      var muted = muteGate(s.userId);
+      if (muted) return muted;
 
       var content = String(args.content || "").trim();
       var plain = plainContent(content);                 // 富文本按可见文字计字数
@@ -502,13 +617,21 @@
       likes: c.likes,
       edited: !!c.edited,
       isAnonymous: anon,
+      hidden: !!c.hidden, hiddenReason: c.hiddenReason || "",
       // 前端绝不返回匿名回复的真实身份（F9/D-02）：isMine 对匿名一律 false
       isMine: !anon && !!(session && session.userId === c.ownerId)
     };
   }
 
   function buildCommentTree(messageId, session) {
-    var all = db.getComments().filter(function (c) { return c.messageId === messageId; });
+    // GM 隐藏评论：普通视图不展示，其下回复也一并不展示（本人可见自己的隐藏评论）
+    var visible = db.getComments().filter(function (c) {
+      return c.messageId === messageId &&
+        !(c.hidden === true && !(session && session.userId === c.ownerId));
+    });
+    var visibleIds = {};
+    visible.forEach(function (c) { visibleIds[c.resourceId] = true; });
+    var all = visible.filter(function (c) { return !c.parentId || visibleIds[c.parentId]; });
     var roots = [];
     var byId = {};
     all.forEach(function (c) { byId[c.resourceId] = toCommentOut(c, session); });
@@ -545,6 +668,8 @@
       var auth = requireAuth(args.csrf);
       if (auth.err) return auth.err;
       var s = auth.session;
+      var muted = muteGate(s.userId);
+      if (muted) return muted;
 
       var messages = db.getMessages();
       var m = messages.find(function (x) { return x.resourceId === args.messageId; });
@@ -764,7 +889,7 @@
 
       // 候选集：他人的、公开的、未删除的、非空的留言（排除自己）
       var candidates = db.getMessages().filter(function (m) {
-        return m.ownerId !== s.userId && m.isPublic !== false &&
+        return m.ownerId !== s.userId && m.isPublic !== false && m.hidden !== true &&
           plainContent(m.content).length > 0;
       });
       if (candidates.length === 0) return ok({ message: null });
@@ -782,6 +907,8 @@
       var auth = requireAuth(args.csrf);
       if (auth.err) return auth.err;
       var s = auth.session;
+      var muted = muteGate(s.userId);
+      if (muted) return muted;
 
       var messages = db.getMessages();
       var m = messages.find(function (x) { return x.resourceId === args.messageId; });
@@ -845,10 +972,11 @@
 
       // 仅自己可见：本人主页可见（isSelf），他人不可见；其下评论同理
       var messages = allMessages.filter(function (m) {
-        return m.ownerId === u.id && (isSelf || m.isPublic !== false);
+        return m.ownerId === u.id && (isSelf || (m.isPublic !== false && m.hidden !== true));
       });
       var comments = db.getComments().filter(function (c) {
         if (c.ownerId !== u.id || c.isAnonymous) return false;
+        if (c.hidden === true && !isSelf) return false;
         var m = msgById[c.messageId];
         return m && (isSelf || m.isPublic !== false);
       });
@@ -1039,6 +1167,427 @@
     });
   }
 
+  /* ================= GM 管理接口（G1–G17，文档 §6.3） ================= */
+
+  /** G1 概览 */
+  function gmSummary() {
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdminRead();
+      if (auth.err) return auth.err;
+      var users = db.getUsers();
+      var messages = db.getMessages();
+      var comments = db.getComments();
+      var actions = db.getAdminActions();
+      var dayAgo = Date.now() - 86400000;
+      return ok({
+        users: {
+          total: users.length,
+          active: users.filter(function (u) { return u.status !== "banned"; }).length,
+          banned: users.filter(function (u) { return u.status === "banned"; }).length,
+          admins: users.filter(isAdmin).length,
+          muted: users.filter(function (u) { return u.muteUntil && u.muteUntil > Date.now(); }).length
+        },
+        contents: {
+          messages: messages.length,
+          comments: comments.length,
+          hiddenMessages: messages.filter(function (m) { return m.hidden === true; }).length,
+          hiddenComments: comments.filter(function (c) { return c.hidden === true; }).length
+        },
+        today: {
+          newUsers: users.filter(function (u) { return u.createdAt > dayAgo; }).length,
+          newMessages: messages.filter(function (m) { return m.createdAt > dayAgo; }).length,
+          newComments: comments.filter(function (c) { return c.createdAt > dayAgo; }).length
+        },
+        actions: {
+          total: actions.length,
+          today: actions.filter(function (a) { return a.createdAt > dayAgo; }).length
+        },
+        // 设置页回填用（G15 / G16 的当前值），避免页面直接读数据库
+        settings: {
+          sensitiveWords: (db.getSettings().sensitiveWords || []).slice(),
+          currentPeriod: db.getSettings().currentPeriod
+        }
+      });
+    });
+  }
+
+  /** G2 用户列表 */
+  function gmUsers(args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdminRead();
+      if (auth.err) return auth.err;
+      var q = (args.q || "").toLowerCase();
+      var status = args.status || "all";
+      var role = args.role || "all";
+      var list = db.getUsers().filter(function (u) {
+        if (status !== "all" && (u.status || "active") !== status) return false;
+        if (role !== "all" && (u.role || "user") !== role) return false;
+        if (!q) return true;
+        return [u.account, u.displayId, u.nickname, u.realName]
+          .some(function (v) { return String(v || "").toLowerCase().indexOf(q) >= 0; });
+      }).map(toGmUser).sort(function (a, b) { return b.createdAt - a.createdAt; });
+      var out = paginate(list, args.page, args.pageSize);
+      // 读取敏感字段（完整手机号/邮箱）须写审计
+      audit(auth.user, "user.read_sensitive", "user", "list", "q=" + (args.q || "") + " 共 " + out.total + " 条");
+      return ok(out);
+    });
+  }
+
+  /** G3 用户详情 */
+  function gmUserDetail(userId) {
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdminRead();
+      if (auth.err) return auth.err;
+      var u = db.findUserById(userId);
+      if (!u) return fail(5001, "error.5001");
+      var out = toGmUser(u);
+      out.recentActionIds = db.getAdminActions().filter(function (a) {
+        return String(a.targetId) === String(userId) && a.targetType === "user";
+      }).sort(function (a, b) { return b.createdAt - a.createdAt; }).slice(0, 10).map(function (a) { return a.id; });
+      return ok(out);
+    });
+  }
+
+  /** G4 封禁 / 解封 */
+  function gmSetUserStatus(userId, args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdmin(args.csrf);
+      if (auth.err) return auth.err;
+      var u = db.findUserById(userId);
+      var guard = guardTarget(auth.user, u, args.status === "banned" ? "ban" : "none");
+      if (guard) return guard;
+      var status = args.status === "banned" ? "banned" : "active";
+      if ((u.status || "active") === status) return fail(6006, "error.6006");
+      u.status = status;
+      u.banReason = status === "banned" ? (args.reason || "") : "";
+      u.bannedAt = status === "banned" ? Date.now() : 0;
+      db.saveUsers(db.getUsers().map(function (x) { return x.id === u.id ? u : x; }));
+      if (status === "banned") revokeUserSessions(u.id);
+      audit(auth.user, status === "banned" ? "user.ban" : "user.unban", "user", u.id, args.reason || "");
+      return ok({ id: u.id, status: u.status, muteUntil: u.muteUntil || 0 });
+    });
+  }
+
+  /** G5 禁言 / 解除（1h / 1d / 7d / 永久 / 解除） */
+  function gmSetUserMute(userId, args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdmin(args.csrf);
+      if (auth.err) return auth.err;
+      var u = db.findUserById(userId);
+      var guard = guardTarget(auth.user, u, "none");
+      if (guard) return guard;
+      var dur = Number(args.durationSec);
+      if ([3600, 86400, 604800, -1, 0].indexOf(dur) < 0) return fail(6005, "error.6005");
+      var until = dur === -1 ? 253402300800000 : (dur === 0 ? 0 : Date.now() + dur * 1000);
+      if ((u.muteUntil || 0) === until) return fail(6006, "error.6006");
+      u.muteUntil = until;
+      u.muteReason = dur === 0 ? "" : (args.reason || "");
+      db.saveUsers(db.getUsers().map(function (x) { return x.id === u.id ? u : x; }));
+      audit(auth.user, dur === 0 ? "user.unmute" : "user.mute", "user", u.id,
+        (dur === 0 ? "解除禁言" : "时长 " + dur + " 秒") + (args.reason ? "｜" + args.reason : ""));
+      return ok({ id: u.id, muteUntil: until, muted: until > Date.now() });
+    });
+  }
+
+  /** G6 角色调整 */
+  function gmSetUserRole(userId, args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdmin(args.csrf);
+      if (auth.err) return auth.err;
+      var u = db.findUserById(userId);
+      var guard = guardTarget(auth.user, u, args.role === "user" ? "demote" : "none");
+      if (guard) return guard;
+      var role = args.role === "admin" ? "admin" : "user";
+      if ((u.role || "user") === role) return fail(6006, "error.6006");
+      u.role = role;
+      db.saveUsers(db.getUsers().map(function (x) { return x.id === u.id ? u : x; }));
+      // 角色变更后已有会话立即失效（重新登录才生效新角色）
+      revokeUserSessions(u.id);
+      audit(auth.user, "user.role", "user", u.id, role);
+      return ok({ id: u.id, role: role, isAdmin: role === "admin" });
+    });
+  }
+
+  /** G7 修改用户信息（detail 只记字段名，不记明文值） */
+  function gmUpdateUserProfile(userId, args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdmin(args.csrf);
+      if (auth.err) return auth.err;
+      var u = db.findUserById(userId);
+      var guard = guardTarget(auth.user, u, "none");
+      if (guard) return guard;
+      var fields = [];
+      if (args.nickname !== undefined) {
+        var nick = String(args.nickname).trim();
+        if (!nick || nick.length > 20) return fail(6005, "error.6005");
+        u.nickname = nick; fields.push("nickname");
+      }
+      if (args.bio !== undefined) {
+        var bio = String(args.bio).trim();
+        if (bio.length > 60) return fail(6005, "error.6005");
+        u.bio = bio; fields.push("bio");
+      }
+      if (args.avatarEnum !== undefined) {
+        var av = Number(args.avatarEnum);
+        if (!(av >= 1 && av <= seed.AVATARS.length)) return fail(6005, "error.6005");
+        u.avatarEnum = av; fields.push("avatarEnum");
+      }
+      if (args.realName !== undefined) {
+        var rn = String(args.realName).trim();
+        if (rn.length > 20) return fail(6005, "error.6005");
+        u.realName = rn; fields.push("realName");
+      }
+      if (args.email !== undefined) {
+        var em = String(args.email).trim();
+        if (em.length > 60 || (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em))) return fail(6005, "error.6005");
+        u.email = em; fields.push("email");
+      }
+      ["flagName", "flagEmail", "flagPhone"].forEach(function (k) {
+        if (args[k] !== undefined) { u[k] = !!args[k]; fields.push(k); }
+      });
+      if (!fields.length) return fail(6005, "error.6005");
+      db.saveUsers(db.getUsers().map(function (x) { return x.id === u.id ? u : x; }));
+      audit(auth.user, "user.profile_update", "user", u.id, fields.join(","));
+      return ok({ id: u.id, nickname: u.nickname, bio: u.bio, avatarEnum: u.avatarEnum });
+    });
+  }
+
+  /** G8 重置密码（不可操作内置账号 / 自己；吊销会话 + 强制改密） */
+  function gmResetPassword(userId, args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdmin(args.csrf);
+      if (auth.err) return auth.err;
+      var u = db.findUserById(userId);
+      var guard = guardTarget(auth.user, u, "none");
+      if (guard) return guard;
+      var pwd = String(args.newPassword || "");
+      if (pwd.length < 8 || pwd.length > 32 || !/[a-zA-Z]/.test(pwd) || !/\d/.test(pwd)) {
+        return fail(6005, "error.6005");
+      }
+      u.password = pwd; // 演示明文；真实系统为 bcrypt/加盐哈希
+      u.mustChangePassword = true;
+      db.saveUsers(db.getUsers().map(function (x) { return x.id === u.id ? u : x; }));
+      revokeUserSessions(u.id);
+      audit(auth.user, "user.reset_password", "user", u.id, "重置密码");
+      return ok({ id: u.id, passwordReset: true });
+    });
+  }
+
+  function toGmContent(type, item) {
+    if (type === "message") {
+      return {
+        type: "message", resourceId: item.resourceId, messageId: item.resourceId,
+        title: item.title || "", content: plainContent(item.content).slice(0, 160),
+        authorId: item.ownerId, authorNickname: item.nicknameSnapshot || "",
+        createdAt: item.createdAt, hidden: !!item.hidden, hiddenReason: item.hiddenReason || "",
+        period: item.period, stats: {
+          views: item.stats.views, likes: item.stats.likes,
+          comments: item.stats.comments, favorites: item.stats.favorites
+        }
+      };
+    }
+    var anon = !!item.isAnonymous;
+    var parent = db.findMessage(item.messageId);
+    return {
+      type: "comment", resourceId: item.resourceId, messageId: item.messageId,
+      title: parent ? ("回复：" + (parent.title || "留言")) : "评论",
+      content: item.content,
+      // 匿名红线：GM 也不暴露盲盒匿名回复的真实身份
+      authorId: anon ? "" : item.ownerId,
+      authorNickname: anon ? t("common.anonymous") : (item.authorName || ""),
+      createdAt: item.createdAt, hidden: !!item.hidden, hiddenReason: item.hiddenReason || "",
+      stats: { likes: item.likes || 0 }
+    };
+  }
+
+  /** G9 内容统一列表 */
+  function gmContents(args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdminRead();
+      if (auth.err) return auth.err;
+      var type = args.type || "all";
+      var q = (args.q || "").toLowerCase();
+      var hidden = String(args.hidden || "all");
+      var list = [];
+      if (type !== "comment") {
+        db.getMessages().forEach(function (m) { list.push(toGmContent("message", m)); });
+      }
+      if (type !== "message") {
+        db.getComments().forEach(function (c) { list.push(toGmContent("comment", c)); });
+      }
+      list = list.filter(function (x) {
+        if (hidden === "1" && !x.hidden) return false;
+        if (hidden === "0" && x.hidden) return false;
+        if (!q) return true;
+        return [x.title, x.content, x.authorNickname]
+          .some(function (v) { return String(v || "").toLowerCase().indexOf(q) >= 0; });
+      }).sort(function (a, b) { return b.createdAt - a.createdAt; });
+      return ok(paginate(list, args.page, args.pageSize));
+    });
+  }
+
+  /** G10 / G12 隐藏与显示 */
+  function gmSetHidden(kind, resourceId, args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdmin(args.csrf);
+      if (auth.err) return auth.err;
+      var isMsg = kind === "message";
+      var list = isMsg ? db.getMessages() : db.getComments();
+      var item = list.find(function (x) { return x.resourceId === resourceId; });
+      if (!item) return fail(5001, "error.5001");
+      var hidden = !!args.hidden;
+      if (!!item.hidden === hidden) return fail(6006, "error.6006");
+      item.hidden = hidden;
+      item.hiddenReason = hidden ? (args.reason || "") : "";
+      (isMsg ? db.saveMessages : db.saveComments).call(db, list);
+      audit(auth.user, isMsg ? (hidden ? "message.hide" : "message.show") :
+        (hidden ? "comment.hide" : "comment.show"), kind, resourceId, args.reason || "");
+      return ok({ resourceId: resourceId, hidden: hidden });
+    });
+  }
+
+  /** G11 / G13 硬删除（级联清理 + 审计） */
+  function gmDelete(kind, resourceId, args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdmin(args.csrf);
+      if (auth.err) return auth.err;
+      var deletedComments = 0, deletedLikes = 0, deletedTraces = 0;
+      if (kind === "message") {
+        var messages = db.getMessages();
+        var m = messages.find(function (x) { return x.resourceId === resourceId; });
+        if (!m) return fail(5001, "error.5001");
+        var comments = db.getComments();
+        deletedComments = comments.filter(function (c) { return c.messageId === resourceId; }).length;
+        db.saveComments(comments.filter(function (c) { return c.messageId !== resourceId; }));
+        var likes = db.getLikes();
+        var targets = {};
+        comments.forEach(function (c) { if (c.messageId === resourceId) targets[c.resourceId] = true; });
+        targets[resourceId] = true;
+        deletedLikes = likes.filter(function (l) { return targets[l.targetId]; }).length;
+        db.saveLikes(likes.filter(function (l) { return !targets[l.targetId]; }));
+        var traces = db.getBlindboxReplies();
+        deletedTraces = traces.filter(function (tr) { return tr.messageId === resourceId; }).length;
+        db.saveBlindboxReplies(traces.filter(function (tr) { return tr.messageId !== resourceId; }));
+        db.saveMessages(messages.filter(function (x) { return x.resourceId !== resourceId; }));
+      } else {
+        var allComments = db.getComments();
+        var c0 = allComments.find(function (x) { return x.resourceId === resourceId; });
+        if (!c0) return fail(5001, "error.5001");
+        var rootId = c0.rootId || c0.resourceId;
+        var removedIds = {};
+        allComments.forEach(function (c) {
+          if (c.resourceId === resourceId || (c0.depth === 1 && (c.rootId === rootId || c.resourceId === rootId))) {
+            removedIds[c.resourceId] = true;
+          }
+        });
+        deletedComments = Object.keys(removedIds).length;
+        db.saveComments(allComments.filter(function (c) { return !removedIds[c.resourceId]; }));
+        var allLikes = db.getLikes();
+        deletedLikes = allLikes.filter(function (l) { return removedIds[l.targetId]; }).length;
+        db.saveLikes(allLikes.filter(function (l) { return !removedIds[l.targetId]; }));
+        var allTraces = db.getBlindboxReplies();
+        deletedTraces = allTraces.filter(function (tr) { return removedIds[tr.replyId]; }).length;
+        db.saveBlindboxReplies(allTraces.filter(function (tr) { return !removedIds[tr.replyId]; }));
+        var msgs = db.getMessages();
+        var parent = msgs.find(function (x) { return x.resourceId === c0.messageId; });
+        if (parent && parent.stats.comments > 0) {
+          parent.stats.comments -= 1;
+          db.saveMessages(msgs);
+        }
+      }
+      audit(auth.user, kind + ".delete", kind, resourceId, "级联清理评论 " + deletedComments);
+      return ok({ resourceId: resourceId, deletedComments: deletedComments,
+        deletedLikes: deletedLikes, deletedTraces: deletedTraces });
+    });
+  }
+
+  /** G14 审计列表 */
+  function gmActions(args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdminRead();
+      if (auth.err) return auth.err;
+      var list = db.getAdminActions().filter(function (a) {
+        if (args.actorId && String(a.actorId) !== String(args.actorId)) return false;
+        if (args.action && a.action !== args.action) return false;
+        if (args.targetType && a.targetType !== args.targetType) return false;
+        if (args.from && a.createdAt < Number(args.from)) return false;
+        if (args.to && a.createdAt > Number(args.to)) return false;
+        return true;
+      }).sort(function (a, b) { return b.createdAt - a.createdAt; });
+      return ok(paginate(list, args.page, args.pageSize));
+    });
+  }
+
+  /** G15 / G16 配置修改 */
+  function gmSetSettings(kind, args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdmin(args.csrf);
+      if (auth.err) return auth.err;
+      var settings = db.getSettings();
+      if (kind === "sensitiveWords") {
+        if (!Array.isArray(args.words)) return fail(6005, "error.6005");
+        var words = [];
+        args.words.forEach(function (w) {
+          var s = String(w || "").trim();
+          if (s && s.length <= 30 && words.indexOf(s) < 0) words.push(s);
+        });
+        settings.sensitiveWords = words;
+        audit(auth.user, "settings.sensitive_words", "settings", "sensitiveWords", words.join(","));
+      } else {
+        var p = Number(args.period);
+        if (!isFinite(p) || p < settings.currentPeriod) return fail(6005, "error.6005");
+        settings.currentPeriod = p;
+        audit(auth.user, "settings.current_period", "settings", "currentPeriod", String(p));
+      }
+      db.saveSettings(settings);
+      return ok({ sensitiveWords: settings.sensitiveWords, currentPeriod: settings.currentPeriod });
+    });
+  }
+
+  /** G17 重置演示数据：审计表保留最后一条重置记录 */
+  function gmResetData(args) {
+    args = args || {};
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var auth = requireAdmin(args.csrf);
+      if (auth.err) return auth.err;
+      if (args.confirm !== "RESET") return fail(6005, "error.6005");
+      var entry = {
+        id: "RESET" + Date.now().toString(36),
+        actorId: auth.user.id, actorNickname: auth.user.nickname || "",
+        action: "data.reset", targetType: "system", targetId: "all",
+        detail: "重置演示数据", ip: "127.0.0.1", createdAt: Date.now()
+      };
+      db.reset();
+      db.saveAdminActions([entry]);
+      return ok({ reset: true, auditId: entry.id });
+    });
+  }
+
   /* ---------------- 会话查询 ---------------- */
 
   function apiGetSession() {
@@ -1052,6 +1601,8 @@
       nickname: u.nickname,
       avatarEnum: u.avatarEnum,
       displayId: u.displayId,
+      role: u.role || "user",
+      isAdmin: isAdmin(u),
       csrf: s.csrf
     });
   }
@@ -1090,6 +1641,25 @@
     /* 扩展 */   updateNickname: apiUpdateNickname,
     /* 扩展 */   updateSensitive: apiUpdateSensitive,
     /* 扩展 */   getSession: apiGetSession,
+
+    /* GM G1–G17 */
+    gmSummary: gmSummary,
+    gmUsers: gmUsers,
+    gmUserDetail: gmUserDetail,
+    gmSetUserStatus: gmSetUserStatus,
+    gmSetUserMute: gmSetUserMute,
+    gmSetUserRole: gmSetUserRole,
+    gmUpdateUserProfile: gmUpdateUserProfile,
+    gmResetPassword: gmResetPassword,
+    gmContents: gmContents,
+    gmSetMessageHidden: function (resourceId, args) { return gmSetHidden("message", resourceId, args); },
+    gmDeleteMessage: function (resourceId, args) { return gmDelete("message", resourceId, args); },
+    gmSetCommentHidden: function (resourceId, args) { return gmSetHidden("comment", resourceId, args); },
+    gmDeleteComment: function (resourceId, args) { return gmDelete("comment", resourceId, args); },
+    gmActions: gmActions,
+    gmSetSensitiveWords: function (args) { return gmSetSettings("sensitiveWords", args); },
+    gmSetCurrentPeriod: function (args) { return gmSetSettings("currentPeriod", args); },
+    gmResetData: gmResetData,
 
     /* 调试辅助（演示面板） */
     _debug: {

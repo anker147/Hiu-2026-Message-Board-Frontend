@@ -654,9 +654,12 @@ out.isMine = (session != null && session.userId == message.ownerId)
   "users": { "total": 7, "active": 6, "banned": 1, "muted": 2, "admins": 1 },
   "contents": { "messages": 8, "comments": 24, "hiddenMessages": 1, "hiddenComments": 2 },
   "today": { "newUsers": 1, "newMessages": 2, "newComments": 5 },
-  "actions": { "total": 18, "today": 4 }
+  "actions": { "total": 18, "today": 4 },
+  "settings": { "sensitiveWords": ["加微信", "代考"], "currentPeriod": 24 }
 }
 ```
+
+> `settings` 用于 GM 设置页回填当前值（G15 / G16 的读取侧），避免前端直连数据库。
 
 #### G2 用户列表 `GET /api/gm/users`
 
@@ -801,6 +804,7 @@ out.isMine = (session != null && session.userId == message.ownerId)
 | `gm.html#content` | 内容表格 / 隐藏 / 删除 | G9 G10 G11 G12 G13 |
 | `gm.html#actions` | 审计日志 | G14 |
 | `gm.html#settings` | 敏感词 / 期次 / 重置演示数据 | G15 G16 G17 |
+| `all.html` | 全部留言列表 + 搜索（零新接口，复用 `GET /api/messages`） | API-04 |
 
 前端文案键建议：`gm.title`、`gm.tabUsers`、`gm.tabContent`、`gm.tabActions`、`gm.tabSettings`、
 `gm.badge`（"管理员"）、`gm.action.ban`、`gm.action.unban`、`gm.action.mute`、`gm.action.unmute`、

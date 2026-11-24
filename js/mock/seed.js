@@ -48,6 +48,31 @@
     { id: 6, account: "13800000006", password: "abc12345", displayId: "36208841", nickname: "晚风",   avatarEnum: 4, realName: "林晚风",  email: "wanfeng@qq.com",     flagName: true,  flagEmail: false, flagPhone: true,  bio: "环湖散步队队长", createdAt: now - 15 * DAY }
   ];
 
+  /* —— 管理员账号（GM 默认账号，写死；文档 §6.1 约定）——
+     id=9999 为内置保护账号：不可封禁 / 降级 / 改密 / 删除；
+     登录入口与手机号账号共用 password 校验（演示明文，真实系统为加盐哈希）。 */
+  var ADMIN_USER = {
+    id: 9999,
+    account: "admin",
+    password: "admin",
+    displayId: "90000001",
+    nickname: "管理员",
+    avatarEnum: 1,
+    role: "admin",
+    status: "active",
+    muteUntil: 0,
+    muteReason: "",
+    banReason: "",
+    bannedAt: 0,
+    lastLoginAt: 0,
+    mustChangePassword: false,
+    flagName: false,
+    flagEmail: false,
+    flagPhone: false,
+    bio: "留言板管理员",
+    createdAt: 1730000000000
+  };
+
   /* —— 留言（第 24 期 6 条：画布 01 原值；第 23 期 2 条）
      时间锚点：周界口径为“周日 00:00 → 周六 24:00”，演示留言锚定在本期周日内
      （第 24 期 6 条在周日内 3~19h，第 23 期 2 条在上周日晚 ~ 周一晚）；
@@ -181,9 +206,33 @@
     { userId: 6, targetId: "a1f0b2c3-b2e1-4d94-9d02-000000000002" }
   ];
 
+  function withDefaults(defaults, item) {
+    var out = {}, k;
+    for (k in defaults) if (Object.prototype.hasOwnProperty.call(defaults, k)) out[k] = defaults[k];
+    for (k in item) if (Object.prototype.hasOwnProperty.call(item, k)) out[k] = item[k];
+    return out;
+  }
+
+  // 普通用户补齐 GM 权限字段（便于文档契约与 mock 出口一致），不改变原有演示数据
+  var USER_GM_DEFAULTS = {
+    role: "user", status: "active", muteUntil: 0, muteReason: "",
+    banReason: "", bannedAt: 0, lastLoginAt: 0, mustChangePassword: false
+  };
+  var USERS_WITH_ROLE = USERS.map(function (u) {
+    return withDefaults(USER_GM_DEFAULTS, u);
+  });
+
+  // hidden 为 GM 软处置字段：缺省即公开，这里显式补齐便于审计与列表筛选
+  var MESSAGES_WITH_HIDDEN = MESSAGES.map(function (m) {
+    return withDefaults({ hidden: false }, m);
+  });
+  var COMMENTS_WITH_HIDDEN = COMMENTS.map(function (c) {
+    return withDefaults({ hidden: false }, c);
+  });
+
   window.HMB = window.HMB || {};
   window.HMB.SEED = {
-    VERSION: 5, // v5：热榜改为按期次出版（默认上一期）——peakRank 语义重置为所属期次周榜名次，六条本期帖待首次浏览时维护
+    VERSION: 6, // v6：GM 权限模块（admin/admin、role/status/muteUntil/hidden、admin_actions 审计表）
     AVATARS: AVATARS,
     NICK_ADJ: NICK_ADJ,
     NICK_ANIMAL: NICK_ANIMAL,
@@ -192,9 +241,12 @@
     EMOJI_LIBRARY: EMOJI_LIBRARY,
     PERIODS: PERIODS,
     CURRENT_PERIOD: 24,
-    USERS: USERS,
-    MESSAGES: MESSAGES,
-    COMMENTS: COMMENTS,
-    LIKES: LIKES
+    USERS: USERS_WITH_ROLE.concat([ADMIN_USER]),
+    MESSAGES: MESSAGES_WITH_HIDDEN,
+    COMMENTS: COMMENTS_WITH_HIDDEN,
+    LIKES: LIKES,
+    ADMIN_USER: ADMIN_USER,
+    /** 内置保护账号：不可封禁 / 降级 / 改密 / 删除 */
+    isProtectedUser: function (userId) { return Number(userId) === 9999; }
   };
 })(window);

@@ -62,15 +62,22 @@
     var pill = el("span", "nav-pill");
     pill.style.width = "0px";
     nav.appendChild(pill);
-    var TAB_ICONS = { hot: "flame", latest: "clock", mine: "user", about: "info" };
-    var TAB_SUBS = { hot: "HOT", latest: "NEW", mine: "MINE", about: "ABOUT" };
-    var TAB_DEFS = [["hot", "common.hot"], ["latest", "common.latest"], ["mine", "common.mine"], ["about", "common.about"]];
+    var TAB_ICONS = { hot: "flame", latest: "clock", mine: "user", about: "info", gm: "shield" };
+    var TAB_SUBS = { hot: "HOT", latest: "NEW", mine: "MINE", about: "ABOUT", gm: "GM" };
+    // 管理员 GM = 导航岛第五项，仅 session.isAdmin=true 时渲染（服务端也必须校验角色）
+    var TAB_DEFS = [
+      ["hot", "common.hot"], ["latest", "common.latest"],
+      ["mine", "common.mine"], ["about", "common.about"]
+    ];
+    if (session && session.isAdmin) TAB_DEFS.push(["gm", "gm.badge"]);
     var current = activeTab;
     var switchEpoch = 0;   // 点击代际：predict 异步期间连点时，过期点击的 doSwap 作废   // 当前项的可变副本：软切换后必须同步，否则闭包旧值会把"切回加载时 tab"判为无操作
     /* tab 构建器：活岛用 data-text 走 i18n 注入；测量克隆行用 withText 直接写文本（克隆不经过 i18n.apply） */
     function buildTab(pair, isActive, withText) {
       var a = el("a", "nav-tab" + (isActive ? " is-active" : ""));
-      a.href = pair[0] === "about" ? "about.html" : "index.html?tab=" + pair[0];   // 关于整页跳转其自有页面
+      // 关于 / GM 为独立页面；其余在榜单页内软切换
+      a.href = (pair[0] === "about" || pair[0] === "gm")
+        ? pair[0] + ".html" : "index.html?tab=" + pair[0];
       a.setAttribute("data-tab", pair[0]);
       var ic = el("span", "nav-ico");
       ic.appendChild(U.icon(TAB_ICONS[pair[0]]));
@@ -88,8 +95,9 @@
       var a = buildTab(pair, activeTab === pair[0], false);
       a.addEventListener("click", function (e) {
         var board = HMB.pages && HMB.pages.board;
-        // standalone about.html 上点“关于”= 已在当前页，无操作（阻断页面过渡层）
-        if (pair[0] === "about" && location.pathname.indexOf("about.html") >= 0) {
+        // standalone about.html / gm.html 上点当前页项 = 无操作（阻断页面过渡层）
+        if ((pair[0] === "about" || pair[0] === "gm") &&
+            location.pathname.indexOf(pair[0] + ".html") >= 0) {
           e.preventDefault(); e.stopPropagation(); return;
         }
         // 榜单页内软切换（含“关于”视图切换）：胶囊滑向新位置（replaceState 不计文档导航）
@@ -303,6 +311,7 @@
       if (session.displayId) menuItem("common.viewProfile", "zone.html?u=" + encodeURIComponent(session.displayId));
       menuItem("common.editProfile", "profile.html");
       menuItem("common.myMessages", "index.html?tab=mine");
+      menuItem("common.allMessages", "all.html");
       var logoutItem = menuItem("common.logout", "#", true);
 
       idPill.addEventListener("click", function (e) {
