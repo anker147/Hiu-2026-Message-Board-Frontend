@@ -955,13 +955,34 @@ body[data-page="login"] {
 
 /* 图标输入框（浮动标签：未输入显示在框内，聚焦/有内容后缩小上移并常驻） */
 .login-field {
+  --line-c: rgba(255,255,255,.14);   /* 边框色，随 hover/focus/error 变化 */
+  --gap-s: 0px;                      /* 上边框缺口：默认 0（完整线），标签浮起时才展开 */
+  --gap-e: 0px;
   position: relative;
   display: flex; align-items: center; gap: 10px;
   height: 46px; padding: 0 13px;
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid var(--line-c);
+  border-top-color: transparent;     /* 上边框交给 ::before，中间留标签缺口 */
   border-radius: 12px;
   background: rgba(255,255,255,.06);
   transition: border-color .22s var(--ease-out), background .22s var(--ease-out), box-shadow .22s var(--ease-out), transform .22s var(--ease-out);
+}
+/* 上边框 = 左段 + 右段，中间缺口恰好让浮动标签骑在框上且不被线穿过 */
+.login-field::before {
+  content: ""; position: absolute; top: -1px; left: -1px; right: -1px; height: 1px;
+  background: linear-gradient(to right,
+    transparent 0, var(--line-c) 7px,          /* 左端淡入，贴合圆角，避免线头伸出 */
+    var(--line-c) var(--gap-s),
+    transparent var(--gap-s), transparent var(--gap-e),
+    var(--line-c) var(--gap-e), var(--line-c) calc(100% - 7px), transparent 100%); /* 右端淡出 */
+  border-radius: 12px 12px 0 0; pointer-events: none;
+  transition: background .22s var(--ease-out);
+}
+/* 仅当标签浮起（聚焦或有内容）才展开缺口；空态保持完整上边框 */
+.login-field:focus-within,
+.login-field:has(.input:not(:placeholder-shown)) {
+  --gap-s: var(--meas-s, 0px);
+  --gap-e: var(--meas-e, 0px);
 }
 .float-label {
   position: absolute; left: 39px; top: 50%;
@@ -972,30 +993,32 @@ body[data-page="login"] {
   transition: top .2s var(--ease-out), transform .2s var(--ease-out), color .2s var(--ease-out);
 }
 /* 聚焦 或 已有内容 → 缩小并骑到输入框上边框上（描边式浮动标签）：
-   位置沿用原「压边框」方案，仅按要求去掉遮罩色块（背景透明），文字不上移飞出框外；
-   left 与 padding 补偿后仍与输入文字左对齐 */
+   上边框已由 ::before 按标签实际宽度挖出缺口，标签保持全透明即可骑框且不穿字；
+   位置不上移飞出框外，left 补偿后仍与输入文字左对齐 */
 .login-field:focus-within .float-label,
-.login-field .input:not(:placeholder-shown) ~ .float-label {
-  top: -9px;
+.login-field .input:not(:placeholder-shown) ~ .float-label,
+.login-field.is-measuring .float-label {
+  top: -8px;
   left: 34px;
-  padding: 0 5px;
-  border-radius: 4px;
+  padding: 0;
   background: transparent;
-  transform: translateY(0) scale(.76);
-  color: #8fd0ff;
+  transform: translateY(0) scale(.82);
+  color: #9fd6ff;
 }
+/* 测量态禁用过渡，确保 getBoundingClientRect 拿到终值 */
+.login-field.is-measuring .float-label { transition: none; }
 .float-label .req-star { color: #ff9a9a; font-size: 14px; font-weight: 700; line-height: 1; }
 .float-label .opt-tag { font-style: normal; font-size: 10px; color: rgba(238,242,247,.4); border: 1px solid rgba(255,255,255,.16); border-radius: 4px; padding: 0 4px; line-height: 14px; }
 .login-field:focus-within .opt-tag,
 .login-field .input:not(:placeholder-shown) ~ .float-label .opt-tag { color: rgba(143,208,255,.8); border-color: rgba(143,208,255,.35); }
-.login-field:hover { border-color: rgba(255,255,255,.26); background: rgba(255,255,255,.08); }
+.login-field:hover { --line-c: rgba(255,255,255,.26); background: rgba(255,255,255,.08); }
 .login-field:focus-within {
+  --line-c: rgba(143,208,255,.7);
   transform: translateY(-2px);
-  border-color: rgba(143,208,255,.7);
   background: rgba(255,255,255,.1);
   box-shadow: 0 8px 22px rgba(6,18,36,.35), 0 0 0 3px rgba(93,155,214,.16);
 }
-.login-field.is-error { border-color: rgba(255,138,138,.7); background: rgba(255,138,138,.08); }
+.login-field.is-error { --line-c: rgba(255,138,138,.7); background: rgba(255,138,138,.08); }
 .field-ico { flex: 0 0 16px; width: 16px; height: 16px; color: rgba(238,242,247,.55); transition: color .22s var(--ease-out); }
 .login-field:focus-within .field-ico { color: #8fd0ff; }
 .login-field .input {

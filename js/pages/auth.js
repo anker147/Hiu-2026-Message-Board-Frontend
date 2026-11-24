@@ -257,6 +257,10 @@
     wrap.style.overflow = "hidden";
     lf.hidden = which !== "login";
     rf.hidden = which !== "register";
+    // 新表单从隐藏变可见 → 布局稳定后重测浮动标签缺口宽度
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(measureFloatGaps);
+    });
     var toH = wrap.scrollHeight;                       // 新表单的自然高度
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (Math.abs(toH - fromH) > 1 && !reduce) {
@@ -339,6 +343,38 @@
     pre.src = "https://picsum.photos/id/" + WINTER[Math.floor(Math.random() * WINTER.length)] + "/1920/1080";
   }
 
+  /* ---------------- 浮动标签：按文字实际宽度给上边框挖缺口 ----------------
+   * 标签骑在上边框上且全透明，边框须在标签文字区间断开才不穿字。
+   * 文案长度各异（"密码" vs "账号 / 手机号"），故按聚焦态实测宽度动态写入
+   * --gap-s / --gap-e，让缺口始终恰好贴合文字，两端各留 4px 呼吸位。 */
+  var measureFloatGaps = function () {};
+  function initFloatLabelGaps() {
+    function measure() {
+      // 只测可见表单里的字段（隐藏表单宽度为 0，测出来无效）
+      document.querySelectorAll(".login-field").forEach(function (field) {
+        if (!field.getClientRects().length) return;
+        var label = field.querySelector(".float-label");
+        if (!label) return;
+        // 临时把标签切到「聚焦态」的尺寸/位置再测，避免测到未聚焦的框内大字
+        field.classList.add("is-measuring");
+        var fr = field.getBoundingClientRect();
+        var lr = label.getBoundingClientRect();
+        field.classList.remove("is-measuring");
+        // 标签缩放后的实际左右边界，相对输入框左边缘；两端各扩 4px
+        var s = Math.max(0, Math.round(lr.left - fr.left) - 4);
+        var e = Math.min(Math.round(fr.width) + 2, Math.round(lr.right - fr.left) + 4);
+        field.style.setProperty("--meas-s", s + "px");
+        field.style.setProperty("--meas-e", e + "px");
+      });
+    }
+    measureFloatGaps = measure;
+    // 首屏布局稳定后测量（字体/背景加载会改变宽度）
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(measure);
+    });
+    window.addEventListener("resize", measure);
+  }
+
   /* ---------------- 共用初始化 ---------------- */
 
   function init() {
@@ -358,6 +394,7 @@
       bindTabs();
       bindAgreement();
       bindBg();
+      initFloatLabelGaps();
     });
   }
 
