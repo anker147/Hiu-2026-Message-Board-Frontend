@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 14; // v14：GM 概览仪表盘（核心指标/用户概况/今日动态/快捷操作）文案
+  var VERSION = 15; // v15：GM 用户表重排、内容/审计详情弹窗文案
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -661,7 +661,7 @@
     "gm.settings.sensitiveDesc": "每行一个词，命中后留言与评论将无法发布；修改后立即生效",
     "gm.settings.wordsPlaceholder": "每行一个敏感词",
     "gm.settings.periodTitle": "当前期次",
-    "gm.settings.periodDesc": "新发布的留言会归入该期次；期次只能前进，不能回退",
+    "gm.settings.periodDesc": "新发布的留言归入该期次，期次只能前进；已发布留言、周榜历史数据和折线不受影响",
     "gm.settings.save": "保存设置",
     "gm.settings.resetTitle": "重置演示数据",
     "gm.settings.resetDesc": "清空当前演示数据并按初始种子重建（含管理员账号），操作不可恢复",
@@ -690,6 +690,19 @@
     "gm.action.settings.sensitive_words": "修改敏感词",
     "gm.action.settings.current_period": "修改期次",
     "gm.action.data.reset": "重置演示数据",
+    "gm.content.viewDetail": "查看内容详情",
+    "gm.actions.viewDetail": "查看详情",
+    "gm.detail.author": "作者",
+    "gm.detail.time": "时间",
+    "gm.detail.stats": "数据",
+    "gm.detail.original": "原始内容",
+    "gm.detail.comments": "评论与回复",
+    "gm.detail.noComments": "这条留言暂无评论",
+    "gm.detail.actor": "操作人",
+    "gm.detail.brief": "功能简述",
+    "gm.detail.target": "操作对象",
+    "gm.detail.ip": "来源 IP",
+    "gm.detail.raw": "原始记录",
 
     /* —— Toast —— */
     "toast.likeOn": "已点赞",

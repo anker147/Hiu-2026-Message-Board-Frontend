@@ -194,7 +194,7 @@
       bindNav();
       bindFilters();
       var hash = (window.location.hash || "").replace("#", "");
-      switchPanel(["overview", "users", "content", "actions", "settings"].indexOf(hash) >= 0 ? hash : "overview");
+      switchPanel(["overview", "users", "content", "actions", "settings"].indexOf(hash) >= 0 ? hash : "overview", true);
     });
   }
 
@@ -231,16 +231,36 @@
     $("gmDataReset").addEventListener("click", confirmResetData);
   }
 
-  function switchPanel(name) {
-    current = name;
-    document.querySelectorAll(".gm-side-btn").forEach(function (b) {
-      b.classList.toggle("is-active", b.dataset.panel === name);
-    });
-    document.querySelectorAll(".gm-panel").forEach(function (p) {
-      p.classList.toggle("is-active", p.id === "panel-" + name);
-    });
-    if (history.replaceState) history.replaceState(null, "", "#" + name);
-    loadPanel();
+  var panelSwitchTimer = null;
+
+  /** 面板切换：旧面板先线性淡出，再载入新面板，避免硬切"卡手"。
+   *  immediate=true 用于首次进入；系统开启"减少动态效果"时直接切换。 */
+  function switchPanel(name, immediate) {
+    var oldPanel = document.querySelector(".gm-panel.is-active");
+    var apply = function () {
+      current = name;
+      document.querySelectorAll(".gm-side-btn").forEach(function (b) {
+        b.classList.toggle("is-active", b.dataset.panel === name);
+      });
+      document.querySelectorAll(".gm-panel").forEach(function (p) {
+        p.classList.toggle("is-active", p.id === "panel-" + name);
+      });
+      if (history.replaceState) history.replaceState(null, "", "#" + name);
+      loadPanel();
+    };
+    if (panelSwitchTimer) { clearTimeout(panelSwitchTimer); panelSwitchTimer = null; }
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (immediate || reduced || !oldPanel || oldPanel.id === "panel-" + name) {
+      if (oldPanel) oldPanel.classList.remove("is-leaving");
+      apply();
+      return;
+    }
+    oldPanel.classList.add("is-leaving");
+    panelSwitchTimer = setTimeout(function () {
+      panelSwitchTimer = null;
+      oldPanel.classList.remove("is-leaving");
+      apply();
+    }, 110);
   }
 
   function loadPanel() {
@@ -391,6 +411,8 @@
         var statsCell = el("div", "gm-cell-sub",
           t("gm.overview.messages") + " " + u.messageCount + " · " + t("gm.overview.comments") + " " + u.commentCount);
 
+        /* 操作列只留「封禁/解封」一个高频按钮，其余收进「更多」；
+           配合 gm-table--users 固定列宽，按钮不再压住昵称与账号文字。 */
         var actions = el("div", "gm-actions-cell");
         if (u.protected || u.id === session.userId) {
           actions.appendChild(el("span", "gm-cell-sub", u.protected ? t("gm.user.protected") : t("gm.user.selfNote")));
@@ -399,12 +421,11 @@
           actions.appendChild(btn(u.status === "banned" ? "gm.user.unban" : "gm.user.ban",
             u.status === "banned" ? "btn--soft btn--sm" : "btn--danger btn--sm",
             function () { u.status === "banned" ? openUnban(u) : openBan(u); }));
-          if (u.muteUntil && u.muteUntil > Date.now()) {
-            actions.appendChild(btn("gm.user.unmute", "btn--soft btn--sm", function () { openUnmute(u); }));
-          } else {
-            actions.appendChild(btn("gm.user.mute", "btn--soft btn--sm", function () { openMute(u); }));
-          }
+          var muted = !!(u.muteUntil && u.muteUntil > Date.now());
           actions.appendChild(moreMenu([
+            { key: muted ? "gm.user.unmute" : "gm.user.mute", onClick: function () {
+                if (muted) openUnmute(u); else openMute(u);
+              } },
             { key: u.role === "admin" ? "gm.user.demote" : "gm.user.promote", onClick: function () { openRole(u); } },
             { key: "gm.user.editProfile", onClick: function () { openProfile(u); } },
             { key: "gm.user.resetPassword", onClick: function () { openResetPwd(u); } }
@@ -412,7 +433,7 @@
         }
         return [userCell, roleCell, statusCell, statsCell, actions];
       });
-      renderTable(wrap, headers, rows);
+      renderTable(wrap, headers, rows, null, "users");
       renderPager($("gmUserPager"), "users", d, loadUsers);
       setResultCount("gmUserCount", d.total);
     });
@@ -552,10 +573,17 @@
         typeCell.appendChild(badge(x.type === "message" ? "gm.content.typeMessage" : "gm.content.typeComment",
           x.type === "message" ? "admin" : ""));
 
-        var contentCell = el("div", "gm-content-cell");
+        var contentCell = el("div", "gm-content-cell is-clickable");
+        contentCell.title = t("gm.content.viewDetail");
+        contentCell.setAttribute("tabindex", "0");
+        contentCell.setAttribute("role", "button");
         contentCell.appendChild(el("div", "gm-content-title", x.title || "（无标题）"));
         contentCell.appendChild(el("div", "gm-cell-sub", String(x.content || "").slice(0, 90)));
         contentCell.appendChild(el("div", "gm-cell-sub", "@" + (x.authorNickname || "—") + " · " + U.fmtDate(x.createdAt)));
+        contentCell.addEventListener("click", function () { openContentDetail(x); });
+        contentCell.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openContentDetail(x); }
+        });
 
         var statusCell = el("div", "gm-cell");
         statusCell.appendChild(badge(x.hidden ? "gm.content.hiddenYes" : "gm.content.hiddenNo", x.hidden ? "warn" : "ok"));
@@ -611,12 +639,23 @@
       var d = resp.data;
       var headers = ["gm.actions.colTime", "gm.actions.colActor", "gm.actions.colAction", "gm.actions.colTarget", "gm.actions.colDetail"];
       var rows = d.list.map(function (a) {
+        var detailCell = el("div", "gm-cell gm-cell--detail");
+        var detailText = String(a.detail || "");
+        var link = el("span", "gm-cell-link", detailText.slice(0, 80) || t("gm.actions.viewDetail"));
+        link.title = t("gm.actions.viewDetail");
+        link.setAttribute("tabindex", "0");
+        link.setAttribute("role", "button");
+        link.addEventListener("click", function () { openActionDetail(a); });
+        link.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openActionDetail(a); }
+        });
+        detailCell.appendChild(link);
         return [
           el("div", "gm-cell-sub", new Date(a.createdAt).toLocaleString("zh-CN")),
           el("div", "gm-cell", a.actorNickname || ("ID " + a.actorId)),
           el("div", "gm-cell", actionLabel(a.action)),
           el("div", "gm-cell-sub", a.targetType + " · " + String(a.targetId || "").slice(0, 12)),
-          el("div", "gm-cell-sub", String(a.detail || "").slice(0, 80))
+          detailCell
         ];
       });
       renderTable(wrap, headers, rows, "gm.actions.empty");
@@ -629,6 +668,84 @@
     var key = "gm.action." + action;
     var v = t(key);
     return v === key ? action : v;
+  }
+
+  /** 详情弹窗：内容管理点击条目，看完整正文与下方评论 */
+  function openContentDetail(x) {
+    var body = el("div", "gm-modal-fields");
+    body.appendChild(detailMeta([
+      [t("gm.content.colType"), t(x.type === "message" ? "gm.content.typeMessage" : "gm.content.typeComment")],
+      [t("gm.detail.author"), "@" + (x.authorNickname || "—")],
+      [t("gm.detail.time"), new Date(x.createdAt).toLocaleString("zh-CN")],
+      [t("gm.content.colStatus"), t(x.hidden ? "gm.content.hiddenYes" : "gm.content.hiddenNo") +
+        (x.hidden && x.hiddenReason ? "（" + x.hiddenReason + "）" : "")],
+      [t("gm.detail.stats"), x.type === "message"
+        ? (t("common.statViews") + " " + U.fmtViews(x.stats.views || 0) + " · " +
+           t("common.likes") + " " + U.fmtViews(x.stats.likes || 0) + " · " +
+           t("gm.overview.comments") + " " + U.fmtViews(x.stats.comments || 0))
+        : (t("common.likes") + " " + U.fmtViews(x.stats.likes || 0))]
+    ]));
+
+    body.appendChild(el("div", "gm-detail-section-title", t("gm.detail.original")));
+    var contentBox = el("div", "gm-detail-content" + (x.type === "message" ? " rich-content" : ""));
+    if (x.type === "message" && (x.fullContent || /<[a-z][\s\S]*>/i.test(x.content || ""))) {
+      contentBox.appendChild(U.renderRich(x.fullContent || x.content, ""));
+    } else {
+      contentBox.textContent = x.content || "—";
+    }
+    body.appendChild(contentBox);
+
+    if (x.type === "message") {
+      body.appendChild(el("div", "gm-detail-section-title", t("gm.detail.comments")));
+      var list = el("div", "gm-comment-list");
+      var comments = x.comments || [];
+      if (!comments.length) {
+        list.appendChild(el("div", "gm-detail-empty", t("gm.detail.noComments")));
+      } else {
+        comments.forEach(function (c) {
+          var item = el("div", "gm-comment-item");
+          var head = el("div", "gm-comment-head");
+          head.appendChild(el("span", "gm-comment-author", c.authorName || t("common.anonymous")));
+          head.appendChild(el("span", null, new Date(c.createdAt).toLocaleString("zh-CN")));
+          if (c.hidden) head.appendChild(badge("gm.content.hiddenYes", "warn"));
+          item.appendChild(head);
+          item.appendChild(el("div", "gm-comment-text", c.content || ""));
+          list.appendChild(item);
+        });
+      }
+      body.appendChild(list);
+    }
+    openModal({
+      title: x.title || t("gm.content.viewDetail"),
+      wide: true, hideOk: true, content: body
+    });
+  }
+
+  /** 详情弹窗：审计记录显示功能简述 + 原始内容（不再出现 q=共N条 这类参数拼接） */
+  function openActionDetail(a) {
+    var body = el("div", "gm-modal-fields");
+    body.appendChild(detailMeta([
+      [t("gm.actions.colTime"), new Date(a.createdAt).toLocaleString("zh-CN")],
+      [t("gm.detail.actor"), a.actorNickname || ("ID " + a.actorId)],
+      [t("gm.detail.brief"), actionLabel(a.action)],
+      [t("gm.detail.target"), (a.targetType || "—") + " · " + String(a.targetId || "—")],
+      [t("gm.detail.ip"), a.ip || "—"]
+    ]));
+    body.appendChild(el("div", "gm-detail-section-title", t("gm.detail.raw")));
+    body.appendChild(el("div", "gm-detail-content", String(a.detail || "—")));
+    openModal({
+      title: t("gm.actions.viewDetail") + " · " + actionLabel(a.action),
+      wide: true, hideOk: true, content: body
+    });
+  }
+
+  function detailMeta(pairs) {
+    var dl = el("dl", "gm-detail-meta");
+    pairs.forEach(function (p) {
+      dl.appendChild(el("dt", null, p[0]));
+      dl.appendChild(el("dd", null, p[1]));
+    });
+    return dl;
   }
 
   /* ---------------- 设置 ---------------- */
@@ -650,6 +767,8 @@
       return api.gmSetCurrentPeriod({ period: period, csrf: session.csrf }).then(function (r2) {
         if (!r2.success) { toastFail(r2); return; }
         U.toast(t("gm.settings.saved"), "success");
+        // 期次前进后同步首页榜单的本地缓存与下拉，避免仍停留在旧期
+        if (HMB.pages.board && HMB.pages.board.syncPeriod) HMB.pages.board.syncPeriod();
         loadOverview();
       });
     });
@@ -681,11 +800,13 @@
     return b;
   }
 
-  /** 行内「更多」菜单：把低频操作收进弹出层，表格只留封禁/禁言两个高频动作 */
+  /** 行内「更多」菜单：把低频操作收进弹出层，表格只留封禁/解封一个高频动作 */
   function moreMenu(items) {
     var wrap = el("div", "gm-more");
-    var toggle = el("button", "btn btn--soft btn--sm gm-more-btn", t("gm.common.more"));
+    var toggle = el("button", "btn btn--soft btn--sm gm-more-btn", "···");
     toggle.type = "button";
+    toggle.title = t("gm.common.more");
+    toggle.setAttribute("aria-label", t("gm.common.more"));
     toggle.setAttribute("aria-haspopup", "true");
     toggle.setAttribute("aria-expanded", "false");
     var menu = el("div", "gm-more-menu");
@@ -728,8 +849,8 @@
     return el("span", "gm-badge" + (tone ? " gm-badge--" + tone : ""), t(labelKey));
   }
 
-  function renderTable(wrap, headers, rows, emptyKey) {
-    var table = el("table", "gm-table");
+  function renderTable(wrap, headers, rows, emptyKey, variant) {
+    var table = el("table", "gm-table" + (variant ? " gm-table--" + variant : ""));
     var thead = el("thead");
     var hr = el("tr");
     headers.forEach(function (h) {
@@ -797,7 +918,7 @@
     var root = $("gmModalRoot");
     root.textContent = "";
     var mask = el("div", "gm-modal-mask");
-    var box = el("div", "gm-modal");
+    var box = el("div", "gm-modal" + (opts.wide ? " gm-modal--wide" : ""));
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-modal", "true");
 
@@ -815,38 +936,51 @@
     box.appendChild(body);
 
     var foot = el("div", "gm-modal-foot");
-    var cancel = el("button", "btn btn--ghost btn--sm", t("common.cancel"));
+    var cancel = el("button", "btn " + (opts.hideOk ? "btn--primary" : "btn--ghost") + " btn--sm",
+      opts.hideOk ? t("common.close") : t("common.cancel"));
     cancel.type = "button";
     foot.appendChild(cancel);
-    var ok = el("button", "btn " + (opts.danger ? "btn--danger" : "btn--primary") + " btn--sm",
-      opts.okText || t("common.ok"));
-    ok.type = "button";
-    foot.appendChild(ok);
+    var ok = null;
+    if (!opts.hideOk) {
+      ok = el("button", "btn " + (opts.danger ? "btn--danger" : "btn--primary") + " btn--sm",
+        opts.okText || t("common.ok"));
+      ok.type = "button";
+      foot.appendChild(ok);
+    }
     box.appendChild(foot);
     mask.appendChild(box);
     root.appendChild(mask);
 
-    function closeModal() { root.textContent = ""; }
+    /* 线性退出动画：先播 130ms 再摘除，ESC 监听同步解绑，避免叠加泄漏 */
+    var closing = false;
+    function onEsc(e) { if (e.key === "Escape") closeModal(); }
+    function closeModal() {
+      if (closing) return;
+      closing = true;
+      mask.classList.add("is-closing");
+      document.removeEventListener("keydown", onEsc);
+      setTimeout(function () {
+        if (mask.parentNode === root) root.textContent = "";
+      }, 130);
+    }
     close.addEventListener("click", closeModal);
     cancel.addEventListener("click", closeModal);
     mask.addEventListener("click", function (e) { if (e.target === mask) closeModal(); });
-    document.addEventListener("keydown", function onEsc(e) {
-      if (e.key !== "Escape") return;
-      closeModal();
-      document.removeEventListener("keydown", onEsc);
-    });
+    document.addEventListener("keydown", onEsc);
 
-    ok.addEventListener("click", function () {
-      ok.disabled = true;
-      var p = opts.onOk ? opts.onOk() : null;
-      if (!p || typeof p.then !== "function") { closeModal(); return; }
-      p.then(function (resp) {
-        ok.disabled = false;
-        if (!resp || !resp.success) { toastFail(resp); return; }
-        closeModal();
-        reload();
+    if (ok) {
+      ok.addEventListener("click", function () {
+        ok.disabled = true;
+        var p = opts.onOk ? opts.onOk() : null;
+        if (!p || typeof p.then !== "function") { closeModal(); return; }
+        p.then(function (resp) {
+          ok.disabled = false;
+          if (!resp || !resp.success) { toastFail(resp); return; }
+          closeModal();
+          reload();
+        });
       });
-    });
+    }
     return { body: body, close: closeModal };
   }
 
