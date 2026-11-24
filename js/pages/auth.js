@@ -280,10 +280,9 @@
       wrap.style.overflow = "";
     }
     var target = which === "login" ? lf : rf;
-    if (!reduce && target.animate) {
-      var a = target.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: "linear" });
-      a.finished.then(function () { a.cancel(); }).catch(function () {});
-    }
+    // 新表单逐条飞入（追风杯 tp-reveal 语言）：写 --i 后重播 .form-enter，
+    // 各字段按序上浮淡入，替代原先整块 opacity 淡入。
+    U.replayFormEnter(target);
   }
 
   var AGREEMENT = [
@@ -395,6 +394,8 @@
       bindAgreement();
       bindBg();
       initFloatLabelGaps();
+      // 首屏登录表单也按真实子元素数写入 --i（>7 个时 CSS nth-child 只兜底到 6）
+      U.replayFormEnter($("loginForm"));
     });
   }
 

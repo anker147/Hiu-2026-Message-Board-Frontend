@@ -90,7 +90,7 @@
     '            <option value="user" data-text="gm.user.roleUser">普通用户</option>',
     '            <option value="admin" data-text="gm.user.roleAdmin">管理员</option>',
     '          </select>',
-    '          <button type="button" class="btn btn--soft btn--sm" id="gmUserReload" data-text="common.retry">重试</button>',
+    '          <button type="button" class="gm-icon-btn" id="gmUserReload" aria-label="重试" title="重试"></button>',
     '          <span class="gm-result-count" id="gmUserCount"></span>',
     '        </div>',
     '        <div class="gm-table-wrap" id="gmUserTable"></div>',
@@ -113,7 +113,7 @@
     '            <option value="0" data-text="gm.content.hiddenNo">正常</option>',
     '            <option value="1" data-text="gm.content.hiddenYes">已隐藏</option>',
     '          </select>',
-    '          <button type="button" class="btn btn--soft btn--sm" id="gmContentReload" data-text="common.retry">重试</button>',
+    '          <button type="button" class="gm-icon-btn" id="gmContentReload" aria-label="重试" title="重试"></button>',
     '          <span class="gm-result-count" id="gmContentCount"></span>',
     '        </div>',
     '        <div class="gm-table-wrap" id="gmContentTable"></div>',
@@ -191,6 +191,11 @@
       var us = $("gmUserSearchIcon"), cs = $("gmContentSearchIcon");
       if (us) us.appendChild(U.icon("search"));
       if (cs) cs.appendChild(U.icon("search"));
+      // 重试按钮改为图标按钮
+      ["gmUserReload", "gmContentReload"].forEach(function (id) {
+        var rb = $(id);
+        if (rb) rb.appendChild(U.icon("refresh"));
+      });
       bindNav();
       bindFilters();
       var hash = (window.location.hash || "").replace("#", "");
@@ -721,18 +726,30 @@
     });
   }
 
-  /** 详情弹窗：审计记录显示功能简述 + 原始内容（不再出现 q=共N条 这类参数拼接） */
+  /** 详情弹窗：审计记录 = 元信息 + 单列的文字描述 + 代码块形式的原始记录。
+   *  原始记录用 <pre><code> 呈现（保留原始文本、等宽、可换行），不再当普通正文渲染；
+   *  功能简述（人类可读）单独一条列出，与机器原始记录分离。 */
   function openActionDetail(a) {
     var body = el("div", "gm-modal-fields");
     body.appendChild(detailMeta([
       [t("gm.actions.colTime"), new Date(a.createdAt).toLocaleString("zh-CN")],
       [t("gm.detail.actor"), a.actorNickname || ("ID " + a.actorId)],
-      [t("gm.detail.brief"), actionLabel(a.action)],
       [t("gm.detail.target"), (a.targetType || "—") + " · " + String(a.targetId || "—")],
       [t("gm.detail.ip"), a.ip || "—"]
     ]));
+
+    // 文字描述单拉一条
+    body.appendChild(el("div", "gm-detail-section-title", t("gm.detail.brief")));
+    var briefBox = el("div", "gm-detail-content", actionLabel(a.action));
+    body.appendChild(briefBox);
+
+    // 原始记录按代码展示
     body.appendChild(el("div", "gm-detail-section-title", t("gm.detail.raw")));
-    body.appendChild(el("div", "gm-detail-content", String(a.detail || "—")));
+    var codeBox = el("pre", "gm-detail-code");
+    var code = el("code", null, String(a.detail || "—"));
+    codeBox.appendChild(code);
+    body.appendChild(codeBox);
+
     openModal({
       title: t("gm.actions.viewDetail") + " · " + actionLabel(a.action),
       wide: true, hideOk: true, content: body
@@ -866,8 +883,9 @@
       tr.appendChild(td);
       tbody.appendChild(tr);
     } else {
-      rows.forEach(function (cells) {
-        var tr = el("tr");
+      rows.forEach(function (cells, idx) {
+        var tr = el("tr", "gm-row-in");
+        tr.style.setProperty("--i", Math.min(idx, 14));   // 逐行上浮淡入，封顶避免长列表等待过久
         cells.forEach(function (c) {
           var td = el("td");
           if (c !== null && c !== undefined) td.appendChild(c);

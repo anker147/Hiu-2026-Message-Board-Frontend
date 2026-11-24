@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 19; // v19：顶栏全局搜索框作用域文案
+  var VERSION = 20; // v20：GM 图标按钮/代码块/逐条飞入改版（文案 key 未变，仅刷新缓存）
 
   window.UI_TEXT = {
     /* —— 通用 —— */

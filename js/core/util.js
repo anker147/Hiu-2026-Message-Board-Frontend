@@ -466,6 +466,7 @@
 
   var SVG_ATTRS = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
   var ICONS = {
+    refresh: '<svg ' + SVG_ATTRS + '><path d="M20 11a8 8 0 0 0-14.3-4.9L3 9"/><path d="M3 4v5h5"/><path d="M4 13a8 8 0 0 0 14.3 4.9L21 15"/><path d="M21 20v-5h-5"/></svg>',
     eye: '<svg ' + SVG_ATTRS + '><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
     heart: '<svg ' + SVG_ATTRS + '><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
     comment: '<svg ' + SVG_ATTRS + '><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
@@ -864,6 +865,22 @@
 
   /* ---------------- 汇出 ---------------- */
 
+  /* 表单逐条飞入重放：给容器的直接子元素按序写 --i，remove→reflow→add 重播
+     .form-enter 的逐行上浮动画（追风杯 tp-reveal 语言；切 tab / 重新显示时可重放）。
+     reduced-motion 直接跳过；子元素 >7 个时由 JS 覆盖 CSS nth-child 的 --i 上限。 */
+  function replayFormEnter(container) {
+    if (!container) return;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    container.classList.remove("form-enter");
+    var kids = container.children;
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i].style) kids[i].style.setProperty("--i", i);
+    }
+    void container.offsetWidth;                       // 强制回流，令动画从头播放
+    container.classList.add("form-enter");
+  }
+
   HMB.util = {
     el: el,
     frag: frag,
@@ -893,6 +910,7 @@
     closeAllDropdowns: closeAllDropdowns,
     openModal: openModal,
     toast: toast,
+    replayFormEnter: replayFormEnter,
     renderDebugPanel: renderDebugPanel
   };
   HMB.hooks = hooks;
