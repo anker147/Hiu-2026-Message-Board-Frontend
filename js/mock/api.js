@@ -506,10 +506,12 @@
       var period = opts.period;
       var messages = db.getMessages(); // 全量引用：filter 元素共享引用，历史最高刷新后整体回写
       var list = messages.filter(function (m) {
-        // 热榜 = 全站所有公开帖子的排行（周榜公示口径），不受期次过滤：
-        // 期次只是榜单的“统计周”标签，不是筛选条件；得分与名次由前端按原始 stats 计算。
-        // 新帖榜（latest）仍按期次过滤“本周新帖”。
-        if (period && opts.tab !== "hot" && m.period !== period) return false;
+        // 热度周榜 = 截至所选期次的全站帖子排行（不是“仅该周新帖”）：
+        // hot 按期次上限过滤 period <= 所选期次，所选周之后发布的帖子不进榜；
+        // 新帖榜（latest）仍严格等于该期。得分与名次由前端按原始 stats 计算。
+        if (period && opts.tab === "hot") {
+          if (m.period > period) return false;
+        } else if (period && m.period !== period) return false;
         // 帖子可见类型（isPublic=false 仅自己可见）：不进入他人可见的任何列表视图
         if (m.isPublic === false &&
             !(session && session.userId === m.ownerId)) return false;
