@@ -105,7 +105,6 @@
   var selectedTag = "";
   var isPublic = true;
   var submitting = false;
-  var likeIntent = {};
   var pendingImages = [];   // 文末图片引用（localimg://id），最多 10 张，随发布/保存提交
 
   function qsId() {
@@ -166,8 +165,6 @@
     $("modeChip").textContent = isNew ? t("editPage.modeNew") : t("editPage.modeEdit");
     $("editOrigin").hidden = isNew;
     $("newOnlyBlock").hidden = !isNew;
-    $("newListTitle").hidden = !isNew;
-    $("newList").hidden = !isNew;
     $("editSaveBtn").textContent = isNew ? t("post.submit") : t("edit.save");
     document.title = (isNew ? t("post.title") : t("editPage.title")) + " · 留言板";
   }
@@ -465,77 +462,19 @@
         return;
       }
 
-      if (mode === "new") return afterNewPost(resp, t0);
+      if (mode === "new") return afterNewPost(t0);
       U.toast(t("edit.successToast"), "success");
       setTimeout(function () { window.location.href = detailHref(); }, 600);
     });
   }
 
-  /* ---------------- 新建成功：F5 两阶段定位 + 新卡高亮 + 表单复位 ---------------- */
-
-  function afterNewPost(resp, t0) {
-    var wait = Math.max(0, 200 - (performance.now() - t0));
+  /* ---------------- 新建成功：直接回到「我的留言」，由目标页给出成功反馈 ----------------
+     发布页不再保留「最新发布」列表；新帖在 mine 视图按最新优先自然排在首位。 */
+  function afterNewPost(t0) {
+    var wait = Math.max(0, 260 - (performance.now() - t0));
     setTimeout(function () {
-      // api 只回传原始 stats，卡片折合分由前端计算（万分制展示）
-      resp.data.heat = U.messageScore(resp.data) / 10000;
-      var card = C.renderCard(resp.data, {
-        rank: 1, q: "", session: session, likedSet: {},
-        onLike: handleLike,
-        onOpen: function (m) { window.location.href = detailHref(m.resourceId); }
-      });
-      card.style.setProperty("--i", "0");
-      card.classList.add("is-entered");
-      var list = $("newList");
-      list.insertBefore(card, list.firstChild);
-
-      card.scrollIntoView({ behavior: "smooth", block: "center" });
-      card.classList.add("is-highlight");
-      setTimeout(function () {
-        card.classList.remove("is-highlight");
-        HMB.hooks.highlightRemovedAt = performance.now();
-      }, 1800);
-
-      // 成功复位：标题/内容清空、开关复位、昵称保留（F5 验收）
-      setContent("");
-      $("editTitle").value = "";
-      $("editContent").classList.remove("is-error");
-      selectedTag = "";
-      isPublic = true;
-      renderTopicDropdown();
-      renderTypeDropdown();
-      $("pflagName").checked = false;
-      $("pflagEmail").checked = false;
-      $("pflagPhone").checked = false;
-      updateWordCount();
-
-      U.toast(t("post.successToast"), "success");
+      window.location.href = "index.html?tab=mine&posted=1";
     }, wait);
-  }
-
-  /** F8 点赞（新卡红心）：350ms 内重复点击复用幂等键 */
-  function handleLike(m, statEl) {
-    if (!session.loggedIn) { C.openGuideModal("like"); return; }
-    var now = Date.now();
-    var intent = likeIntent[m.resourceId];
-    if (!intent || now - intent.ts > 350) {
-      intent = likeIntent[m.resourceId] = {
-        idemKey: "idem-" + now + "-" + Math.random().toString(36).slice(2, 8),
-        ts: now
-      };
-    } else {
-      intent.ts = now;
-    }
-    api.like({ targetId: m.resourceId, idemKey: intent.idemKey, csrf: session.csrf })
-      .then(function (resp) {
-        if (resp.code === 401) { C.openGuideModal("like"); return; }
-        if (resp.success) {
-          statEl.classList.toggle("is-liked", resp.data.liked);
-          var cnt = statEl.querySelector("span:last-child");
-          if (cnt) cnt.textContent = U.fmtViews(resp.data.count);
-        } else {
-          U.toast(resp.message, "error");
-        }
-      });
   }
 
   /* ---------------- 删除（仅编辑模式，P-08 确认弹窗复用） ---------------- */

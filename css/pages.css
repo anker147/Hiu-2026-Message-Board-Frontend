@@ -1881,10 +1881,6 @@ body[data-page="login"] :is(button, a, [tabindex]):focus-visible { outline: 2px 
 .ef-count.is-over b { color: var(--danger); }
 .editor-footer-inner .btn--lg { width: auto; min-width: 148px; }
 
-/* —— 新建成功：最新发布列表 —— */
-#newListTitle { width: min(760px, calc(100% - 48px)); margin: 28px auto 0; }
-#newList { width: min(760px, calc(100% - 48px)); margin: 12px auto 0; padding-bottom: 40px; }
-
 /* —— 窄屏：窄卡与底部条自适应 —— */
 @media (max-width: 760px) {
   .editor-page { width: calc(100% - 28px); padding-top: calc(var(--h-topbar) + 12px); }
@@ -1894,7 +1890,6 @@ body[data-page="login"] :is(button, a, [tabindex]):focus-visible { outline: 2px 
   .editor-content-input { min-height: 260px; }
   .editor-footer-inner { width: calc(100% - 28px); height: 64px; }
   .editor-footer-inner .btn--lg { min-width: 112px; }
-  #newListTitle, #newList { width: calc(100% - 28px); }
 }
 
 /* ---------- 760px 断点（PRD 9.5） ---------- */
