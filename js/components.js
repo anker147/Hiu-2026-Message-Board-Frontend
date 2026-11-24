@@ -741,8 +741,12 @@
     heatLabel.setAttribute("data-text", "board.heatLabel");
     heatZone.appendChild(heatLabel);
     var heatVal = el("div", "heat-value");
-    heatVal.appendChild(el("span", null, U.fmtHeat(msg.heat)));
-    heatVal.appendChild(el("span", "unit", "万"));
+    // 本周热度实时由原始 stats 计算；不足 1 万直接显示精确整数，不写「万」
+    var heatV = (typeof msg.heat === "number" && isFinite(msg.heat)) ? msg.heat : 0;
+    var heatUnder = heatV < 1;
+    heatVal.appendChild(el("span", null,
+      heatUnder ? U.fmtHeatDisplay(heatV) : U.fmtHeat(heatV)));
+    if (!heatUnder) heatVal.appendChild(el("span", "unit", "万"));
     heatZone.appendChild(heatVal);
     heatZone.appendChild(deltaChip(msg.rate));
     card.appendChild(heatZone);

@@ -224,9 +224,17 @@
   }
 
   function fmtHeat(heat) {
-    // heat 以“万”为单位存储（PRD 6.5：展示时格式化为万）
+    // heat 以“万”为单位存储；≥1 万保留 1 位小数
     var v = Math.round(heat * 10) / 10;
     return String(v);
+  }
+
+  /** 热度完整展示：不足 1 万显示精确整数（不带单位），达到 1 万才写「万」。
+   *  heat 入参单位是“万”，与 messageScore 的实时折合分保持同一口径。 */
+  function fmtHeatDisplay(heat) {
+    var v = (typeof heat === "number" && isFinite(heat)) ? heat : 0;
+    if (v < 1) return String(Math.round(v * 10000));
+    return fmtHeat(v) + "万";
   }
 
   /* ---------------- 榜单得分与排序（前端权威计算层） ----------------
@@ -491,7 +499,7 @@
       vline.setAttribute("x1", best.x); vline.setAttribute("x2", best.x);
       dot.setAttribute("cx", best.x); dot.setAttribute("cy", best.y);
       guide.style.opacity = "1";
-      tip.textContent = (best.raw.value == null ? "—" : fmtHeat(best.raw.value) + "万") + (best.raw.synthetic ? " · 估算" : "");
+      tip.textContent = (best.raw.value == null ? "—" : fmtHeatDisplay(best.raw.value)) + (best.raw.synthetic ? " · 估算" : "");
       tip.style.left = (best.x / W * 100) + "%";
       tip.style.top = (best.y / H * 100) + "%";
       tip.classList.add("is-visible");
@@ -970,6 +978,7 @@
     openImageViewer: openImageViewer,
     fmtViews: fmtViews,
     fmtHeat: fmtHeat,
+    fmtHeatDisplay: fmtHeatDisplay,
     periodStartTime: periodStartTime,
     viewTimeFactor: viewTimeFactor,
     messageScore: messageScore,
