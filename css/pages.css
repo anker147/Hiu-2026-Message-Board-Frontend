@@ -1745,6 +1745,50 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
 .zone-career-metric--rose .zone-career-metric-bar { background: var(--rank-1); }
 .zone-career-metric--amber .zone-career-metric-bar { background: var(--rank-3); }
 
+/* —— 活跃称号（纯前端计算，个人主页 hero 徽章 + 侧栏称号墙） —— */
+.zone-title-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 800; line-height: 1;
+  padding: 4px 10px; border-radius: var(--radius-pill);
+  border: 1px solid var(--line); background: var(--card);
+  color: var(--ink-2); white-space: nowrap;
+}
+.zone-title-badge-icon { font-size: 13px; }
+.zone-title-badge--t1 { color: var(--ink-2); }
+.zone-title-badge--t2 { color: var(--blue); border-color: rgba(53, 158, 255, .35); background: var(--blue-soft); }
+.zone-title-badge--t3 { color: var(--rank-2); border-color: rgba(139, 92, 246, .35); background: rgba(139, 92, 246, .08); }
+.zone-title-badge--t4 { color: var(--warning); border-color: rgba(245, 158, 11, .4); background: rgba(245, 158, 11, .1); }
+.zone-title-grid { display: grid; grid-template-columns: 1fr; gap: 7px; }
+.zone-title-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--card);
+}
+.zone-title-item.is-owned { border-color: rgba(53, 158, 255, .28); background: var(--blue-soft); }
+.zone-title-item.is-locked { opacity: .55; }
+.zone-title-icon {
+  width: 26px; height: 26px; flex: none; display: flex;
+  align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--card); font-size: 14px;
+}
+.zone-title-body { flex: 1; min-width: 0; }
+.zone-title-name { font-size: 12px; font-weight: 800; color: var(--ink); }
+.zone-title-desc { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+.zone-title-tier { font-size: 10px; font-weight: 700; color: var(--ink-3); flex: none; }
+.zone-title-next { margin-top: 11px; }
+.zone-title-next-text { font-size: 11px; color: var(--ink-3); }
+.zone-title-bar {
+  height: 5px; border-radius: 4px; background: var(--line);
+  margin: 6px 0 4px; overflow: hidden;
+}
+.zone-title-bar-fill {
+  height: 100%; border-radius: 4px; background: var(--blue);
+  transition: width 420ms var(--ease-spring);
+}
+.zone-title-next-num {
+  font-size: 10.5px; color: var(--blue-pale-ink); font-variant-numeric: tabular-nums;
+}
+
 /* —— 我送出的盲盒祝福（本人可见） —— */
 .zone-blindbox-head { display: flex; align-items: center; gap: 8px; }
 .zone-blindbox-head .zone-side-title { margin-bottom: 0; }
