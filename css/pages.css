@@ -767,16 +767,27 @@ body.is-tab-switching #gmView {
               opacity var(--t-fast) var(--ease-out);
 }
 .float-actions.is-crowded .float-btn {
+  position: relative;
   width: 46px; height: 46px; padding: 0;
   border-radius: 50%; justify-content: center;
+}
+/* 恒定命中区：与按钮视觉几何解耦，避免 hover 改变宽度/位移导致 hover 反复开关（抽搐）。
+   命中区固定为展开后的宽度、贴在按钮右侧；鼠标进入这个不变的区域即展开，
+   展开后鼠标仍处于区域内 → 不会缩回；上下各留 6px 抵消任何位移抖动。 */
+.float-actions.is-crowded .float-btn::after {
+  content: ""; position: absolute;
+  top: -6px; bottom: -6px; right: 0; width: 160px;
 }
 .float-actions.is-crowded .float-btn-label {
   max-width: 0; opacity: 0; pointer-events: none;
 }
 .float-actions.is-crowded .float-btn:hover,
 .float-actions.is-crowded .float-btn:focus-visible {
-  width: auto; height: 46px; padding: 0 22px;
+  /* 固定展开宽度（不用 auto），配合恒定命中区：width/padding/label 过渡有明确起止值，
+     中间态不会再先缩小到 28px；transform:none 取消上移，避免边缘脱离 */
+  width: 160px; height: 46px; padding: 0 18px;
   border-radius: var(--radius-pill); justify-content: flex-start;
+  transform: none;
 }
 .float-actions.is-crowded .float-btn:hover .float-btn-label,
 .float-actions.is-crowded .float-btn:focus-visible .float-btn-label {
