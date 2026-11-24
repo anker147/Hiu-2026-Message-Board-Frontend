@@ -60,9 +60,9 @@
     els.issueText = $("issueText");
     els.boardView = $("boardView");
 
-    // URL → tab
+    // URL → tab（gm 为岛内管理视图，与 about 同级）
     var m = window.location.search.match(/[?&]tab=(\w+)/);
-    if (m && ["hot", "latest", "mine", "about"].indexOf(m[1]) >= 0) state.tab = m[1];
+    if (m && ["hot", "latest", "mine", "about", "gm"].indexOf(m[1]) >= 0) state.tab = m[1];
 
     // 图标（静态 SVG 常量）
     els.searchIcon.appendChild(U.icon("search"));
@@ -80,9 +80,10 @@
       renderTopbarIfNeeded();
       bindToolbar();
       bindFloatActions();
-      if (state.tab === "about") {   // ?tab=about 直达：显示关于视图，跳过列表
+      if (state.tab === "about" || state.tab === "gm") {   // ?tab=about / ?tab=gm 直达：显示岛内视图，跳过列表
         if (els.boardView) els.boardView.hidden = true;
-        if (HMB.pages.about) HMB.pages.about.show();
+        if (state.tab === "about" && HMB.pages.about) HMB.pages.about.show();
+        if (state.tab === "gm" && HMB.pages.gm) HMB.pages.gm.show();
         return;
       }
       loadList();
@@ -363,7 +364,7 @@
          当前 scrollY 超过它 → 换页时滚动位置会被钳制硬切 → 应走编排转场；
          mock 数据本地即回，判定失败返回 Infinity → 保持线性回顶旧路径。 —— */
     predictTargetMaxScroll: function (key) {
-      if (key === "about") return Promise.resolve(0);              // 全视口固定场景
+      if (key === "about" || key === "gm") return Promise.resolve(0);   // 全视口固定场景
       if (key === "mine" && !session.loggedIn) return Promise.resolve(0);  // 未登录仅一个状态框
       return api.getMessages({
         tab: key,
@@ -379,18 +380,25 @@
       }).catch(function () { return Infinity; });
     },
     switchTab: function (key) {
-      if (["hot", "latest", "mine", "about"].indexOf(key) < 0 || state.tab === key) return;
+      if (["hot", "latest", "mine", "about", "gm"].indexOf(key) < 0 || state.tab === key) return;
       state.tab = key;
       state._topbarTab = key;
       updateView();
       renderPeriodDropdown(); // 期次下拉按新 tab 的条目/选中项重建
-      if (key === "about") {
+      if (key === "about" || key === "gm") {
         listReqSeq++;                                  // 使在途列表响应过期
         if (els.boardView) els.boardView.hidden = true;
-        if (HMB.pages.about) HMB.pages.about.show();
+        if (key === "about") {
+          if (HMB.pages.gm) HMB.pages.gm.hide();
+          if (HMB.pages.about) HMB.pages.about.show();
+        } else {
+          if (HMB.pages.about) HMB.pages.about.hide();
+          if (HMB.pages.gm) HMB.pages.gm.show();
+        }
         return;
       }
       if (HMB.pages.about) HMB.pages.about.hide();
+      if (HMB.pages.gm) HMB.pages.gm.hide();
       if (els.boardView) els.boardView.hidden = false;
       loadList({ skipTopbar: true });
     }

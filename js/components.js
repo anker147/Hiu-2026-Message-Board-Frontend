@@ -75,8 +75,8 @@
     /* tab 构建器：活岛用 data-text 走 i18n 注入；测量克隆行用 withText 直接写文本（克隆不经过 i18n.apply） */
     function buildTab(pair, isActive, withText) {
       var a = el("a", "nav-tab" + (isActive ? " is-active" : ""));
-      // 关于 / GM 为独立页面；其余在榜单页内软切换
-      a.href = (pair[0] === "about" || pair[0] === "gm")
+      // 关于为独立页面；GM 与其余项均在榜单页内软切换（岛内 tag）
+      a.href = (pair[0] === "about")
         ? pair[0] + ".html" : "index.html?tab=" + pair[0];
       a.setAttribute("data-tab", pair[0]);
       var ic = el("span", "nav-ico");
@@ -95,9 +95,8 @@
       var a = buildTab(pair, activeTab === pair[0], false);
       a.addEventListener("click", function (e) {
         var board = HMB.pages && HMB.pages.board;
-        // standalone about.html / gm.html 上点当前页项 = 无操作（阻断页面过渡层）
-        if ((pair[0] === "about" || pair[0] === "gm") &&
-            location.pathname.indexOf(pair[0] + ".html") >= 0) {
+        // standalone about.html 上点当前页项 = 无操作（阻断页面过渡层）
+        if (pair[0] === "about" && location.pathname.indexOf("about.html") >= 0) {
           e.preventDefault(); e.stopPropagation(); return;
         }
         // 榜单页内软切换（含“关于”视图切换）：胶囊滑向新位置（replaceState 不计文档导航）

@@ -591,7 +591,11 @@ out.isMine = (session != null && session.userId == message.ownerId)
 
 岛内项定义（前端顺序固定）：`hot → latest → mine → about → gm`，
 其中 `gm` 项仅在 `isAdmin=true` 时渲染，标签文案 `GM`，角标文案 `管理员`。
-非管理员直接访问 `gm.html` → 页面显示无权限状态盒；接口层仍以 `6001` 为准。
+
+`gm` 与 `about` 同为**岛内软切换视图**（非独立页面）：点击后在当前 `index.html` 内切换
+到 `#gmView` 挂载点（`?tab=gm#<panel>`，无文档导航），由 `HMB.pages.gm.show()/hide()` 控制；
+`pages/gm.html` 仅作兼容入口保留。非管理员直接访问 `gm.html` → 页面显示无权限状态盒；
+接口层仍以 `6001` 为准。
 
 #### 6.1.4 新增错误码（追加到前文 §0.3）
 
@@ -795,15 +799,18 @@ out.isMine = (session != null && session.userId == message.ownerId)
 
 ---
 
-### 6.4 GM 页前端消费对照
+### 6.4 GM 视图前端消费对照
 
-| 页面 | 能力 | 调用接口 |
+GM 为导航岛第五项 tag 的岛内视图（`index.html?tab=gm#<panel>`），非独立页面；
+`gm.html` 仅保留兼容。下表"面板"即岛内 `#gmView` 的五个子面板。
+
+| 面板（岛内视图） | 能力 | 调用接口 |
 |---|---|---|
-| `gm.html`（岛内第五项） | 概览卡片 | G1 |
-| `gm.html#users` | 用户表格 / 搜索 / 封禁 / 禁言 / 角色 / 改资料 / 重置密码 | G2 G3 G4 G5 G6 G7 G8 |
-| `gm.html#content` | 内容表格 / 隐藏 / 删除 | G9 G10 G11 G12 G13 |
-| `gm.html#actions` | 审计日志 | G14 |
-| `gm.html#settings` | 敏感词 / 期次 / 重置演示数据 | G15 G16 G17 |
+| `gm#overview`（岛内第五项） | 概览卡片 | G1 |
+| `gm#users` | 用户表格 / 搜索 / 封禁 / 禁言 / 角色 / 改资料 / 重置密码 | G2 G3 G4 G5 G6 G7 G8 |
+| `gm#content` | 内容表格 / 隐藏 / 删除 | G9 G10 G11 G12 G13 |
+| `gm#actions` | 审计日志 | G14 |
+| `gm#settings` | 敏感词 / 期次 / 重置演示数据 | G15 G16 G17 |
 | `all.html` | 全部留言列表 + 搜索（零新接口，复用 `GET /api/messages`） | API-04 |
 
 前端文案键建议：`gm.title`、`gm.tabUsers`、`gm.tabContent`、`gm.tabActions`、`gm.tabSettings`、

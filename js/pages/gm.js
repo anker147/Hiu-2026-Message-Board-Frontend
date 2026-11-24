@@ -15,38 +15,165 @@
   var el = U.el;
   var $ = function (id) { return document.getElementById(id); };
 
+  /* 双模式：standalone（gm.html 独立页，保留兼容）/ embedded（index.html#gmView 岛内 tag）。
+     岛内模式下 DOM 由模板惰性构建，对外暴露 HMB.pages.gm.show()/hide() 供 board.js 软切换。 */
+  var view = document.getElementById("gmView");
+  var embedded = !!view;
+  var built = false;
+  var started = false;
+
   var session = { loggedIn: false, csrf: "" };
   var current = "overview";
   var page = { users: 1, content: 1, actions: 1 };
   var PAGE_SIZE = 20;
 
-  /* ---------------- 启动 ---------------- */
+  /* 岛内模式的 GM 结构模板（静态可信结构，无用户输入；文案由 data-text 交 i18n 注入）。
+     与 pages/gm.html 的 <main> 保持一致，去掉"回首页"按钮（岛内返回由导航岛承接）。 */
+  var GM_TEMPLATE = [
+    '<main class="gm-page container">',
+    '  <section class="gm-head">',
+    '    <div>',
+    '      <h1 class="gm-head-title" data-text="gm.title">留言板管理</h1>',
+    '      <p class="gm-head-sub" data-text="gm.subtitle">账号、内容与运行数据，统一在这里管理</p>',
+    '    </div>',
+    '  </section>',
+    '  <div class="gm-shell">',
+    '    <nav class="gm-side" id="gmSide" aria-label="管理功能">',
+    '      <button type="button" class="gm-side-btn is-active" data-panel="overview" data-text="gm.tabOverview">概览</button>',
+    '      <button type="button" class="gm-side-btn" data-panel="users" data-text="gm.tabUsers">用户管理</button>',
+    '      <button type="button" class="gm-side-btn" data-panel="content" data-text="gm.tabContent">内容管理</button>',
+    '      <button type="button" class="gm-side-btn" data-panel="actions" data-text="gm.tabActions">操作审计</button>',
+    '      <button type="button" class="gm-side-btn" data-panel="settings" data-text="gm.tabSettings">设置</button>',
+    '    </nav>',
+    '    <section class="gm-main" id="gmMain">',
+    '      <div class="gm-panel is-active" id="panel-overview">',
+    '        <h2 class="gm-section-title" data-text="gm.tabOverview">概览</h2>',
+    '        <div class="gm-stat-grid" id="gmStats"></div>',
+    '      </div>',
+    '      <div class="gm-panel" id="panel-users">',
+    '        <h2 class="gm-section-title" data-text="gm.tabUsers">用户管理</h2>',
+    '        <div class="gm-toolbar">',
+    '          <div class="search-box">',
+    '            <span class="search-icon" id="gmUserSearchIcon"></span>',
+    '            <input type="search" class="search-input" id="gmUserSearch" data-text-placeholder="gm.user.searchPlaceholder" placeholder="搜索昵称 / 账号 / 展示 ID" aria-label="搜索用户">',
+    '          </div>',
+    '          <select class="gm-select" id="gmUserStatus" aria-label="账号状态">',
+    '            <option value="all" data-text="gm.user.statusAll">全部状态</option>',
+    '            <option value="active" data-text="gm.user.statusActive">正常</option>',
+    '            <option value="banned" data-text="gm.user.statusBanned">已封禁</option>',
+    '          </select>',
+    '          <select class="gm-select" id="gmUserRole" aria-label="账号角色">',
+    '            <option value="all" data-text="gm.user.roleAll">全部角色</option>',
+    '            <option value="user" data-text="gm.user.roleUser">普通用户</option>',
+    '            <option value="admin" data-text="gm.user.roleAdmin">管理员</option>',
+    '          </select>',
+    '          <button type="button" class="btn btn--soft btn--sm" id="gmUserReload" data-text="common.retry">重试</button>',
+    '        </div>',
+    '        <div class="gm-table-wrap" id="gmUserTable"></div>',
+    '        <div class="gm-pager" id="gmUserPager"></div>',
+    '      </div>',
+    '      <div class="gm-panel" id="panel-content">',
+    '        <h2 class="gm-section-title" data-text="gm.tabContent">内容管理</h2>',
+    '        <div class="gm-toolbar">',
+    '          <div class="search-box">',
+    '            <span class="search-icon" id="gmContentSearchIcon"></span>',
+    '            <input type="search" class="search-input" id="gmContentSearch" data-text-placeholder="gm.content.searchPlaceholder" placeholder="搜索标题 / 正文 / 作者" aria-label="搜索内容">',
+    '          </div>',
+    '          <select class="gm-select" id="gmContentType" aria-label="内容类型">',
+    '            <option value="all" data-text="gm.content.typeAll">全部内容</option>',
+    '            <option value="message" data-text="gm.content.typeMessage">留言</option>',
+    '            <option value="comment" data-text="gm.content.typeComment">评论</option>',
+    '          </select>',
+    '          <select class="gm-select" id="gmContentHidden" aria-label="隐藏状态">',
+    '            <option value="all" data-text="gm.content.hiddenAll">全部状态</option>',
+    '            <option value="0" data-text="gm.content.hiddenNo">正常</option>',
+    '            <option value="1" data-text="gm.content.hiddenYes">已隐藏</option>',
+    '          </select>',
+    '          <button type="button" class="btn btn--soft btn--sm" id="gmContentReload" data-text="common.retry">重试</button>',
+    '        </div>',
+    '        <div class="gm-table-wrap" id="gmContentTable"></div>',
+    '        <div class="gm-pager" id="gmContentPager"></div>',
+    '      </div>',
+    '      <div class="gm-panel" id="panel-actions">',
+    '        <h2 class="gm-section-title" data-text="gm.tabActions">操作审计</h2>',
+    '        <p class="gm-note" data-text="gm.actions.note">所有管理操作都会留痕，记录不可修改或删除。</p>',
+    '        <div class="gm-table-wrap" id="gmActionTable"></div>',
+    '        <div class="gm-pager" id="gmActionPager"></div>',
+    '      </div>',
+    '      <div class="gm-panel" id="panel-settings">',
+    '        <h2 class="gm-section-title" data-text="gm.tabSettings">设置</h2>',
+    '        <div class="gm-settings-grid">',
+    '          <section class="gm-card">',
+    '            <h3 class="gm-card-title" data-text="gm.settings.sensitiveTitle">敏感词配置</h3>',
+    '            <p class="gm-card-desc" data-text="gm.settings.sensitiveDesc">每行一个词，命中后留言与评论将无法发布；修改后立即生效</p>',
+    '            <textarea class="gm-textarea" id="gmWords" rows="7" data-text-placeholder="gm.settings.wordsPlaceholder" placeholder="每行一个敏感词"></textarea>',
+    '            <h3 class="gm-card-title gm-card-title--gap" data-text="gm.settings.periodTitle">当前期次</h3>',
+    '            <p class="gm-card-desc" data-text="gm.settings.periodDesc">新发布的留言会归入该期次；期次只能前进，不能回退</p>',
+    '            <input type="number" class="gm-input" id="gmPeriod" min="1" step="1" aria-label="当前期次">',
+    '            <div class="gm-card-actions">',
+    '              <button type="button" class="btn btn--primary btn--sm" id="gmSettingsSave" data-text="gm.settings.save">保存设置</button>',
+    '            </div>',
+    '          </section>',
+    '          <section class="gm-card gm-card--danger">',
+    '            <h3 class="gm-card-title" data-text="gm.settings.resetTitle">重置演示数据</h3>',
+    '            <p class="gm-card-desc" data-text="gm.settings.resetDesc">清空当前演示数据并按初始种子重建（含管理员账号），操作不可恢复</p>',
+    '            <button type="button" class="btn btn--danger btn--sm" id="gmDataReset" data-text="gm.settings.resetBtn">重置数据</button>',
+    '          </section>',
+    '        </div>',
+    '      </div>',
+    '    </section>',
+    '  </div>',
+    '</main>',
+    '<div id="gmModalRoot"></div>'
+  ].join("\n");
 
-  function init() {
+  function buildDom() {
+    if (built) return;
+    built = true;
+    if (!embedded) return;             // standalone：DOM 来自 gm.html 静态结构
+    view.innerHTML = GM_TEMPLATE;
+    HMB.i18n.apply(view);
+  }
+
+  function showNoPermission() {
+    document.querySelectorAll(".gm-shell").forEach(function (n) { n.style.display = "none"; });
+    C.renderStateBox($("gmMain"), {
+      emoji: "🔒",
+      titleKey: "gm.noPermissionTitle",
+      descKey: "gm.noPermissionDesc",
+      btnKey: "common.backHome",
+      onBtn: function () { window.location.href = "index.html"; }
+    });
+  }
+
+  /* 启动（含会话校验与事件绑定）只做一次，岛内反复 show() 不重复绑定。 */
+  function start() {
+    if (started) return;
+    started = true;
     api.getSession().then(function (resp) {
       session = resp.data || { loggedIn: false };
-      C.renderTopbar($("topbar"), "gm", session);
+      if (!embedded) C.renderTopbar($("topbar"), "gm", session);
       U.renderDebugPanel();
 
       if (!session.loggedIn || !session.isAdmin) {
-        document.querySelectorAll(".gm-shell").forEach(function (n) { n.style.display = "none"; });
-        C.renderStateBox($("gmMain"), {
-          emoji: "🔒",
-          titleKey: "gm.noPermissionTitle",
-          descKey: "gm.noPermissionDesc",
-          btnKey: "common.backHome",
-          onBtn: function () { window.location.href = "index.html"; }
-        });
+        showNoPermission();
         return;
       }
 
-      $("gmUserSearchIcon").appendChild(U.icon("search"));
-      $("gmContentSearchIcon").appendChild(U.icon("search"));
+      var us = $("gmUserSearchIcon"), cs = $("gmContentSearchIcon");
+      if (us) us.appendChild(U.icon("search"));
+      if (cs) cs.appendChild(U.icon("search"));
       bindNav();
       bindFilters();
       var hash = (window.location.hash || "").replace("#", "");
       switchPanel(["overview", "users", "content", "actions", "settings"].indexOf(hash) >= 0 ? hash : "overview");
     });
+  }
+
+  function init() {
+    if (embedded) return;              // 岛内模式：由 show() 惰性触发 buildDom + start
+    buildDom();
+    start();
   }
 
   function bindNav() {
@@ -590,6 +717,17 @@
       window.location.href = "login.html?redirect=" + encodeURIComponent(window.location.href);
     }
   }
+
+  /* 岛内 tag 接口：board.js 软切换调用 show()/hide()。show() 首次进入时惰性构建 + 启动。 */
+  HMB.pages = HMB.pages || {};
+  HMB.pages.gm = {
+    show: function () {
+      buildDom();
+      view.hidden = false;
+      start();
+    },
+    hide: function () { view.hidden = true; }
+  };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
