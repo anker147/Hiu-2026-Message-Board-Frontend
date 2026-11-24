@@ -4,11 +4,12 @@
  * ============================================================ */
 
 /* ---------- 顶栏 60px sticky：Transparent Nav（文字直接落在页面背景上） ----------
-   下滑挤占收起（components.js 依 banner 上移进度写 --crowd 0→1，四层错峰）：
+   下滑挤占收起（components.js 依 scrollY/80 全站统一写 --crowd 0→1，三层错峰）：
    第 1 层 0–0.45 两翼滑出（logo 先行，登录·身份胶囊滞后 0.08）；
-   第 2 层 0.35–0.85 导航岛整体收紧；第 3 层 0.6–1 玻璃盖板淡入；
-   第 4 层 0.8–1 岛吸顶只露下缘小边（点击弹出，见 is-popped）——
-   banner 与榜单从导航带下掠过时保持可读，回滚到顶逐层复原。 */
+   第 2 层 0.35–0.85 导航岛整体收紧；
+   第 3 层 0.8–1 岛吸顶只露下缘小边（点击弹出，见 is-popped）——
+   顶栏全程完全透明（::before 盖板已停用），banner 与榜单从导航带下掠过时保持可读，
+   回滚到顶逐层复原。 */
 .topbar {
   position: sticky; top: 0; z-index: 100;
   height: var(--h-topbar);
@@ -16,15 +17,12 @@
   border-bottom: none;
   box-shadow: none;
 }
-/* 第 3 层：玻璃盖板（banner / 榜单掠过导航带时的可读性底线） */
+/* 第 3 层：收起避让后顶栏全透明 —— 不铺任何半透明盖板，内容从导航带后直接透出。
+   保留伪元素但永不显示，避免影响 z-index 层级与各页既有布局。 */
 .topbar::before {
   content: ""; position: absolute; inset: 0; z-index: -1;
   pointer-events: none;
-  opacity: clamp(0, (var(--crowd, 0) - 0.6) / 0.4, 1);
-  background: rgba(253, 252, 255, 0.78);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  box-shadow: 0 1px 0 var(--line), 0 10px 26px rgba(30, 41, 59, 0.06);
+  display: none;
 }
 .topbar-inner {
   width: min(var(--w-page), calc(100% - 48px));   /* 与 .container（banner 所在容器）等宽 → logo / 登录胶囊不超出 banner 显示范围 */
