@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 23; // v23：GM 版资料编辑卡文案
+  var VERSION = 24; // v24：发布成功回跳我的留言，移除发布页最新发布区
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -154,8 +154,6 @@
     "post.submittingNote": "正在发布，请稍候…",
     "post.needLogin": "发布留言需要先登录",
     "post.successToast": "发布成功",
-    "post.latestTitle": "最新发布",
-    "post.backBoard": "返回热度周榜 →",
     "post.branchNote": "如果发布失败，你写的内容会保留下来，可以修改后再试",
 
     /* —— 帖子编辑页（参考好游快爆 sendThreadShow 发帖器设计） —— */

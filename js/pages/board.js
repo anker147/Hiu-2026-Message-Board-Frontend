@@ -96,6 +96,13 @@
       loadList();
       restoreReturn();
       HMB.util.renderDebugPanel();
+      // 发布成功从编辑页回跳：在「我的留言」给一次成功反馈，并清标记避免刷新重复提示
+      if (/[?&]posted=1/.test(window.location.search)) {
+        U.toast(t("post.successToast"), "success");
+        try {
+          window.history.replaceState(null, "", window.location.href.replace(/[?&]posted=1/, ""));
+        } catch (e) { /* 部分环境禁用 replaceState，忽略即可 */ }
+      }
     });
   }
 
