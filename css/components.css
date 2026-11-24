@@ -289,23 +289,70 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .stat--likebtn.is-liked { color: var(--up); }
 .stat--likebtn.is-liked svg { fill: var(--up); stroke: var(--up); }
 
-/* 热度区 110px */
-.heat-zone { width: 110px; flex: none; text-align: right; }
+/* 热度区（biliboard 首页形制：本周分数 + 变化率胶囊） */
+.heat-zone { width: 116px; flex: none; text-align: right; }
 .heat-label { font-size: 11px; color: var(--ink-3); }
-.heat-value { font-size: 24px; font-weight: 800; color: var(--ink); line-height: 1.2; white-space: nowrap; }
+.heat-value {
+  font-size: 24px; font-weight: 800; line-height: 1.2; white-space: nowrap;
+  color: var(--blue-pale-ink);
+}
 .heat-value .unit { font-size: 14px; font-weight: 600; margin-left: 1px; }
-.heat-delta { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; margin-top: 2px; white-space: nowrap; }
-.heat-delta--up { color: var(--up); }
-.heat-delta--down { color: var(--down); }
-.heat-delta--flat { color: var(--ink-3); }
-.heat-delta svg { width: 12px; height: 12px; }
-.heat-delta .arrow-path {
-  stroke-dasharray: 30; stroke-dashoffset: 30;
+
+/* 变更比例胶囊（官网 Gm 组件形制；配色用本站涨红跌绿令牌）
+   + 展开动画：max-width / opacity / padding 380ms，卡片入场时触发 */
+.rate-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; min-height: 16px; margin-top: 3px;
+  border-radius: var(--radius-pill); font-size: 11px; font-weight: 700;
+  overflow: hidden; white-space: nowrap;
+  transition: background-color 380ms ease;
 }
-.rank-card.is-entered .heat-delta .arrow-path {
-  animation: arrow-draw 900ms var(--ease-out) 250ms forwards;
+.rate-pill-inner {
+  display: inline-block; max-width: 0; opacity: 0;
+  padding-top: 0; padding-bottom: 0; padding-left: 0; padding-right: 0;
+  transition: max-width 480ms cubic-bezier(0.22, 0.61, 0.36, 1),
+              opacity 280ms ease 180ms;
 }
-@keyframes arrow-draw { to { stroke-dashoffset: 0; } }
+.rank-card.is-entered .rate-pill-inner { max-width: 120px; opacity: 1; padding: 1px 7px 2px; }
+.rate-pill--up { background: var(--up-soft); color: var(--up); }
+.rate-pill--down { background: var(--down-soft); color: var(--down); }
+.rate-pill--flat { background: #EEF1F4; color: var(--ink-3); }
+
+/* 折线图区（88×48 SVG，官网 sparkline 形制） */
+.card-spark { width: 88px; flex: none; display: flex; align-items: center; justify-content: center; }
+.sparkline { position: relative; display: inline-block; vertical-align: middle; }
+.sparkline-tip {
+  position: absolute; z-index: 20; pointer-events: none;
+  transform: translate(-50%, -100%);
+  background: var(--ink); color: #fff;
+  font-size: 10px; font-weight: 700; white-space: nowrap;
+  padding: 2px 6px; border-radius: 5px; box-shadow: var(--shadow-pop);
+  opacity: 0; transition: opacity 120ms ease; top: -4px;
+}
+.sparkline-tip.is-visible { opacity: 1; }
+
+/* 上周排名小卡（官网 72×68 描边卡形制，本站蓝色令牌） */
+.last-rank-zone { width: 68px; flex: none; display: flex; justify-content: center; }
+.last-rank-card {
+  width: 68px; height: 66px; border-radius: 10px;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: linear-gradient(135deg, var(--card) 0%, var(--blue-soft) 100%);
+  box-shadow: 0 2px 8px 0 rgba(53, 158, 255, .18), 0 0 0 1px rgba(53, 158, 255, .12);
+}
+.last-rank-num {
+  flex: 2; margin: 4px 4px 0; border-radius: 7px; background: var(--card);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 800; color: var(--blue);
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 0 6px 1px rgba(53, 158, 255, .18);
+}
+.last-rank-card--top .last-rank-num { color: var(--accent); }
+.last-rank-label {
+  flex: 1; margin: 3px 4px 4px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: #fff; background: var(--blue);
+}
+.last-rank-card--top .last-rank-label { background: var(--accent); }
 
 /* 最高区 74px */
 .peak-zone { width: 74px; flex: none; text-align: center; }
@@ -427,3 +474,13 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .debug-panel .dbg-btn.is-on { background: var(--warning-soft); color: var(--warning); }
 .debug-panel .dbg-note { font-size: 11px; color: var(--ink-3); line-height: 1.7; }
 .debug-panel .dbg-sec { font-size: 11px; color: var(--ink-3); font-weight: 700; margin: 10px 0 6px; }
+
+/* ---------- 榜单卡新元素响应式（窄屏隐藏折线图与上周排名卡，保留分数+胶囊） ---------- */
+@media (max-width: 900px) {
+  .card-spark, .last-rank-zone { display: none; }
+}
+@media (max-width: 760px) {
+  .heat-zone { width: 92px; }
+  .heat-value { font-size: 20px; }
+  .peak-zone { display: none; }
+}

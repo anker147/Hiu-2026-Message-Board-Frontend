@@ -100,12 +100,45 @@
     }
   }
 
-  /** 前端榜单装配：注入 heat（万分制）→ 排序 →（可选）维护历史最高并写回 db。
+  /** 由本周分数 + 上周变动率反推近 8 期趋势序列（演示推导，不落库、无后端字段）。
+   *  heatDelta 语义为“相对上周变动百分比”：上周分 = 本周分 / (1 + delta/100)。
+   *  往前逐期用确定性正弦扰动回推（同一 resourceId 每次结果一致，不用随机数），
+   *  最近一期用真实值，早期标 synthetic=true 供折线图渲染虚线段。 */
+  function deriveHistory(m) {
+    var cur = m.heat;
+    var delta = (typeof m.heatDelta === "number" && isFinite(m.heatDelta)) ? m.heatDelta : 0;
+    var prev = cur / (1 + delta / 100);
+    if (!isFinite(prev) || prev <= 0) prev = cur;
+    var seedNum = 0;
+    var id = String(m.resourceId || "");
+    for (var k = 0; k < id.length; k++) seedNum = (seedNum * 31 + id.charCodeAt(k)) % 997;
+    var values = [];
+    for (var i = 0; i < 8; i++) {
+      if (i === 7) { values.push({ value: cur, isolated: false, synthetic: false }); continue; }
+      if (i === 6) { values.push({ value: prev, isolated: false, synthetic: false }); continue; }
+      // 回推到更早：以本周/上周为锚点，叠加随期次递增的确定性波动
+      var base = prev + (cur - prev) * (i / 6);
+      var wave = Math.sin(seedNum * 0.017 + i * 0.9) * base * 0.12;
+      values.push({
+        value: Math.max(base + wave, base * 0.35),
+        isolated: false,
+        synthetic: true   // 早期为推导值 → 折线图虚线段（与官网一致）
+      });
+    }
+    return values;
+  }
+
+  /** 前端榜单装配：注入 heat / rate / rateHistory → 排序 →（可选）维护历史最高并写回 db。
    *  opts: { sort:"heat"|"latest"|..., peakField:"peakRank"|"peakNewRank" }
    *  peakField 仅在“完整榜单视图”（heat 排序 + 无搜索 + 非我的留言）传入。 */
   function rankBoard(list, opts) {
     opts = opts || {};
-    list.forEach(function (m) { m.heat = messageScore(m) / 10000; });
+    list.forEach(function (m) {
+      m.heat = messageScore(m) / 10000;
+      // 变更比例（官网语义）：(本周 − 上周) / 上周；heatDelta 即百分数值
+      m.rate = (typeof m.heatDelta === "number" && isFinite(m.heatDelta)) ? m.heatDelta / 100 : null;
+      m.rateHistory = deriveHistory(m);
+    });
     list.sort(boardComparator(opts.sort || "heat"));
     if (opts.peakField && HMB.db) {
       var all = HMB.db.getMessages();
@@ -121,6 +154,159 @@
       if (changed) HMB.db.saveMessages(all);
     }
     return list;
+  }
+
+  /** 上周名次：优先用已记录的 peakRank，否则按当前名次 + 变动率估算（演示推导）。
+   *  返回 0 表示无历史（新帖）。 */
+  function deriveLastRank(m, currentRank) {
+    if (m.peakRank > 0) return m.peakRank;
+    if (!currentRank) return 0;
+    if (!isFinite(m.rate)) return 0;
+    var shift = Math.round(m.rate * currentRank * 1.5); // 涨则上周更靠后，跌则更靠前
+    return Math.max(1, Math.min(99, currentRank + shift));
+  }
+
+  /* ---------------- 折线图 sparkline（移植 biliboard.uk 首页设计，配色用本站令牌） ----------------
+   * 88×48 SVG：渐变面积填充 + clip-path 720ms 展开 + hover 指针追踪 + 数值 tooltip；
+   * synthetic/isolated 段用虚线（与官网一致）。reduced-motion 直接全展开、无 tooltip 动画。 */
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  var SPARK_PAD_X = 2, SPARK_PAD_Y = 2;
+  var _sparkSeq = 0;
+
+  function svgEl(tag, attrs) {
+    var n = document.createElementNS(SVG_NS, tag);
+    if (attrs) for (var k in attrs) {
+      if (Object.prototype.hasOwnProperty.call(attrs, k)) n.setAttribute(k, attrs[k]);
+    }
+    return n;
+  }
+
+  /** renderSparkline(values, opts) → HTMLElement
+   *  opts: { width:88, height:48, stroke:"var(--blue)", fill:"var(--blue)", play:true, label:"趋势" } */
+  function renderSparkline(values, opts) {
+    opts = opts || {};
+    var W = opts.width || 88, H = opts.height || 48;
+    var stroke = opts.stroke || "var(--blue)";
+    var fill = opts.fill || stroke;
+    var play = opts.play !== false && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    var wrap = el("span", "sparkline" + (play ? " sparkline--play" : ""));
+    wrap.style.width = W + "px"; wrap.style.height = H + "px";
+
+    var seq = ++_sparkSeq;
+    var gradId = "spark-g-" + seq, clipId = "spark-c-" + seq;
+    var svg = svgEl("svg", {
+      viewBox: "0 0 " + W + " " + H, width: W, height: H,
+      preserveAspectRatio: "none", role: "img",
+      "aria-label": opts.label || "热度趋势折线图",
+      style: "display:block;overflow:visible"
+    });
+
+    var vals = (values && values.length) ? values : [{ value: 0 }];
+    var nums = vals.map(function (v) { return (v && typeof v.value === "number" && isFinite(v.value)) ? v.value : null; })
+      .filter(function (x) { return x !== null; });
+    var min = nums.length ? Math.min.apply(null, nums) : 0;
+    var max = nums.length ? Math.max.apply(null, nums) : 1;
+    if (min === max) { min -= 1; max += 1; }
+    var innerW = Math.max(W - SPARK_PAD_X * 2, 1);
+    var innerH = Math.max(H - SPARK_PAD_Y * 2, 1);
+    var baseY = H - 1;
+
+    var pts = vals.map(function (v, i) {
+      var x = SPARK_PAD_X + i / Math.max(vals.length - 1, 1) * innerW;
+      var y = (v && typeof v.value === "number" && isFinite(v.value))
+        ? SPARK_PAD_Y + innerH - (v.value - min) / (max - min) * innerH
+        : null;
+      return { x: x, y: y, raw: v || {}, idx: i };
+    });
+
+    // 按 solid / dashed 分段（synthetic 或 isolated → 虚线）
+    var segments = [], cur = null;
+    pts.forEach(function (p, i) {
+      if (p.y === null) { cur = null; return; }
+      var kind = (p.raw.synthetic || p.raw.isolated) ? "dashed" : "solid";
+      var prev = i > 0 ? pts[i - 1] : null;
+      var prevKind = prev && prev.y !== null ? ((prev.raw.synthetic || prev.raw.isolated) ? "dashed" : "solid") : null;
+      if (!cur || kind !== prevKind) {
+        cur = { kind: kind, pts: (prev && prev.y !== null) ? [prev, p] : [p] };
+        segments.push(cur);
+      } else cur.pts.push(p);
+    });
+
+    // defs: 渐变 + clipPath（clip 宽度动画 = 折线绘制动画）
+    var defs = svgEl("defs");
+    var grad = svgEl("linearGradient", { id: gradId, x1: "0", y1: "0", x2: "0", y2: "1" });
+    grad.appendChild(svgEl("stop", { offset: "0%", "stop-color": fill, "stop-opacity": "0.3" }));
+    grad.appendChild(svgEl("stop", { offset: "100%", "stop-color": fill, "stop-opacity": "0" }));
+    defs.appendChild(grad);
+    var clip = svgEl("clipPath", { id: clipId });
+    var clipRect = svgEl("rect", { x: "0", y: "0", width: play ? 0 : W, height: H });
+    if (play) clipRect.style.transition = "width 720ms cubic-bezier(0.22,0.61,0.36,1)";
+    clip.appendChild(clipRect);
+    defs.appendChild(clip);
+    svg.appendChild(defs);
+
+    var g = svgEl("g", { "clip-path": "url(#" + clipId + ")" });
+    // 面积填充（整段）
+    var valid = pts.filter(function (p) { return p.y !== null; });
+    if (valid.length >= 2) {
+      var areaD = "M " + valid[0].x.toFixed(2) + " " + baseY + " " +
+        valid.map(function (p) { return "L " + p.x.toFixed(2) + " " + p.y.toFixed(2); }).join(" ") +
+        " L " + valid[valid.length - 1].x.toFixed(2) + " " + baseY + " Z";
+      g.appendChild(svgEl("path", { d: areaD, fill: "url(#" + gradId + ")" }));
+    }
+    // 折线段
+    segments.forEach(function (seg) {
+      if (seg.pts.length < 2) return;
+      var d = seg.pts.map(function (p, i) {
+        return (i === 0 ? "M " : "L ") + p.x.toFixed(2) + " " + p.y.toFixed(2);
+      }).join(" ");
+      var attrs = {
+        d: d, fill: "none", stroke: stroke, "stroke-width": "2.2",
+        "stroke-linecap": "round", "stroke-linejoin": "round"
+      };
+      if (seg.kind === "dashed") attrs["stroke-dasharray"] = "3 3";
+      g.appendChild(svgEl("path", attrs));
+    });
+    svg.appendChild(g);
+
+    // hover 指示：竖线 + 圆点 + tooltip
+    var guide = svgEl("g", { "pointer-events": "none", style: "opacity:0;transition:opacity 120ms ease" });
+    var vline = svgEl("line", { x1: 0, x2: 0, y1: 0, y2: H, stroke: stroke, "stroke-opacity": "0.25", "stroke-width": 1, "stroke-dasharray": "2 3" });
+    var dot = svgEl("circle", { cx: 0, cy: 0, r: 3.5, fill: "#fff", stroke: stroke, "stroke-width": 2 });
+    guide.appendChild(vline); guide.appendChild(dot);
+    svg.appendChild(guide);
+    var tip = el("span", "sparkline-tip");
+    wrap.appendChild(svg); wrap.appendChild(tip);
+
+    function onMove(e) {
+      if (!valid.length) return;
+      var box = svg.getBoundingClientRect();
+      var mx = (e.clientX - box.left) / box.width * W;
+      var best = valid[0], bestD = Infinity;
+      valid.forEach(function (p) {
+        var d = Math.abs(p.x - mx);
+        if (d < bestD) { bestD = d; best = p; }
+      });
+      vline.setAttribute("x1", best.x); vline.setAttribute("x2", best.x);
+      dot.setAttribute("cx", best.x); dot.setAttribute("cy", best.y);
+      guide.style.opacity = "1";
+      tip.textContent = (best.raw.value == null ? "—" : fmtHeat(best.raw.value) + "万") + (best.raw.synthetic ? " · 估算" : "");
+      tip.style.left = (best.x / W * 100) + "%";
+      tip.style.top = (best.y / H * 100) + "%";
+      tip.classList.add("is-visible");
+    }
+    function onLeave() {
+      guide.style.opacity = "0";
+      tip.classList.remove("is-visible");
+    }
+    svg.addEventListener("pointermove", onMove);
+    svg.addEventListener("pointerleave", onLeave);
+
+    if (play) {
+      // 下一帧触发 clip 展开（与官网 32ms 延时同理）
+      window.setTimeout(function () { clipRect.setAttribute("width", W); }, 32);
+    }
+    return wrap;
   }
 
   function pad2(n) { return n < 10 ? "0" + n : "" + n; }
@@ -550,6 +736,9 @@
     messageScore: messageScore,
     boardComparator: boardComparator,
     rankBoard: rankBoard,
+    deriveHistory: deriveHistory,
+    deriveLastRank: deriveLastRank,
+    renderSparkline: renderSparkline,
     fmtDate: fmtDate,
     timeAgo: timeAgo,
     debounce: debounce,

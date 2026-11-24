@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 4; // 文案变更必须递增（?v=N 防缓存，ADR-003）；v4：热榜期次出版语义（统计中）
+  var VERSION = 5; // 文案变更必须递增（?v=N 防缓存，ADR-003）；v5：榜单卡新增本周热度/变化率/上周排名
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -100,7 +100,9 @@
     "board.rankLabel": "历史最高",
     "board.peakHot": "周榜最高",
     "board.peakNew": "新帖最高",
-    "board.heatLabel": "热度",
+    "board.heatLabel": "本周热度",
+    "board.changeRate": "较上周变化",
+    "board.lastRank": "上周排名",
     "board.tabHot": "热榜",
     "board.tabLatest": "新帖",
     "board.tabMine": "我的留言",

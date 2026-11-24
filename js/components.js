@@ -393,19 +393,17 @@
     return b;
   }
 
-  function deltaChip(delta) {
-    var chip = el("span", "heat-delta");
-    if (delta > 0) {
-      chip.classList.add("heat-delta--up");
-      chip.appendChild(el("span", null, "▲ " + Math.abs(delta).toFixed(1) + "%"));
-    } else if (delta < 0) {
-      chip.classList.add("heat-delta--down");
-      chip.appendChild(el("span", null, "▼ " + Math.abs(delta).toFixed(1) + "%"));
-    } else {
-      chip.classList.add("heat-delta--flat");
-      chip.appendChild(el("span", null, "— 0.0%"));
-    }
-    chip.appendChild(U.trendArrow(delta));
+  /** 变更比例胶囊（移植 biliboard.uk 首页 Gm 组件设计，配色用本站令牌）。
+   *  rate 为小数（0.019 = +1.9%）；正数=涨(--up 红) / 负数=跌(--down 绿) / 0=平(--ink-3)。
+   *  胶囊带 max-width / opacity / padding 展开动画（CSS .rate-pill）。 */
+  function deltaChip(rate) {
+    var val = (typeof rate === "number" && isFinite(rate)) ? rate : 0;
+    var pct = Math.round(val * 1000) / 10;
+    var kind = pct > 0 ? "up" : (pct < 0 ? "down" : "flat");
+    var chip = el("span", "rate-pill rate-pill--" + kind);
+    chip.appendChild(el("span", "rate-pill-inner",
+      (pct > 0 ? "+" : "") + pct.toFixed(1) + "%"));
+    chip.setAttribute("aria-label", t("board.changeRate") + " " + (pct > 0 ? "+" : "") + pct.toFixed(1) + "%");
     return chip;
   }
 
@@ -504,7 +502,8 @@
     mainZone.appendChild(stats);
     card.appendChild(mainZone);
 
-    /* 05 热度区 */
+    /* 05 热度区（biliboard 首页形制：本周分数 + 变更胶囊 + 折线图）
+     * 列①：本周热度标签 + 分数 + 变更比例胶囊；列②：8 期趋势折线图（前端推导） */
     var heatZone = el("div", "heat-zone");
     var heatLabel = el("div", "heat-label");
     heatLabel.setAttribute("data-text", "board.heatLabel");
@@ -513,8 +512,17 @@
     heatVal.appendChild(el("span", null, U.fmtHeat(msg.heat)));
     heatVal.appendChild(el("span", "unit", "万"));
     heatZone.appendChild(heatVal);
-    heatZone.appendChild(deltaChip(msg.heatDelta));
+    heatZone.appendChild(deltaChip(msg.rate));
     card.appendChild(heatZone);
+
+    // 折线图：色值按涨红跌绿（--up / --down / --blue 平），hover 显示各期分数
+    var sparkWrap = el("div", "card-spark");
+    var sparkColor = msg.rate > 0 ? "var(--up)" : (msg.rate < 0 ? "var(--down)" : "var(--blue)");
+    sparkWrap.appendChild(U.renderSparkline(msg.rateHistory || [], {
+      width: 88, height: 48, stroke: sparkColor, fill: sparkColor,
+      label: "本周热度趋势"
+    }));
+    card.appendChild(sparkWrap);
 
     /* 06 最高区：单榜显示本榜历史最高；双榜（我的留言）并排显示周榜/新帖两榜历史最高 */
     var peakZone = el("div", "peak-zone" + (ctx.peakMode === "dual" ? " peak-zone--dual" : ""));
@@ -526,6 +534,18 @@
         ctx.peakMode === "new" ? (msg.peakNewRank || 0) : msg.peakRank));
     }
     card.appendChild(peakZone);
+
+    /* 07 上周排名卡（biliboard 首页形制：描边小卡 + 名次数字 + “上周排名”标签） */
+    var lastRank = U.deriveLastRank(msg, ctx.rank);
+    var lastRankZone = el("div", "last-rank-zone");
+    var lrc = el("div", "last-rank-card" + (lastRank > 0 && lastRank <= 3 ? " last-rank-card--top" : ""));
+    var lrcNum = el("div", "last-rank-num");
+    lrcNum.textContent = lastRank > 0 ? String(lastRank < 10 ? "0" + lastRank : lastRank) : "—";
+    var lrcLabel = el("div", "last-rank-label");
+    lrcLabel.setAttribute("data-text", "board.lastRank");
+    lrc.appendChild(lrcNum); lrc.appendChild(lrcLabel);
+    lastRankZone.appendChild(lrc);
+    card.appendChild(lastRankZone);
 
     HMB.i18n.apply(card);
     return card;
