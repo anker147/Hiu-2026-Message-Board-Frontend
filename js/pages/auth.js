@@ -217,9 +217,14 @@
   /* ---------------- 登录卡共用：tab 切换 / 用户协议 / 背景图 ---------------- */
 
   function switchFormTab(which) {
-    var card = document.querySelector(".login-card");
+    var card = document.querySelector(".login-window") || document.querySelector(".login-card");
     if (!card) return;
     var wrap = card.querySelector(".login-forms");
+    var sub = $("lwSub");
+    if (sub) {
+      sub.textContent = t(which === "register" ? "login.regWindowSub" : "login.windowSub");
+      sub.setAttribute("data-text", which === "register" ? "login.regWindowSub" : "login.windowSub");
+    }
     var lf = card.querySelector("#loginForm"), rf = card.querySelector("#regForm");
     if ((which === "login" && !lf.hidden) || (which === "register" && !rf.hidden)) return;
     card.querySelectorAll(".login-tab").forEach(function (b) {

@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 7; // v7：新增「全部留言」页与管理员 GM 模块文案（含 6xxx 权限错误码）
+  var VERSION = 8; // v8：登录页改为左右分栏（左侧文字区 + 右侧深色玻璃登录窗）
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -355,11 +355,28 @@
     "login.toRegister": "还没有账号",
     "login.registerLink": "去注册",
     "login.demoHint": "演示账号见左下角演示面板",
+    "login.windowTitle": "欢迎回来",
+    "login.windowSub": "登录你的留言板账号",
+    "login.regWindowSub": "创建账号，开始留下你的足迹",
+    "login.accountLabel": "账号 / 手机号",
+    "login.passwordLabel": "密码",
+    "login.featureHot": "热度周榜",
+    "login.featureHotDesc": "全站留言折合分排行，看看大家都在聊什么",
+    "login.featureBlind": "盲盒祝福",
+    "login.featureBlindDesc": "抽一条陌生人的留言，匿名送出你的祝福",
+    "login.featurePrivacy": "隐私脱敏",
+    "login.featurePrivacyDesc": "真实信息自己掌控，对外只展示掩码",
+    "login.footer": "© 2026 留言板 · Hiu 2026",
 
     /* —— 注册页（P-02） —— */
     "register.phonePlaceholder": "请输入 11 位大陆手机号",
     "register.pwdPlaceholder": "至少 8 位，含字母与数字",
     "register.confirmPlaceholder": "再次输入密码",
+    "register.accountLabel": "手机号",
+    "register.passwordLabel": "密码",
+    "register.confirmLabel": "确认密码",
+    "register.nameLabel": "真实姓名（选填）",
+    "register.emailLabel": "邮箱地址（选填）",
     "register.confirmMismatch": "两次输入的密码不一致",
     "register.namePlaceholder": "真实姓名",
     "register.emailPlaceholder": "邮箱地址",
