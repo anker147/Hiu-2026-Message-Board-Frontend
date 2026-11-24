@@ -127,16 +127,16 @@
 
     var foot = el("div", "msg-card-foot");
     var stats = el("div", "msg-card-stats");
-    function stat(iconName, value) {
-      var s = el("span", "stat");
+    function stat(iconName, value, extraCls) {
+      var s = el("span", "stat" + (extraCls ? " " + extraCls : ""));
       s.appendChild(U.icon(iconName));
       s.appendChild(el("span", null, value));
       return s;
     }
     stats.appendChild(stat("eye", U.fmtViews(msg.stats.views)));
-    stats.appendChild(stat("heart", U.fmtViews(msg.stats.likes)));
-    stats.appendChild(stat("comment", U.fmtViews(msg.stats.comments)));
-    stats.appendChild(stat("star", U.fmtViews(msg.stats.favorites)));
+    stats.appendChild(stat("heart", U.fmtViews(msg.stats.likes), "stat--like"));
+    stats.appendChild(stat("comment", U.fmtViews(msg.stats.comments), "stat--comment"));
+    stats.appendChild(stat("star", U.fmtViews(msg.stats.favorites), "stat--fav"));
     foot.appendChild(stats);
 
     if (msg.isMine) {
@@ -193,6 +193,11 @@
       var fc = favBtn.querySelector(".action-count");
       if (fc) fc.textContent = U.fmtViews(msg.stats.favorites);
     }
+    // 左侧四项统计同步：点赞数 / 收藏数与右侧互动按钮一起变化（同一数据源 msg.stats）
+    var likeStat = els.msgArea.querySelector(".msg-card-stats .stat--like span:last-child");
+    if (likeStat) likeStat.textContent = U.fmtViews(msg.stats.likes);
+    var favStat = els.msgArea.querySelector(".msg-card-stats .stat--fav span:last-child");
+    if (favStat) favStat.textContent = U.fmtViews(msg.stats.favorites);
   }
 
   /** F8 点赞状态机（350ms 内重复点击复用幂等键） */
@@ -310,6 +315,10 @@
       }
       commentTree = resp.data.list;
       els.commentCount.textContent = " " + resp.data.total;
+      // 左侧四项统计的评论数与评论标题计数同源同步
+      msg.stats.comments = resp.data.total;
+      var commentStat = els.msgArea.querySelector(".msg-card-stats .stat--comment span:last-child");
+      if (commentStat) commentStat.textContent = U.fmtViews(msg.stats.comments);
       C.renderCommentTree(els.commentList, commentTree, {
         session: session,
         onLike: function (c, btn) { likeTarget(c.resourceId, btn, btn); },
