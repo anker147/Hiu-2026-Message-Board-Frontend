@@ -718,6 +718,22 @@ body.is-tab-switching #gmView {
 .float-btn--publish { background: var(--blue); color: #fff; }
 .float-btn--blindbox { background: var(--card); color: var(--accent); border: 1px solid #FFD3E1; box-shadow: 0 8px 22px rgba(251, 114, 153, 0.25); }
 
+/* 浮动操作组：两个按钮从右下方逐层飞入（沿用 PRD 9.4 子层进入规范）
+   backwards 让延迟帧保持隐藏，动画结束后 transform 归还给 :hover，避免 hover 失效。 */
+@keyframes float-fly-in {
+  from { opacity: 0; transform: translate3d(36px, 18px, 0) scale(.92); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+.float-actions .float-btn {
+  animation: float-fly-in 480ms var(--ease-spring) backwards;
+  animation-delay: calc(90ms + var(--i, 0) * 120ms);
+}
+.float-actions .float-btn:nth-child(1) { --i: 0; }  /* 盲盒先入 */
+.float-actions .float-btn:nth-child(2) { --i: 1; }  /* 发布压轴 */
+@media (prefers-reduced-motion: reduce) {
+  .float-actions .float-btn { animation: none; }
+}
+
 /* ---------- 榜单列表 ---------- */
 .board-list { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 120px; }
 .list-caption {
