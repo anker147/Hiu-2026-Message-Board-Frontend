@@ -106,6 +106,7 @@
   var isPublic = true;
   var submitting = false;
   var likeIntent = {};
+  var pendingImages = [];   // 文末图片引用（localimg://id），最多 10 张，随发布/保存提交
 
   function qsId() {
     var m = window.location.search.match(/[?&]id=([^&#]+)/);
@@ -176,7 +177,7 @@
   function renderOrigin() {
     var box = $("editOrigin");
     box.textContent = "";
-    var av = U.avatar(msg.avatarEnum, "avatar--sm edit-origin-avatar");
+    var av = U.avatar(msg.avatarEnum, "avatar--sm edit-origin-avatar", msg.avatarUrl);
     box.appendChild(av);
 
     var main = el("div", "edit-origin-main");
@@ -249,6 +250,56 @@
     });
   }
 
+  /* ---------------- 文末图片（最多 10 张，横滑无滚动条） ---------------- */
+
+  function renderImageStrip() {
+    var strip = $("eiStrip");
+    if (!strip) return;
+    strip.textContent = "";
+    $("eiCount").textContent = pendingImages.length + "/" + HMB.media.MAX_IMAGES;
+    pendingImages.forEach(function (ref, idx) {
+      var cell = el("div", "ei-item");
+      var img = HMB.media.el(ref, "ei-thumb", "文末图片 " + (idx + 1));
+      if (img) cell.appendChild(img);
+      else cell.appendChild(el("div", "ei-thumb ei-thumb--err", "图片丢失"));
+      var del = el("button", "ei-del", "×");
+      del.type = "button";
+      del.setAttribute("aria-label", "移除第 " + (idx + 1) + " 张");
+      del.addEventListener("click", function () {
+        pendingImages.splice(idx, 1);
+        renderImageStrip();
+      });
+      cell.appendChild(del);
+      strip.appendChild(cell);
+    });
+    var addCell = el("button", "ei-item ei-add-cell", "+");
+    addCell.type = "button";
+    addCell.setAttribute("aria-label", "添加图片");
+    addCell.disabled = pendingImages.length >= HMB.media.MAX_IMAGES;
+    addCell.addEventListener("click", function () { $("eiFile").click(); });
+    strip.appendChild(addCell);
+  }
+
+  function bindImages() {
+    var input = $("eiFile");
+    if (!input) return;
+    $("eiAddBtn").addEventListener("click", function () { input.click(); });
+    input.addEventListener("change", function () {
+      var files = Array.prototype.slice.call(input.files || []);
+      input.value = "";
+      if (!files.length) return;
+      var room = HMB.media.MAX_IMAGES - pendingImages.length;
+      if (room <= 0) { U.toast(t("editPage.imagesMax") || "最多 10 张图片", "error"); return; }
+      HMB.media.saveMany(files.slice(0, room), function (r) {
+        r.refs.forEach(function (ref) {
+          if (pendingImages.length < HMB.media.MAX_IMAGES) pendingImages.push(ref);
+        });
+        renderImageStrip();
+        if (r.errors.length) U.toast(t("editPage.imagesFail") || "部分图片添加失败", "error");
+      });
+    });
+  }
+
   function bindToolbar() {
     // Word 式排版工具栏：mousedown 阻止默认行为，避免点击按钮丢失正文选区
     var rich = $("richTools");
@@ -306,8 +357,11 @@
       if (e.key === "Escape") setPop(false);
     });
 
-    // 禁用态按钮：原型无图片/视频/投票/@/引用能力，点击就地说明
-    ["tbImage", "tbVideo", "tbPoll", "tbAt", "tbQuote"].forEach(function (id) {
+    // 文末图片：图片按钮启用，打开多选文件（正文不插图，图统一放文末）
+    $("tbImage").classList.remove("is-disabled");
+    $("tbImage").addEventListener("click", function () { $("eiFile").click(); });
+    // 其余能力仍为原型禁用态，点击就地说明
+    ["tbVideo", "tbPoll", "tbAt", "tbQuote"].forEach(function (id) {
       $(id).addEventListener("click", function () {
         U.toast($(id).getAttribute("title") || t("editPage.disabledImageTip"));
       });
@@ -388,6 +442,7 @@
           content: content,
           nickname: $("postNickname").value.trim(),
           topic: selectedTag,
+          images: pendingImages.slice(),
           csrf: session.csrf
         })
       : api.updateContent({
@@ -396,6 +451,7 @@
           content: content,
           topic: selectedTag,
           isPublic: isPublic,
+          images: pendingImages.slice(),
           csrf: session.csrf
         });
 
@@ -522,20 +578,24 @@
       titleInput.value = originalTitle;
       selectedTag = msg.topicTag || "";
       isPublic = msg.isPublic !== false;
+      pendingImages = (msg.images || []).slice(0, HMB.media.MAX_IMAGES);
       $("backLink") && ($("backLink").href = detailHref());
     } else {
       setContent("");
       titleInput.value = "";
       selectedTag = "";
       isPublic = true;
+      pendingImages = [];
       syncPrivacySwitches();
       if (session.loggedIn) $("postNickname").value = session.nickname;
     }
+    renderImageStrip();
 
     renderTypeDropdown();
     renderTopicDropdown();
     buildEmojiPop();
     bindToolbar();
+    bindImages();
     updateWordCount();
 
     $("editorTopbar").hidden = false;

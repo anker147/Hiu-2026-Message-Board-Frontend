@@ -75,7 +75,7 @@
     var hero = $("zoneHero");
     hero.textContent = "";
 
-    var av = U.avatar(u.avatarEnum);
+    var av = U.avatar(u.avatarEnum, "", u.avatarUrl);
     av.classList.add("zone-avatar");
     hero.appendChild(av);
 
@@ -232,7 +232,7 @@
   function renderPostItem(m) {
     var item = el("article", "zone-item");
     var head = el("div", "zone-item-head");
-    var av = U.avatar(m.avatarEnum, "avatar--sm");
+    var av = U.avatar(m.avatarEnum, "avatar--sm", m.avatarUrl);
     av.style.width = "30px"; av.style.height = "30px"; av.style.fontSize = "16px";
     head.appendChild(av);
     head.appendChild(el("span", "zone-item-author", "@" + m.nicknameSnapshot));
@@ -277,7 +277,7 @@
   function renderReplyItem(c) {
     var item = el("article", "zone-item");
     var head = el("div", "zone-item-head");
-    var av = U.avatar(zone.user.avatarEnum, "avatar--sm");
+    var av = U.avatar(zone.user.avatarEnum, "avatar--sm", zone.user.avatarUrl);
     av.style.width = "30px"; av.style.height = "30px"; av.style.fontSize = "16px";
     head.appendChild(av);
     head.appendChild(el("span", "zone-item-author", "@" + zone.user.nickname));

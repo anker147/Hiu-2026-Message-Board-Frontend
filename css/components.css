@@ -263,6 +263,11 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .avatar--5 { background: var(--av-5); } .avatar--6 { background: var(--av-6); }
 .avatar--7 { background: var(--av-7); } .avatar--8 { background: var(--av-8); }
 .avatar--sm { font-size: 22px; }
+/* 上传头像：1:1 正方形裁切，覆盖 emoji 底色 */
+.avatar.avatar--img {
+  display: block; object-fit: cover; object-position: center;
+  background: none; overflow: hidden;
+}
 
 /* 主信息区 */
 .main-zone { flex: 1; min-width: 0; }

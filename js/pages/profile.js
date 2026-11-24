@@ -20,7 +20,8 @@
 
   var session = { loggedIn: false };
   var profile = null;
-  var pendingAvatar = null; // 头像选择器暂存（保存时随表单提交）
+  var pendingAvatar = null;      // emoji 头像暂存（保存时随表单提交）
+  var pendingAvatarUrl = null;   // 上传头像引用暂存；null=未改，""=回退 emoji
   var likeIntent = {};
 
   function init() {
@@ -58,7 +59,8 @@
       // 头像预览（选择器暂存优先）
       var avWrap = $("profileAvatar");
       avWrap.textContent = "";
-      var av = U.avatar(pendingAvatar || profile.avatarEnum);
+      var previewUrl = pendingAvatarUrl !== null ? pendingAvatarUrl : (profile.avatarUrl || "");
+      var av = U.avatar(pendingAvatar || profile.avatarEnum, "", previewUrl);
       av.classList.add("pe-avatar");
       avWrap.appendChild(av);
 
@@ -127,6 +129,7 @@
       showErr("");
       var args = { nickname: nick, bio: bio, csrf: session.csrf };
       if (pendingAvatar !== null) args.avatarEnum = pendingAvatar;
+      if (pendingAvatarUrl !== null) args.avatarUrl = pendingAvatarUrl;
 
       // 敏感信息客户端校验（邮箱格式）
       var realName = $("realNameInput").value.trim();
@@ -153,6 +156,7 @@
             if (resp2.success) U.toast(t("profile.sensitiveSaved"), "success");
             else if (resp2.code !== 9001) U.toast(resp2.message, "error");
             U.toast(t("toast.nicknameSaved"), "success");
+            pendingAvatar = null; pendingAvatarUrl = null;   // 提交成功，清除暂存
             loadProfile();   // 掩码预览即时刷新（F6 出口脱敏）
             loadMine();
             api.getSession().then(function (r) {
@@ -196,6 +200,44 @@
         grid.appendChild(opt);
       });
       content.appendChild(grid);
+
+      // 上传自定义头像（追风杯式字符串引用；存 media 层，业务字段只存引用）
+      var upRow = el("div", "pe-avatar-upload-row");
+      var upInput = document.createElement("input");
+      upInput.type = "file";
+      upInput.accept = HMB.media ? HMB.media.ACCEPT.join(",") : "image/*";
+      upInput.className = "pe-avatar-file";
+      upInput.addEventListener("change", function () {
+        var f = upInput.files && upInput.files[0];
+        if (!f || !HMB.media) return;
+        HMB.media.save(f, function (r) {
+          if (!r.ok) { U.toast(t("profile.avatarUploadFail") || "图片读取失败", "error"); return; }
+          pendingAvatarUrl = r.ref;
+          pendingAvatar = null;
+          modal.close();
+          loadProfile();
+          U.toast(t("profile.avatarUploaded") || "头像已更新，保存后生效", "success");
+        });
+      });
+      var upBtn = el("button", "btn btn--soft btn--sm", t("profile.avatarUpload") || "上传图片");
+      upBtn.type = "button";
+      upBtn.addEventListener("click", function () { upInput.click(); });
+      upRow.appendChild(upBtn);
+      upRow.appendChild(upInput);
+      // 已有自定义头像 → 提供“恢复默认 emoji”
+      var hasCustom = !!(pendingAvatarUrl || (profile && profile.avatarUrl));
+      if (hasCustom) {
+        var resetBtn = el("button", "btn btn--ghost btn--sm", t("profile.avatarReset") || "恢复默认头像");
+        resetBtn.type = "button";
+        resetBtn.addEventListener("click", function () {
+          pendingAvatarUrl = "";
+          pendingAvatar = null;
+          modal.close();
+          loadProfile();
+        });
+        upRow.appendChild(resetBtn);
+      }
+      content.appendChild(upRow);
       HMB.i18n.apply(content);
       var modal = U.openModal(content, { modalCls: "pe-avatar-modal" });
     });

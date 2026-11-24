@@ -5,6 +5,13 @@
 
 html { scroll-behavior: smooth; }
 
+/* —— 全站隐藏滚动条（保留滚动能力）：页面纵向滚动、多图横向滑动都无可见滚动条 —— */
+html, body { scrollbar-width: none; -ms-overflow-style: none; }
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar, *::-webkit-scrollbar-track, *::-webkit-scrollbar-thumb {
+  width: 0; height: 0; display: none; -webkit-appearance: none; appearance: none;
+}
+
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -137,8 +144,3 @@ a:focus-visible, [tabindex]:focus-visible {
   margin: -1px; padding: 0; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
-
-/* —— 滚动条微调 —— */
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #D6E1EC; border-radius: 8px; border: 2px solid var(--bg); }
-::-webkit-scrollbar-track { background: transparent; }
