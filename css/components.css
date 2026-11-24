@@ -268,6 +268,13 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
   display: block; object-fit: cover; object-position: center;
   background: none; overflow: hidden;
 }
+/* 帖子封面：替换头像位，1:1 正方形裁切，点击看大图 */
+.card-cover {
+  display: block; width: 100%; height: 100%;
+  border-radius: var(--radius-avatar); object-fit: cover; object-position: center;
+  background: var(--bg); cursor: zoom-in;
+}
+.card-cover:focus-visible { box-shadow: var(--focus-ring); outline: none; }
 
 /* 主信息区 */
 .main-zone { flex: 1; min-width: 0; }

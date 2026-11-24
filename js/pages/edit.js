@@ -4,12 +4,12 @@
  *  - 顶部操作行：类型下拉（「文章▾」→ 帖子可见类型）+ 话题版块下拉（fid）
  *  - 图标工具栏：表情可用；图片/视频/投票/@/引用为原型禁用态（无后端能力）
  *  - 居中窄卡：标题（选填）·48 字以内 + 分隔线 + 正文（纯白大区）
- *  - 设置封面禁用卡 + 「▼ 发布设置」折叠设置卡（公开范围 / 本次昵称 / 危险区）
+ *  - 封面卡：独立上传封面 / 文末图集首图作封面 / 移除；「▼ 发布设置」折叠卡
  *  - 底部固定条：正文字数（实时）+ 发布 / 保存修改
  * 双模式：?id=<resourceId> 编辑（预填原文，API-07，标记「已编辑」）；
  *         无参 / ?mode=new 新建（承接原 P-03 全部语义：F5 两阶段定位等）。
- * 红线说明：标题/字数计数按新参考（好游快爆）落地；图片上传与封面不设
- * （无后端存储），工具栏对应项为禁用态并就地说明。
+ * 红线说明：标题/字数计数按新参考（好游快爆）落地；图片统一走本地媒体层
+ * （字符串引用 + 默认回退），正文不图文混排，视频/投票/@/引用仍为原型禁用态。
  * ============================================================ */
 (function (window, document) {
   "use strict";
@@ -106,6 +106,8 @@
   var isPublic = true;
   var submitting = false;
   var pendingImages = [];   // 文末图片引用（localimg://id），最多 10 张，随发布/保存提交
+  var pendingCover = "";    // 独立封面引用（localimg://id），空 = 未设置
+  var coverFromFirst = false; // true = 列表封面取文末图集第一张，并随图集变化
 
   function qsId() {
     var m = window.location.search.match(/[?&]id=([^&#]+)/);
@@ -275,6 +277,61 @@
     addCell.disabled = pendingImages.length >= HMB.media.MAX_IMAGES;
     addCell.addEventListener("click", function () { $("eiFile").click(); });
     strip.appendChild(addCell);
+    // 「首图作封面」开启时，图集增删会改变实际封面，同步刷新预览
+    if (coverFromFirst) renderCoverCard();
+  }
+
+  /* ---------------- 封面：独立上传 / 文末首图 / 移除 ---------------- */
+
+  /** 实际生效的封面：首图开关优先，否则用独立封面，都没有返回空 */
+  function effectiveCover() {
+    if (coverFromFirst && pendingImages.length) return pendingImages[0];
+    return pendingCover;
+  }
+
+  function renderCoverCard() {
+    var btn = $("coverBtn");
+    if (!btn) return;
+    btn.textContent = "";
+    var cover = effectiveCover();
+    var img = (cover && HMB.media) ? HMB.media.el(cover, "editor-cover-preview", t("editPage.coverLabel")) : null;
+    if (img) btn.appendChild(img);
+    else btn.appendChild(U.icon("image"));
+    btn.classList.toggle("has-cover", !!img);
+    btn.setAttribute("aria-label", img ? t("editPage.coverReplace") : t("editPage.coverLabel"));
+    btn.title = img ? t("editPage.coverReplace") : t("editPage.coverLabel");
+    var remove = $("coverRemove");
+    if (remove) remove.hidden = !(pendingCover || coverFromFirst);
+  }
+
+  function bindCover() {
+    var input = $("coverFile");
+    if (!input) return;
+    $("coverBtn").addEventListener("click", function () { input.click(); });
+    input.addEventListener("change", function () {
+      var files = Array.prototype.slice.call(input.files || []);
+      input.value = "";
+      if (!files.length) return;
+      HMB.media.save(files[0], function (r) {
+        if (!r.ok) { U.toast(t("editPage.imagesFail"), "error"); return; }
+        pendingCover = r.ref;
+        renderCoverCard();
+        U.toast(coverFromFirst && pendingImages.length
+          ? t("editPage.coverSavedBehindFirst") : t("editPage.coverDone"), "success");
+      });
+    });
+    $("coverFromFirst").addEventListener("change", function () {
+      coverFromFirst = !!this.checked;
+      if (coverFromFirst && !pendingImages.length) U.toast(t("editPage.coverNeedImage"));
+      renderCoverCard();
+    });
+    $("coverRemove").addEventListener("click", function () {
+      pendingCover = "";
+      coverFromFirst = false;
+      $("coverFromFirst").checked = false;
+      renderCoverCard();
+      U.toast(t("editPage.coverRemoved"), "success");
+    });
   }
 
   function bindImages() {
@@ -330,10 +387,6 @@
         btn.textContent = "";
         btn.appendChild(U.icon(pair[1]));
       });
-    // 封面按钮图标
-    var coverBtn = $("coverBtn");
-    coverBtn.textContent = "";
-    coverBtn.appendChild(U.icon("image"));
 
     var pop = $("emojiPop");
     pop.setAttribute("aria-hidden", "true"); // 收起态不进无障碍树
@@ -364,10 +417,6 @@
       });
     });
 
-    // 封面按钮同禁用语义
-    $("coverBtn").addEventListener("click", function () {
-      U.toast(t("editPage.disabledCoverTip"));
-    });
 
     // 设置卡折叠（「▼ 发布设置」）
     var settingsCard = document.querySelector(".editor-settings-card");
@@ -440,6 +489,8 @@
           nickname: $("postNickname").value.trim(),
           topic: selectedTag,
           images: pendingImages.slice(),
+          coverUrl: pendingCover,
+          coverFromFirst: coverFromFirst,
           csrf: session.csrf
         })
       : api.updateContent({
@@ -449,6 +500,8 @@
           topic: selectedTag,
           isPublic: isPublic,
           images: pendingImages.slice(),
+          coverUrl: pendingCover,
+          coverFromFirst: coverFromFirst,
           csrf: session.csrf
         });
 
@@ -518,6 +571,9 @@
       selectedTag = msg.topicTag || "";
       isPublic = msg.isPublic !== false;
       pendingImages = (msg.images || []).slice(0, HMB.media.MAX_IMAGES);
+      pendingCover = msg.coverUrl || "";
+      coverFromFirst = !!msg.coverFromFirst;
+      if ($("coverFromFirst")) $("coverFromFirst").checked = coverFromFirst;
       $("backLink") && ($("backLink").href = detailHref());
     } else {
       setContent("");
@@ -525,16 +581,21 @@
       selectedTag = "";
       isPublic = true;
       pendingImages = [];
+      pendingCover = "";
+      coverFromFirst = false;
+      if ($("coverFromFirst")) $("coverFromFirst").checked = false;
       syncPrivacySwitches();
       if (session.loggedIn) $("postNickname").value = session.nickname;
     }
     renderImageStrip();
+    renderCoverCard();
 
     renderTypeDropdown();
     renderTopicDropdown();
     buildEmojiPop();
     bindToolbar();
     bindImages();
+    bindCover();
     updateWordCount();
 
     $("editorTopbar").hidden = false;

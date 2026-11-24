@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 24; // v24：发布成功回跳我的留言，移除发布页最新发布区
+  var VERSION = 25; // v25：帖子封面（独立上传 / 文末首图）+ 图片大图查看
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -191,8 +191,15 @@
     "editPage.settingsLabel": "设置",
     "editPage.publishSettings": "发布设置",
     "editPage.coverLabel": "设置封面",
-    "editPage.coverNote1": "· 封面能力暂未开放",
-    "editPage.coverNote2": "· 图片请通过下方「文末图片」添加（最多 10 张）",
+    "editPage.coverNote1": "· 设置后封面会替换列表卡片上的头像位",
+    "editPage.coverNote2": "· JPG / PNG / GIF / WebP · 单张 ≤5MB",
+    "editPage.coverReplace": "点击更换封面",
+    "editPage.coverFromFirst": "用文末第一张图片作为封面",
+    "editPage.coverRemove": "移除封面",
+    "editPage.coverDone": "封面已设置",
+    "editPage.coverRemoved": "已移除封面",
+    "editPage.coverNeedImage": "请先添加文末图片，当前仍使用独立封面",
+    "editPage.coverSavedBehindFirst": "独立封面已保存，当前优先显示文末第一张图片",
     "editPage.imagesTitle": "文末图片",
     "editPage.imagesAdd": "添加图片",
     "editPage.imagesNote": "最多 10 张 · JPG/PNG/GIF/WebP · 单张 ≤5MB · 显示在正文末尾",
@@ -203,7 +210,6 @@
     "editPage.disabledPollTip": "前端原型不支持投票帖",
     "editPage.disabledAtTip": "留言暂不支持 @ 用户",
     "editPage.disabledQuoteTip": "前端原型不支持引用功能",
-    "editPage.disabledCoverTip": "前端原型不支持封面图片上传",
     "editPage.wordCount": "正文字数",
     "editPage.toolbarReset": "还原原文",
     "editPage.resetDone": "已还原为原文",

@@ -303,6 +303,12 @@
     return (box.textContent || box.innerText || "").replace(/\u00a0/g, " ").trim();
   }
 
+  /** 封面引用校验：只接受 localimg://id，空串 = 无封面（与头像上传同口径） */
+  function sanitizeCover(ref) {
+    var s = (ref === undefined || ref === null) ? "" : (typeof ref === "string" ? ref : "");
+    return (s && s.indexOf("localimg://") === 0 && s.length > 11) ? s : "";
+  }
+
   /** 文末图片引用白名单校验：只接受 localimg://id，最多 10 张，去重。
    *  正文 content 仍不含 img（不图文混排），图作为独立字段随帖保存。 */
   function sanitizeImages(images) {
@@ -347,6 +353,8 @@
       avatarEnum: m.avatarEnum,
       avatarUrl: (m.avatarUrlSnapshot !== undefined ? m.avatarUrlSnapshot : (owner && owner.avatarUrl)) || "",
       images: (m.images || []).slice(0, 10),   // 文末图片引用（localimg://id），最多 10 张；正文不含图
+      coverUrl: sanitizeCover(m.coverUrl),     // 独立封面引用；空 = 用默认头像
+      coverFromFirst: !!m.coverFromFirst,      // true = 取 images[0] 为封面，自动跟随图集变化
       displayId: m.displayId,
       topicTag: m.topicTag || "",
       createdAt: m.createdAt,
@@ -610,6 +618,8 @@
         avatarEnum: user.avatarEnum,
         avatarUrlSnapshot: user.avatarUrl || "",   // 发帖时头像快照（真实头像引用，历史不变）
         images: sanitizeImages(args.images),        // 文末图片引用，最多 10 张
+        coverUrl: sanitizeCover(args.coverUrl),     // 独立封面（可空）
+        coverFromFirst: !!args.coverFromFirst,      // 图集第一张作为封面
         displayId: user.displayId,
         topicTag: args.topic || "",
         isPublic: true,
@@ -803,6 +813,8 @@
         if (args.isPublic !== undefined) m.isPublic = !!args.isPublic;
         // 文末图片：传 images 时整体替换（含全部删除→空数组）；未传保持原值（评论编辑不传）
         if (args.images !== undefined) m.images = sanitizeImages(args.images);
+        if (args.coverUrl !== undefined) m.coverUrl = sanitizeCover(args.coverUrl);
+        if (args.coverFromFirst !== undefined) m.coverFromFirst = !!args.coverFromFirst;
         m.edited = true;
         db.saveMessages(messages);
         return ok(toListMessage(m));

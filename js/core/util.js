@@ -133,15 +133,87 @@
     return frag;
   }
 
-  /** 文末图片横滑条（最多 10 张，滚动条由 base.css 全站隐藏）：无图片返回 null */
+  /** 帖子实际封面：开启「图集首图作封面」时取 images[0]，否则取独立封面；都没有返回空 */
+  function messageCover(m) {
+    if (!m) return "";
+    if (m.coverFromFirst && m.images && m.images.length) return m.images[0] || "";
+    return m.coverUrl || "";
+  }
+
+  /** 文末图片横滑条（最多 10 张，滚动条由 base.css 全站隐藏）：点击任意图打开大图查看 */
   function imageStrip(images) {
     if (!window.HMB.media || !Array.isArray(images) || !images.length) return null;
     var strip = el("div", "msg-images");
-    images.slice(0, 10).forEach(function (ref) {
-      var img = window.HMB.media.el(ref, "msg-images-item", "文末图片");
-      if (img) strip.appendChild(img);
+    var refs = images.slice(0, 10);
+    refs.forEach(function (ref, idx) {
+      var img = window.HMB.media.el(ref, "msg-images-item", "文末图片 " + (idx + 1));
+      if (!img) return;
+      img.tabIndex = 0;
+      img.setAttribute("role", "button");
+      img.addEventListener("click", function () { openImageViewer(refs, idx); });
+      img.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openImageViewer(refs, idx); }
+      });
+      strip.appendChild(img);
     });
     return strip.childNodes.length ? strip : null;
+  }
+
+  /** 全屏大图查看：封面与图集共用；支持左右切换、键盘方向键、Esc 与点遮罩关闭 */
+  function openImageViewer(refs, index) {
+    if (!window.HMB.media || !Array.isArray(refs) || !refs.length) return;
+    var list = refs.slice(0, 10);
+    var i = Math.max(0, Math.min(index || 0, list.length - 1));
+    var mask = el("div", "img-viewer");
+    mask.setAttribute("role", "dialog");
+    mask.setAttribute("aria-modal", "true");
+
+    var stage = el("div", "img-viewer-stage");
+    var img = el("img", "img-viewer-photo");
+    img.alt = "图片预览";
+    stage.appendChild(img);
+    mask.appendChild(stage);
+
+    var close = el("button", "img-viewer-close", "×");
+    close.type = "button";
+    close.setAttribute("aria-label", "关闭图片预览");
+    mask.appendChild(close);
+
+    var counter = el("div", "img-viewer-counter");
+    mask.appendChild(counter);
+
+    var prev = el("button", "img-viewer-nav img-viewer-nav--prev", "‹");
+    var next = el("button", "img-viewer-nav img-viewer-nav--next", "›");
+    prev.type = "button"; next.type = "button";
+    prev.setAttribute("aria-label", "上一张");
+    next.setAttribute("aria-label", "下一张");
+    mask.appendChild(prev); mask.appendChild(next);
+
+    function paint() {
+      var data = window.HMB.media.get(list[i]);
+      img.src = data || "";
+      img.style.visibility = data ? "visible" : "hidden";
+      counter.textContent = (i + 1) + " / " + list.length;
+      prev.hidden = next.hidden = list.length < 2;
+    }
+    function move(d) { i = (i + d + list.length) % list.length; paint(); }
+    function shut() {
+      document.removeEventListener("keydown", onKey);
+      if (mask.parentNode) mask.parentNode.removeChild(mask);
+    }
+    function onKey(e) {
+      if (e.key === "Escape") shut();
+      else if (e.key === "ArrowLeft") move(-1);
+      else if (e.key === "ArrowRight") move(1);
+    }
+    close.addEventListener("click", shut);
+    mask.addEventListener("click", function (e) { if (e.target === mask || e.target === stage) shut(); });
+    prev.addEventListener("click", function (e) { e.stopPropagation(); move(-1); });
+    next.addEventListener("click", function (e) { e.stopPropagation(); move(1); });
+    document.addEventListener("keydown", onKey);
+    paint();
+    document.body.appendChild(mask);
+    requestAnimationFrame(function () { mask.classList.add("is-open"); });
   }
 
   /* ---------------- 格式化 ---------------- */
@@ -488,6 +560,11 @@
     layers: '<svg ' + SVG_ATTRS + '><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 12 12 17 22 12"/><polyline points="2 17 12 22 22 17"/></svg>',
     "file-text": '<svg ' + SVG_ATTRS + '><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
     message: '<svg ' + SVG_ATTRS + '><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z"/></svg>',
+    image: '<svg ' + SVG_ATTRS + '><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>',
+    video: '<svg ' + SVG_ATTRS + '><rect x="2" y="5" width="16" height="14" rx="2"/><polygon points="22 8 18 12 22 16 22 8"/></svg>',
+    poll: '<svg ' + SVG_ATTRS + '><line x1="4" y1="20" x2="20" y2="20"/><rect x="5" y="11" width="3" height="9"/><rect x="10.5" y="6" width="3" height="14"/><rect x="16" y="14" width="3" height="6"/></svg>',
+    at: '<svg ' + SVG_ATTRS + '><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>',
+    quote: '<svg ' + SVG_ATTRS + '><path d="M9 11H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4zM21 11h-4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4zM7 11V5l5 5M19 11V5l-5 5"/></svg>',
     settings: '<svg ' + SVG_ATTRS + '><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
   };
 
@@ -889,6 +966,8 @@
     richTextToPlain: richTextToPlain,
     renderRich: renderRich,
     imageStrip: imageStrip,
+    messageCover: messageCover,
+    openImageViewer: openImageViewer,
     fmtViews: fmtViews,
     fmtHeat: fmtHeat,
     periodStartTime: periodStartTime,

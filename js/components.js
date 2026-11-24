@@ -656,9 +656,25 @@
     if (badge) rankZone.appendChild(badge);
     if (rankZone.children.length > 0) card.appendChild(rankZone);
 
-    /* 02 头像区 */
+    /* 02 头像区：有封面时以封面替换头像，点击看大图；无封面保持原头像 */
     var avZone = el("div", "avatar-zone");
-    avZone.appendChild(U.avatar(msg.avatarEnum, "", msg.avatarUrl));
+    var cover = U.messageCover(msg);
+    var coverImg = (cover && HMB.media) ? HMB.media.el(cover, "card-cover", "帖子封面") : null;
+    if (coverImg) {
+      coverImg.tabIndex = 0;
+      coverImg.setAttribute("role", "button");
+      function viewCover(e) {
+        e.stopPropagation();
+        U.openImageViewer([cover], 0);
+      }
+      coverImg.addEventListener("click", viewCover);
+      coverImg.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); viewCover(e); }
+      });
+      avZone.appendChild(coverImg);
+    } else {
+      avZone.appendChild(U.avatar(msg.avatarEnum, "", msg.avatarUrl));
+    }
     card.appendChild(avZone);
 
     /* 03/04 主信息区 + 统计区 */

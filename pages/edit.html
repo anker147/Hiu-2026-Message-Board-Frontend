@@ -7,10 +7,10 @@
   <link rel="icon" href="data:,">
   <meta name="description" content="帖子编辑器 — 新建与编辑统一入口（参照好游快爆 sendThreadShow 形制）">
   <title>帖子编辑器 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css?v=20261124ax">
-  <link rel="stylesheet" href="../css/base.css?v=20261124ax">
-  <link rel="stylesheet" href="../css/components.css?v=20261124ax">
-  <link rel="stylesheet" href="../css/pages.css?v=20261124ax">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261124ay">
+  <link rel="stylesheet" href="../css/base.css?v=20261124ay">
+  <link rel="stylesheet" href="../css/components.css?v=20261124ay">
+  <link rel="stylesheet" href="../css/pages.css?v=20261124ay">
 </head>
 <body data-page="edit">
   <div class="grain" aria-hidden="true"></div>
@@ -113,14 +113,20 @@
         <p class="ei-note" data-text="editPage.imagesNote">最多 10 张 · JPG/PNG/GIF/WebP · 单张 ≤5MB · 显示在正文末尾</p>
       </section>
 
-      <!-- 设置封面（原型禁用形制：无后端图片存储） -->
+      <!-- 设置封面：独立上传，或直接取文末图集第一张 -->
       <section class="editor-cover-card" id="coverCard">
-        <button type="button" class="editor-cover-btn" id="coverBtn" data-text-title="editPage.disabledCoverTip" aria-label="设置封面"></button>
+        <button type="button" class="editor-cover-btn" id="coverBtn" aria-label="设置封面"></button>
         <div class="editor-cover-note">
           <div class="t" data-text="editPage.coverLabel">设置封面</div>
-          <div data-text="editPage.coverNote1">· 前端原型不包含图片上传（无后端存储）</div>
-          <div data-text="editPage.coverNote2">· 图片能力接入后支持 JPEG / JPG / PNG</div>
+          <div data-text="editPage.coverNote1">· 设置后封面会替换列表卡片上的头像位</div>
+          <div data-text="editPage.coverNote2">· JPG / PNG / GIF / WebP · 单张 ≤5MB</div>
+          <label class="ec-switch">
+            <span class="switch switch--sm"><input type="checkbox" id="coverFromFirst"><span class="switch-track"></span></span>
+            <span data-text="editPage.coverFromFirst">用文末第一张图片作为封面</span>
+          </label>
+          <button type="button" class="ec-remove" id="coverRemove" hidden data-text="editPage.coverRemove">移除封面</button>
         </div>
+        <input type="file" id="coverFile" class="ei-file" accept="image/jpeg,image/png,image/gif,image/webp">
       </section>
 
       <!-- 设置卡：公开范围 + 本次昵称（新建）/ 危险区（编辑）；可折叠 -->
@@ -165,13 +171,13 @@
     </div>
   </div>
 
-  <script src="../js/ui-text.js?v=20261124ax"></script>
-  <script src="../js/mock/seed.js?v=20261124ax"></script>
-  <script src="../js/mock/db.js?v=20261124ax"></script>
-  <script src="../js/mock/api.js?v=20261124ax"></script>
-  <script src="../js/core/util.js?v=20261124ax"></script>
-  <script src="../js/core/media.js?v=20261124ax"></script>
-  <script src="../js/components.js?v=20261124ax"></script>
-  <script src="../js/pages/edit.js?v=20261124ax"></script>
+  <script src="../js/ui-text.js?v=20261124ay"></script>
+  <script src="../js/mock/seed.js?v=20261124ay"></script>
+  <script src="../js/mock/db.js?v=20261124ay"></script>
+  <script src="../js/mock/api.js?v=20261124ay"></script>
+  <script src="../js/core/util.js?v=20261124ay"></script>
+  <script src="../js/core/media.js?v=20261124ay"></script>
+  <script src="../js/components.js?v=20261124ay"></script>
+  <script src="../js/pages/edit.js?v=20261124ay"></script>
 </body>
 </html>
