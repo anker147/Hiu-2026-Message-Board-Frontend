@@ -2094,3 +2094,105 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
   .gm-toolbar .search-box { flex: 1 1 100%; }
 }
 
+/* ============================================================
+ * 编辑资料页（P-06，pe-*）—— 居中白卡 + 头像 + 表单行 + 隐私开关
+ * 形制参照好游快爆编辑资料页；配色/圆角/阴影全走令牌。
+ * ============================================================ */
+.profile-page { padding-top: 24px; padding-bottom: 70px; }
+
+/* 面包屑 */
+.pe-breadcrumb { font-size: 13px; color: var(--ink-3); margin: 0 0 14px; }
+.pe-bc-home { color: var(--blue); text-decoration: none; }
+.pe-bc-home:hover { text-decoration: underline; }
+.pe-bc-sep { margin: 0 6px; color: var(--line); }
+.pe-bc-here { color: var(--ink-2); font-weight: 600; }
+
+/* 居中白卡 */
+.pe-card {
+  max-width: 720px; margin: 0 auto; padding: 30px 36px 26px;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius-card); box-shadow: var(--shadow-card);
+}
+
+/* 头像 + 相机覆盖按钮 */
+.pe-avatar-wrap { position: relative; width: 84px; height: 84px; margin: 0 auto 24px; }
+.pe-avatar { width: 84px; height: 84px !important; font-size: 40px !important; border-radius: 50% !important; }
+.pe-avatar-cam {
+  position: absolute; right: -2px; bottom: -2px;
+  width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--card); border: 1px solid var(--line);
+  box-shadow: var(--shadow-card); font-size: 15px; line-height: 1; padding: 0;
+  transition: transform 160ms var(--ease-out), border-color 160ms var(--ease-out);
+}
+.pe-avatar-cam:hover { transform: scale(1.08); border-color: var(--blue); }
+
+/* 表单行：label 左 108px / 控件右 */
+.pe-row {
+  display: grid; grid-template-columns: 122px minmax(0, 1fr);
+  align-items: start; gap: 16px; padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.pe-row:last-of-type { border-bottom: 0; }
+.pe-label { font-size: 14px; font-weight: 700; color: var(--ink); padding-top: 10px; }
+.pe-ctrl { min-width: 0; }
+.pe-input {
+  width: 100%; height: 40px; padding: 0 12px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-input);
+  color: var(--ink); font-size: 14px; font-family: var(--font);
+  transition: border-color .18s var(--ease-out), box-shadow .18s var(--ease-out);
+}
+.pe-input:focus { outline: none; border-color: var(--blue); box-shadow: var(--focus-ring); }
+.pe-input[readonly] { background: #F1F5F9; color: var(--ink-3); cursor: not-allowed; }
+.pe-note { margin: 6px 0 0; font-size: 12px; color: var(--ink-3); line-height: 1.55; }
+
+/* 敏感信息两列网格 */
+.pe-sensitive-grid {
+  display: grid; grid-template-columns: 120px minmax(0, 1fr) 72px minmax(0, 1fr);
+  gap: 10px 10px; align-items: center;
+}
+.pe-sub-label { font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+/* 手机号独占整行（label 120px + 控件跨后三列） */
+.pe-sensitive-grid label[for="phoneInput"] { grid-column: 1 / 2; }
+.pe-sensitive-grid #phoneInput { grid-column: 2 / -1; }
+
+/* 隐私脱敏展示 */
+.pe-masked {
+  margin: 0 0 10px; padding: 9px 12px; border-radius: 9px;
+  background: var(--blue-soft); color: var(--blue-pale-ink);
+  font-size: 12.5px; line-height: 1.6;
+}
+.pe-privacy-row { display: flex; flex-wrap: wrap; gap: 14px 24px; margin: 4px 0 8px; }
+.pe-privacy-row .privacy-item { font-size: 13px; color: var(--ink-2); cursor: pointer; }
+
+/* 保存 / 取消 */
+.pe-actions { display: flex; justify-content: center; gap: 12px; margin-top: 24px; }
+.pe-save, .pe-cancel { min-width: 108px; }
+.pe-footnote { margin: 10px 0 0; text-align: center; font-size: 12px; color: var(--ink-3); }
+
+/* 我的留言标题 */
+.pe-mine-title { max-width: 720px; margin: 30px auto 6px; }
+.profile-page .mine-list { max-width: 720px; margin: 0 auto 12px; }
+
+/* 头像选择弹窗 */
+.pe-avatar-modal { width: 380px; }
+.pe-avatar-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px;
+}
+.pe-avatar-opt {
+  height: 62px; border-radius: 12px; cursor: pointer;
+  background: var(--bg); border: 2px solid var(--line);
+  font-size: 30px; line-height: 1;
+  transition: border-color 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.pe-avatar-opt:hover { transform: translateY(-2px); border-color: var(--blue); }
+.pe-avatar-opt.is-active { border-color: var(--blue); background: var(--blue-soft); }
+
+@media (max-width: 640px) {
+  .pe-card { padding: 24px 18px; }
+  .pe-row { grid-template-columns: 1fr; gap: 6px; }
+  .pe-label { padding-top: 0; }
+  .pe-sensitive-grid { grid-template-columns: 1fr; }
+  .pe-sensitive-grid label[for="phoneInput"], .pe-sensitive-grid #phoneInput { grid-column: auto; }
+}
+
