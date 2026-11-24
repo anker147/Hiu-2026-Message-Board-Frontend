@@ -8,10 +8,10 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="description" content="留言板管理后台 — 账号权限、内容处置、操作审计与站点设置">
   <title>留言板管理 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css?v=20261124t">
-  <link rel="stylesheet" href="../css/base.css?v=20261124t">
-  <link rel="stylesheet" href="../css/components.css?v=20261124t">
-  <link rel="stylesheet" href="../css/pages.css?v=20261124t">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261124u">
+  <link rel="stylesheet" href="../css/base.css?v=20261124u">
+  <link rel="stylesheet" href="../css/components.css?v=20261124u">
+  <link rel="stylesheet" href="../css/pages.css?v=20261124u">
 </head>
 <body data-page="gm">
   <div class="grain" aria-hidden="true"></div>
@@ -41,10 +41,29 @@
       </nav>
 
       <section class="gm-main" id="gmMain">
-        <!-- 概览 -->
+        <!-- 概览（仪表盘） -->
         <div class="gm-panel is-active" id="panel-overview">
-          <h2 class="gm-section-title" data-text="gm.tabOverview">概览</h2>
-          <div class="gm-stat-grid" id="gmStats"></div>
+          <div class="dash-hero">
+            <div class="dash-hero-copy">
+              <div class="dash-hero-title" data-text="gm.dash.greeting">管理总览</div>
+              <div class="dash-hero-sub" data-text="gm.subtitle">账号、内容与运行数据，统一在这里管理</div>
+            </div>
+            <div class="dash-hero-live"><span class="dash-live-dot"></span><span data-text="gm.dash.updated">数据实时更新</span></div>
+          </div>
+          <div class="dash-section-head"><span class="dash-section-title" data-text="gm.dash.core">核心指标</span></div>
+          <div class="dash-kpi-grid" id="dashKpi"></div>
+          <div class="dash-split">
+            <section class="dash-group">
+              <div class="dash-group-head"><span class="dash-group-dot dash-group-dot--blue"></span><span data-text="gm.dash.userGroup">用户概况</span></div>
+              <div class="dash-mini-grid" id="dashUser"></div>
+            </section>
+            <section class="dash-group">
+              <div class="dash-group-head"><span class="dash-group-dot dash-group-dot--green"></span><span data-text="gm.dash.todayGroup">今日动态</span></div>
+              <div class="dash-mini-grid" id="dashToday"></div>
+            </section>
+          </div>
+          <div class="dash-section-head"><span class="dash-section-title" data-text="gm.dash.quick">快捷操作</span></div>
+          <div class="dash-quick-grid" id="dashQuick"></div>
         </div>
 
         <!-- 用户管理 -->
@@ -142,12 +161,12 @@
 
   <div id="gmModalRoot"></div>
 
-  <script src="../js/ui-text.js?v=20261124t"></script>
-  <script src="../js/mock/seed.js?v=20261124t"></script>
-  <script src="../js/mock/db.js?v=20261124t"></script>
-  <script src="../js/mock/api.js?v=20261124t"></script>
-  <script src="../js/core/util.js?v=20261124t"></script>
-  <script src="../js/components.js?v=20261124t"></script>
-  <script src="../js/pages/gm.js?v=20261124t"></script>
+  <script src="../js/ui-text.js?v=20261124u"></script>
+  <script src="../js/mock/seed.js?v=20261124u"></script>
+  <script src="../js/mock/db.js?v=20261124u"></script>
+  <script src="../js/mock/api.js?v=20261124u"></script>
+  <script src="../js/core/util.js?v=20261124u"></script>
+  <script src="../js/components.js?v=20261124u"></script>
+  <script src="../js/pages/gm.js?v=20261124u"></script>
 </body>
 </html>

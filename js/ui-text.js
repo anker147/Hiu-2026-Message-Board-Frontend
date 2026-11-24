@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 13; // v13：折线按真实期数画点、去数值外显，历史最高无数据显示 --
+  var VERSION = 14; // v14：GM 概览仪表盘（核心指标/用户概况/今日动态/快捷操作）文案
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -579,6 +579,21 @@
     "gm.overview.todayMessages": "今日新增留言",
     "gm.overview.todayComments": "今日新增评论",
     "gm.overview.actions": "累计处置记录",
+    /* 仪表盘：核心指标副标题 / 分组标题 / 快捷操作 */
+    "gm.dash.greeting": "管理总览",
+    "gm.dash.updated": "数据实时更新",
+    "gm.dash.core": "核心指标",
+    "gm.dash.userGroup": "用户概况",
+    "gm.dash.todayGroup": "今日动态",
+    "gm.dash.usersSub": "全站注册账号",
+    "gm.dash.messagesSub": "累计留言条数",
+    "gm.dash.commentsSub": "累计评论条数",
+    "gm.dash.actionsSub": "管理操作留痕",
+    "gm.dash.quick": "快捷操作",
+    "gm.dash.quickUsers": "管理用户与权限",
+    "gm.dash.quickContent": "审核隐藏内容",
+    "gm.dash.quickActions": "查看操作审计",
+    "gm.dash.quickSettings": "配置敏感词与期次",
     "gm.user.searchPlaceholder": "搜索昵称 / 账号 / 展示 ID",
     "gm.user.statusAll": "全部状态",
     "gm.user.statusActive": "正常",

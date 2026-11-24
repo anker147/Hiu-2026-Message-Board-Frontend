@@ -51,8 +51,27 @@
     '    </nav>',
     '    <section class="gm-main" id="gmMain">',
     '      <div class="gm-panel is-active" id="panel-overview">',
-    '        <h2 class="gm-section-title" data-text="gm.tabOverview">概览</h2>',
-    '        <div class="gm-stat-grid" id="gmStats"></div>',
+    '        <div class="dash-hero">',
+    '          <div class="dash-hero-copy">',
+    '            <div class="dash-hero-title" data-text="gm.dash.greeting">管理总览</div>',
+    '            <div class="dash-hero-sub" data-text="gm.subtitle">账号、内容与运行数据，统一在这里管理</div>',
+    '          </div>',
+    '          <div class="dash-hero-live"><span class="dash-live-dot"></span><span data-text="gm.dash.updated">数据实时更新</span></div>',
+    '        </div>',
+    '        <div class="dash-section-head"><span class="dash-section-title" data-text="gm.dash.core">核心指标</span></div>',
+    '        <div class="dash-kpi-grid" id="dashKpi"></div>',
+    '        <div class="dash-split">',
+    '          <section class="dash-group">',
+    '            <div class="dash-group-head"><span class="dash-group-dot dash-group-dot--blue"></span><span data-text="gm.dash.userGroup">用户概况</span></div>',
+    '            <div class="dash-mini-grid" id="dashUser"></div>',
+    '          </section>',
+    '          <section class="dash-group">',
+    '            <div class="dash-group-head"><span class="dash-group-dot dash-group-dot--green"></span><span data-text="gm.dash.todayGroup">今日动态</span></div>',
+    '            <div class="dash-mini-grid" id="dashToday"></div>',
+    '          </section>',
+    '        </div>',
+    '        <div class="dash-section-head"><span class="dash-section-title" data-text="gm.dash.quick">快捷操作</span></div>',
+    '        <div class="dash-quick-grid" id="dashQuick"></div>',
     '      </div>',
     '      <div class="gm-panel" id="panel-users">',
     '        <h2 class="gm-section-title" data-text="gm.tabUsers">用户管理</h2>',
@@ -240,29 +259,96 @@
     api.gmSummary().then(function (resp) {
       if (!resp.success) { toastFail(resp); return; }
       var d = resp.data;
-      var grid = $("gmStats");
-      grid.textContent = "";
-      statCard(grid, "gm.overview.users", d.users.total, "primary");
-      statCard(grid, "gm.overview.active", d.users.active);
-      statCard(grid, "gm.overview.banned", d.users.banned, "danger");
-      statCard(grid, "gm.overview.admins", d.users.admins);
-      statCard(grid, "gm.overview.muted", d.users.muted, "warn");
-      statCard(grid, "gm.overview.messages", d.contents.messages);
-      statCard(grid, "gm.overview.comments", d.contents.comments);
-      statCard(grid, "gm.overview.hidden", d.contents.hiddenMessages + d.contents.hiddenComments, "warn");
-      statCard(grid, "gm.overview.todayUsers", d.today.newUsers);
-      statCard(grid, "gm.overview.todayMessages", d.today.newMessages);
-      statCard(grid, "gm.overview.todayComments", d.today.newComments);
-      statCard(grid, "gm.overview.actions", d.actions.total);
+
+      /* 核心指标：4 张大卡（大数字 + 图标 + 副标题） */
+      var kpi = $("dashKpi");
+      if (kpi) {
+        kpi.textContent = "";
+        kpiCard(kpi, "users", "gm.overview.users", d.users.total, "gm.dash.usersSub", "primary");
+        kpiCard(kpi, "file-text", "gm.overview.messages", d.contents.messages, "gm.dash.messagesSub", "blue");
+        kpiCard(kpi, "message", "gm.overview.comments", d.contents.comments, "gm.dash.commentsSub", "green");
+        kpiCard(kpi, "shield", "gm.overview.actions", d.actions.total, "gm.dash.actionsSub", "purple");
+      }
+
+      /* 用户概况：正常 / 封禁 / 管理员 / 禁言 */
+      var ug = $("dashUser");
+      if (ug) {
+        ug.textContent = "";
+        miniStat(ug, "gm.overview.active", d.users.active);
+        miniStat(ug, "gm.overview.banned", d.users.banned, "danger");
+        miniStat(ug, "gm.overview.admins", d.users.admins);
+        miniStat(ug, "gm.overview.muted", d.users.muted, "warn");
+      }
+
+      /* 今日动态：新增用户 / 留言 / 评论 / 隐藏内容 */
+      var tg = $("dashToday");
+      if (tg) {
+        tg.textContent = "";
+        miniStat(tg, "gm.overview.todayUsers", d.today.newUsers);
+        miniStat(tg, "gm.overview.todayMessages", d.today.newMessages);
+        miniStat(tg, "gm.overview.todayComments", d.today.newComments);
+        miniStat(tg, "gm.overview.hidden", d.contents.hiddenMessages + d.contents.hiddenComments, "warn");
+      }
+
+      /* 快捷操作：点击切到对应面板 */
+      var qg = $("dashQuick");
+      if (qg) {
+        qg.textContent = "";
+        quickCard(qg, "users", "users", "gm.tabUsers", "gm.dash.quickUsers");
+        quickCard(qg, "file-text", "content", "gm.tabContent", "gm.dash.quickContent");
+        quickCard(qg, "shield", "actions", "gm.tabActions", "gm.dash.quickActions");
+        quickCard(qg, "settings", "settings", "gm.tabSettings", "gm.dash.quickSettings");
+      }
     });
   }
 
-  function statCard(grid, labelKey, num, tone) {
-    var card = el("div", "gm-stat-card" + (tone ? " gm-stat-card--" + tone : ""));
-    card.appendChild(el("div", "gm-stat-num", String(num)));
-    var label = el("div", "gm-stat-label");
+  /* 核心指标大卡 */
+  function kpiCard(grid, iconName, labelKey, num, subKey, tone) {
+    var card = el("div", "dash-kpi dash-kpi--" + (tone || "primary"));
+    var ico = el("div", "dash-kpi-icon");
+    ico.appendChild(U.icon(iconName));
+    card.appendChild(ico);
+    var body = el("div", "dash-kpi-body");
+    var label = el("div", "dash-kpi-label");
     label.setAttribute("data-text", labelKey);
-    card.appendChild(label);
+    body.appendChild(label);
+    body.appendChild(el("div", "dash-kpi-num", String(num)));
+    var sub = el("div", "dash-kpi-sub");
+    sub.setAttribute("data-text", subKey);
+    body.appendChild(sub);
+    card.appendChild(body);
+    grid.appendChild(card);
+    HMB.i18n.apply(card);
+  }
+
+  /* 次要指标紧凑行 */
+  function miniStat(wrap, labelKey, num, tone) {
+    var row = el("div", "dash-mini" + (tone ? " dash-mini--" + tone : ""));
+    row.appendChild(el("div", "dash-mini-num", String(num)));
+    var label = el("div", "dash-mini-label");
+    label.setAttribute("data-text", labelKey);
+    row.appendChild(label);
+    wrap.appendChild(row);
+    HMB.i18n.apply(row);
+  }
+
+  /* 快捷操作卡：点击切换 GM 面板 */
+  function quickCard(grid, iconName, panel, labelKey, descKey) {
+    var card = el("button", "dash-quick");
+    card.type = "button";
+    var ico = el("span", "dash-quick-icon");
+    ico.appendChild(U.icon(iconName));
+    card.appendChild(ico);
+    var copy = el("span", "dash-quick-copy");
+    var label = el("span", "dash-quick-label");
+    label.setAttribute("data-text", labelKey);
+    copy.appendChild(label);
+    var desc = el("span", "dash-quick-desc");
+    desc.setAttribute("data-text", descKey);
+    copy.appendChild(desc);
+    card.appendChild(copy);
+    card.appendChild(el("span", "dash-quick-arrow", "→"));
+    card.addEventListener("click", function () { switchPanel(panel); });
     grid.appendChild(card);
     HMB.i18n.apply(card);
   }
