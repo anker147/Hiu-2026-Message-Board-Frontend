@@ -541,6 +541,9 @@
       }
       var data = toListMessage(m);
       data.isMine = !!(session && session.userId === m.ownerId);
+      // 当前访问者的互动状态：详情卡据此点亮爱心 / 星标
+      data.isLiked = !!(session && db.hasLike(session.userId, resourceId));
+      data.isFavorite = !!(session && db.hasFavorite(session.userId, resourceId));
       return ok(data);
     });
   }
@@ -618,6 +621,10 @@
       content: c.content,
       createdAt: c.createdAt,
       likes: c.likes,
+      favorites: c.favorites || 0,
+      // 当前访问者对评论的互动状态（未登录恒 false）
+      isLiked: !!(session && db.hasLike(session.userId, c.resourceId)),
+      isFavorite: !!(session && db.hasFavorite(session.userId, c.resourceId)),
       edited: !!c.edited,
       isAnonymous: anon,
       hidden: !!c.hidden, hiddenReason: c.hiddenReason || "",
@@ -882,6 +889,54 @@
     });
   }
 
+  /* ---------------- 收藏（帖子 + 评论，幂等；与点赞分表） ---------------- */
+
+  var favIdemSeen = {};
+
+  function apiFavorite(args) {
+    return netGate().then(function (net) {
+      if (!net.success) return net;
+      var s = currentSession(true);
+      if (!s) return fail(401, "error.401");
+      if (!args.csrf || args.csrf !== s.csrf) return fail(9002, "error.9002");
+
+      var targetId = args.targetId;
+      var messages = db.getMessages();
+      var m = messages.find(function (x) { return x.resourceId === targetId; });
+      var comments = db.getComments();
+      var ci = comments.findIndex(function (x) { return x.resourceId === targetId; });
+      if (!m && ci < 0) return fail(5001, "error.5001");
+
+      var count = function () {
+        return m ? m.stats.favorites : (comments[ci].favorites || 0);
+      };
+      var idemKey = args.idemKey || "";
+      if (idemKey && favIdemSeen[idemKey]) {
+        return ok({ favorite: db.hasFavorite(s.userId, targetId), count: count() });
+      }
+      if (idemKey) favIdemSeen[idemKey] = true;
+
+      var fav = db.hasFavorite(s.userId, targetId);
+      var op = args.op || (fav ? "unfavorite" : "favorite");
+      if (op === "favorite" && !fav) {
+        var fs = db.getFavorites();
+        fs.push({ userId: s.userId, targetId: targetId, createdAt: Date.now() });
+        db.saveFavorites(fs);
+        fav = true;
+        if (m) { m.stats.favorites += 1; db.saveMessages(messages); }
+        else { comments[ci].favorites = (comments[ci].favorites || 0) + 1; db.saveComments(comments); }
+      } else if (op === "unfavorite" && fav) {
+        db.saveFavorites(db.getFavorites().filter(function (f) {
+          return !(f.userId === s.userId && f.targetId === targetId);
+        }));
+        fav = false;
+        if (m) { m.stats.favorites = Math.max(0, m.stats.favorites - 1); db.saveMessages(messages); }
+        else { comments[ci].favorites = Math.max(0, (comments[ci].favorites || 0) - 1); db.saveComments(comments); }
+      }
+      return ok({ favorite: fav, count: count() });
+    });
+  }
+
   /* ---------------- 盲盒（API-11 / API-12，F9） ---------------- */
 
   function apiGetBlindbox() {
@@ -984,6 +1039,53 @@
         return m && (isSelf || m.isPublic !== false);
       });
 
+      function zoneComment(c) {
+        var parent = msgById[c.messageId];
+        if (!parent) return null;
+        return {
+          resourceId: c.resourceId,
+          messageId: c.messageId,
+          content: c.content,
+          createdAt: c.createdAt,
+          likes: c.likes,
+          favorites: c.favorites || 0,
+          edited: !!c.edited,
+          message: {
+            resourceId: parent.resourceId,
+            title: parent.title || "",
+            content: parent.content,
+            topicTag: parent.topicTag || "",
+            nicknameSnapshot: parent.nicknameSnapshot,
+            createdAt: parent.createdAt
+          }
+        };
+      }
+
+      function visibleToVisitor(m) {
+        return !!m && (isSelf || (m.isPublic !== false && m.hidden !== true));
+      }
+
+      /** 我赞过的 / 我收藏的：按目标 id 聚合帖子与评论，时间倒序。
+          本人始终可见；他人仅当对应公开开关开启时由出口返回数据。 */
+      function interactions(kind) {
+        var rows = kind === "liked" ? db.getLikes() : db.getFavorites();
+        var allComments = db.getComments();
+        var posts = [], replies = [];
+        rows.forEach(function (x) {
+          if (x.userId !== u.id) return;
+          var m = msgById[x.targetId];
+          if (visibleToVisitor(m)) { posts.push(m); return; }
+          var c = allComments.find(function (y) { return y.resourceId === x.targetId; });
+          if (c && !c.isAnonymous && visibleToVisitor(msgById[c.messageId])) {
+            var mapped = zoneComment(c);
+            if (mapped) replies.push(mapped);
+          }
+        });
+        posts.sort(function (a, b) { return b.createdAt - a.createdAt; });
+        replies.sort(function (a, b) { return b.createdAt - a.createdAt; });
+        return { posts: posts.map(toListMessage), comments: replies };
+      }
+
       var likesReceived = messages.reduce(function (s, m) { return s + m.stats.likes; }, 0) +
         comments.reduce(function (s, c) { return s + (c.likes || 0); }, 0);
 
@@ -1040,26 +1142,13 @@
         },
         topics: topics,
         blindboxMessages: blindboxMessages,   // 仅本人有值；他人恒为空数组
+        // 互动展示开关：本人恒 true；他人按设置决定主页是否出现这两个域
+        canSeeLiked: isSelf || !!u.flagLiked,
+        canSeeFavorite: isSelf || !!u.flagFavorite,
+        liked: (isSelf || u.flagLiked !== false) ? interactions("liked") : { posts: [], comments: [] },
+        favorite: (isSelf || u.flagFavorite !== false) ? interactions("favorite") : { posts: [], comments: [] },
         messages: messages.map(toListMessage),
-        comments: comments.map(function (c) {
-          var m = msgById[c.messageId];
-          return {
-            resourceId: c.resourceId,
-            messageId: c.messageId,
-            content: c.content,
-            createdAt: c.createdAt,
-            likes: c.likes,
-            edited: !!c.edited,
-            message: {
-              resourceId: m.resourceId,
-              title: m.title || "",
-              content: m.content,
-              topicTag: m.topicTag || "",
-              nicknameSnapshot: m.nicknameSnapshot,
-              createdAt: m.createdAt
-            }
-          };
-        })
+        comments: comments.map(zoneComment).filter(Boolean)
       });
     });
   }
@@ -1085,6 +1174,8 @@
         flagName: !!u.flagName,
         flagEmail: !!u.flagEmail,
         flagPhone: !!u.flagPhone,
+        flagLiked: u.flagLiked !== false,
+        flagFavorite: u.flagFavorite !== false,
         maskedName: maskName(u.realName),
         maskedEmail: maskEmail(u.email),
         maskedPhone: maskPhone(u.account)
@@ -1103,6 +1194,9 @@
       u.flagName = !!args.flagName;
       u.flagEmail = !!args.flagEmail;
       u.flagPhone = !!args.flagPhone;
+      // 互动展示开关：缺省保留原值，兼容旧调用方
+      if (args.flagLiked !== undefined) u.flagLiked = !!args.flagLiked;
+      if (args.flagFavorite !== undefined) u.flagFavorite = !!args.flagFavorite;
       db.saveUsers(users);
       return ok({});
     });
@@ -1650,6 +1744,7 @@
     /* API-08 */ getProfile: apiGetProfile,
     /* API-09 */ getComments: apiGetComments,
     /* API-10 */ like: apiLike,
+    /* 收藏（帖子 + 评论） */ favorite: apiFavorite,
     /* API-11 */ getBlindbox: apiGetBlindbox,
     /* API-12 */ blindboxReply: apiBlindboxReply,
     /* 扩展 */   getMessage: apiGetMessage,

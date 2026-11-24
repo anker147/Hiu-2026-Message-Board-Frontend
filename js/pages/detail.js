@@ -18,6 +18,7 @@
   var msg = null;
   var commentTree = [];
   var likeIntent = {};
+  var favoriteIntent = {};
   var busyComment = false;
   var replyEditorAt = null; // 当前展开回复输入的评论节点
 
@@ -126,16 +127,16 @@
 
     var foot = el("div", "msg-card-foot");
     var stats = el("div", "msg-card-stats");
-    function stat(labelKey, value) {
+    function stat(iconName, value) {
       var s = el("span", "stat");
-      s.appendChild(el("span", null, t(labelKey)));
-      s.appendChild(el("span", null, " " + value));
+      s.appendChild(U.icon(iconName));
+      s.appendChild(el("span", null, value));
       return s;
     }
-    stats.appendChild(stat("common.statViews", U.fmtViews(msg.stats.views)));
-    stats.appendChild(stat("common.likes", U.fmtViews(msg.stats.likes)));
-    stats.appendChild(stat("common.statComments", U.fmtViews(msg.stats.comments)));
-    stats.appendChild(stat("common.statFavorites", U.fmtViews(msg.stats.favorites)));
+    stats.appendChild(stat("eye", U.fmtViews(msg.stats.views)));
+    stats.appendChild(stat("heart", U.fmtViews(msg.stats.likes)));
+    stats.appendChild(stat("comment", U.fmtViews(msg.stats.comments)));
+    stats.appendChild(stat("star", U.fmtViews(msg.stats.favorites)));
     foot.appendChild(stats);
 
     if (msg.isMine) {
@@ -153,26 +154,44 @@
       foot.appendChild(actions);
     }
 
-    var likeBtn = el("button", "msg-like-btn");
+    /* 右侧互动按钮：点赞 + 收藏，图标 + 数量，状态由接口 isLiked / isFavorite 点亮 */
+    var interactActions = el("div", "msg-interact-actions");
+    var likeBtn = el("button", "msg-action-btn msg-like-btn" + (msg.isLiked ? " is-liked" : ""));
     likeBtn.type = "button";
-    likeBtn.appendChild(el("span", null, t("common.likes") + " " + U.fmtViews(msg.stats.likes)));
+    likeBtn.setAttribute("aria-label", t("detail.like"));
+    likeBtn.appendChild(U.icon("heart"));
+    likeBtn.appendChild(el("span", "action-count", U.fmtViews(msg.stats.likes)));
     likeBtn.addEventListener("click", function () { likeTarget(msg.resourceId, likeBtn, null); });
-    foot.appendChild(likeBtn);
+    interactActions.appendChild(likeBtn);
+
+    var favBtn = el("button", "msg-action-btn msg-fav-btn" + (msg.isFavorite ? " is-favorited" : ""));
+    favBtn.type = "button";
+    favBtn.setAttribute("aria-label", t("detail.favorite"));
+    favBtn.appendChild(U.icon("star"));
+    favBtn.appendChild(el("span", "action-count", U.fmtViews(msg.stats.favorites)));
+    favBtn.addEventListener("click", function () { favoriteTarget(msg.resourceId, favBtn, null); });
+    interactActions.appendChild(favBtn);
+    foot.appendChild(interactActions);
     card.appendChild(foot);
 
     els.msgArea.appendChild(card);
     HMB.i18n.apply(card);
-    refreshLikeVisual();
+    refreshInteractionVisual();
   }
 
-  function refreshLikeVisual() {
-    // 从接口侧数据校正红心态：详情页不批量拉取，取最近一次响应为准
-    if (typeof msg._liked === "boolean") {
-      var btn = els.msgArea.querySelector(".msg-like-btn");
-      if (btn) {
-        btn.classList.toggle("is-liked", msg._liked);
-        btn.querySelector("span").textContent = t("common.likes") + " " + U.fmtViews(msg.stats.likes);
-      }
+  function refreshInteractionVisual() {
+    // 取最近一次接口响应校正爱心 / 星标状态
+    var likeBtn = els.msgArea.querySelector(".msg-like-btn");
+    if (likeBtn && typeof msg.isLiked === "boolean") {
+      likeBtn.classList.toggle("is-liked", msg.isLiked);
+      var lc = likeBtn.querySelector(".action-count");
+      if (lc) lc.textContent = U.fmtViews(msg.stats.likes);
+    }
+    var favBtn = els.msgArea.querySelector(".msg-fav-btn");
+    if (favBtn && typeof msg.isFavorite === "boolean") {
+      favBtn.classList.toggle("is-favorited", msg.isFavorite);
+      var fc = favBtn.querySelector(".action-count");
+      if (fc) fc.textContent = U.fmtViews(msg.stats.favorites);
     }
   }
 
@@ -194,14 +213,44 @@
       if (!resp.success) { U.toast(resp.message, "error"); return; }
       if (commentNode) {
         commentNode.classList.toggle("is-liked", resp.data.liked);
-        var cnt = commentNode.querySelector("span:last-child");
+        var cnt = commentNode.querySelector(".action-count");
         if (cnt) cnt.textContent = String(resp.data.count);
         var c = findComment(targetId);
-        if (c) c.likes = resp.data.count;
+        if (c) { c.likes = resp.data.count; c.isLiked = resp.data.liked; }
       } else {
         msg.stats.likes = resp.data.count;
-        msg._liked = resp.data.liked;
-        refreshLikeVisual();
+        msg.isLiked = resp.data.liked;
+        refreshInteractionVisual();
+      }
+    });
+  }
+
+  /** 收藏状态机：与点赞同样幂等（独立幂等键），帖子与评论共用 */
+  function favoriteTarget(targetId, btn, commentNode) {
+    if (!session.loggedIn) { C.openGuideModal("favorite"); return; }
+    var now = Date.now();
+    var intent = favoriteIntent[targetId];
+    if (!intent || now - intent.ts > 350) {
+      intent = favoriteIntent[targetId] = {
+        idemKey: "fav-" + now + "-" + Math.random().toString(36).slice(2, 8),
+        ts: now
+      };
+    } else {
+      intent.ts = now;
+    }
+    api.favorite({ targetId: targetId, idemKey: intent.idemKey, csrf: session.csrf }).then(function (resp) {
+      if (resp.code === 401) { C.openGuideModal("favorite"); return; }
+      if (!resp.success) { U.toast(resp.message, "error"); return; }
+      if (commentNode) {
+        commentNode.classList.toggle("is-favorited", resp.data.favorite);
+        var cnt = commentNode.querySelector(".action-count");
+        if (cnt) cnt.textContent = String(resp.data.count);
+        var c = findComment(targetId);
+        if (c) { c.favorites = resp.data.count; c.isFavorite = resp.data.favorite; }
+      } else {
+        msg.stats.favorites = resp.data.count;
+        msg.isFavorite = resp.data.favorite;
+        refreshInteractionVisual();
       }
     });
   }
@@ -264,6 +313,7 @@
       C.renderCommentTree(els.commentList, commentTree, {
         session: session,
         onLike: function (c, btn) { likeTarget(c.resourceId, btn, btn); },
+        onFavorite: function (c, btn) { favoriteTarget(c.resourceId, btn, btn); },
         onReply: openReplyEditor,
         onEdit: editComment,
         onDelete: confirmDeleteComment

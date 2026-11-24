@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 15; // v15：GM 用户表重排、内容/审计详情弹窗文案
+  var VERSION = 16; // v16：收藏、详情页图标化互动、个人主页互动域文案
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -211,10 +211,17 @@
     "zone.statMessages": "留言",
     "zone.statComments": "评论",
     "zone.statLikes": "收到赞",
+    "zone.selfChip": "这是你的主页",
     "zone.editProfile": "修改资料与隐私",
     "zone.tabAll": "全部",
     "zone.tabMessages": "留言",
     "zone.tabComments": "评论",
+    "zone.maintabLiked": "我赞过的",
+    "zone.maintabFavorite": "我收藏的",
+    "zone.emptyLikedTitle": "还没有赞过的内容",
+    "zone.emptyLikedDesc": "在详情页给喜欢的留言或评论点亮爱心，就会出现在这里",
+    "zone.emptyFavoriteTitle": "还没有收藏的内容",
+    "zone.emptyFavoriteDesc": "收藏过的留言与评论会汇总在这里，方便随时回看",
     "zone.typePost": "发布了留言",
     "zone.typeReply": "评论了留言",
     "zone.quoteLabel": "TA 评论的原帖",
@@ -274,10 +281,17 @@
     "zone.statMessages": "留言",
     "zone.statComments": "评论",
     "zone.statLikes": "收到赞",
+    "zone.selfChip": "这是你的主页",
     "zone.editProfile": "修改资料与隐私",
     "zone.tabAll": "全部",
     "zone.tabMessages": "留言",
     "zone.tabComments": "评论",
+    "zone.maintabLiked": "我赞过的",
+    "zone.maintabFavorite": "我收藏的",
+    "zone.emptyLikedTitle": "还没有赞过的内容",
+    "zone.emptyLikedDesc": "在详情页给喜欢的留言或评论点亮爱心，就会出现在这里",
+    "zone.emptyFavoriteTitle": "还没有收藏的内容",
+    "zone.emptyFavoriteDesc": "收藏过的留言与评论会汇总在这里，方便随时回看",
     "zone.typePost": "发布了留言",
     "zone.typeReply": "评论了留言",
     "zone.quoteLabel": "TA 评论的原帖",
@@ -402,6 +416,7 @@
     "detail.commentSubmit": "发送评论",
     "detail.replyPlaceholder": "回复 {name}：",
     "detail.reply": "回复",
+    "detail.favorite": "收藏",
     "detail.like": "点赞",
     "detail.delete": "删除",
     "detail.edit": "编辑",
@@ -448,6 +463,9 @@
     "profile.flagName": "公开真实姓名",
     "profile.flagEmail": "公开邮箱",
     "profile.flagPhone": "公开手机号",
+    "profile.flagLiked": "公开展示我赞过的",
+    "profile.flagFavorite": "公开展示我收藏的",
+    "profile.interactionPrivacyDesc": "互动展示只控制他人访问个人主页时是否可见，本人始终可见",
     "profile.privacyDesc": "只有你开启公开的个人信息才会展示给其他同学，手机号始终不公开",
     "profile.nicknameTitle": "修改昵称",
     "profile.nicknameBtn": "修改昵称",

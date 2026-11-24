@@ -122,6 +122,8 @@
     flagName: false,
     flagEmail: false,
     flagPhone: false,
+    flagLiked: true,
+    flagFavorite: true,
     bio: "留言板管理员",
     createdAt: 1730000000000
   };
@@ -272,7 +274,9 @@
   // 普通用户补齐 GM 权限字段（便于文档契约与 mock 出口一致），不改变原有演示数据
   var USER_GM_DEFAULTS = {
     role: "user", status: "active", muteUntil: 0, muteReason: "",
-    banReason: "", bannedAt: 0, lastLoginAt: 0, mustChangePassword: false
+    banReason: "", bannedAt: 0, lastLoginAt: 0, mustChangePassword: false,
+    // 互动展示开关：控制他人访问个人主页时能否看到「我赞过的 / 我收藏的」，本人始终可见
+    flagLiked: true, flagFavorite: true
   };
   var USERS_WITH_ROLE = USERS.map(function (u) {
     return withDefaults(USER_GM_DEFAULTS, u);
@@ -288,7 +292,7 @@
 
   window.HMB = window.HMB || {};
   window.HMB.SEED = {
-    VERSION: 11, // v11：敏感词词库扩充（广告引流/刷单诈骗/博彩/违禁服务/垃圾营销）
+    VERSION: 12, // v12：收藏表 + 我赞过/我收藏展示开关
     AVATARS: AVATARS,
     NICK_ADJ: NICK_ADJ,
     NICK_ANIMAL: NICK_ANIMAL,

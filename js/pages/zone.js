@@ -27,7 +27,8 @@
 
   var session = { loggedIn: false };
   var zone = null;        // getZone 返回的聚合数据
-  var feedFilter = "all"; // all / messages / comments
+  var zoneDomain = "feed"; // feed / liked / favorite（主 tab）
+  var feedFilter = "all"; // all / messages / comments（子筛选）
 
   function qsUser() {
     var m = window.location.search.match(/[?&]u=([^&#]+)/);
@@ -139,25 +140,62 @@
 
   /* ---------------- 动态流（留言 + 评论合并，时间倒序） ---------------- */
 
+  /** 当前主 tab 的数据源：动态 / 我赞过的 / 我收藏的（帖子 + 评论） */
+  function domainData() {
+    if (zoneDomain === "liked") return zone.liked || { posts: [], comments: [] };
+    if (zoneDomain === "favorite") return zone.favorite || { posts: [], comments: [] };
+    return { posts: zone.messages || [], comments: zone.comments || [] };
+  }
+
   function buildFeed() {
+    var data = domainData();
     var items = [];
-    zone.messages.forEach(function (m) {
+    data.posts.forEach(function (m) {
       items.push({ kind: "post", ts: m.createdAt, msg: m });
     });
-    zone.comments.forEach(function (c) {
+    data.comments.forEach(function (c) {
       items.push({ kind: "reply", ts: c.createdAt, c: c });
     });
     items.sort(function (a, b) { return b.ts - a.ts; });
     return items;
   }
 
+  /** 主 tab：互动域按隐私开关出现（本人始终可见） */
+  function renderMainTabs() {
+    var box = $("zoneMainTabs");
+    box.textContent = "";
+    var defs = [{ key: "feed", label: "zone.maintabFeed" }];
+    if (zone.canSeeLiked) defs.push({ key: "liked", label: "zone.maintabLiked" });
+    if (zone.canSeeFavorite) defs.push({ key: "favorite", label: "zone.maintabFavorite" });
+    defs.forEach(function (d) {
+      var b = el("button", "zone-maintab" + (zoneDomain === d.key ? " is-active" : ""));
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", zoneDomain === d.key ? "true" : "false");
+      var label = el("span");
+      label.setAttribute("data-text", d.label);
+      b.appendChild(label);
+      b.addEventListener("click", function () {
+        if (zoneDomain === d.key) return;
+        zoneDomain = d.key;
+        feedFilter = "all";
+        renderMainTabs();
+        renderTabs();
+        renderFeed();
+      });
+      box.appendChild(b);
+    });
+    HMB.i18n.apply(box);
+  }
+
   function renderTabs() {
     var tabs = $("zoneTabs");
     tabs.textContent = "";
+    var data = domainData();
     [
-      { key: "all", label: "zone.tabAll", n: zone.stats.messages + zone.stats.comments },
-      { key: "messages", label: "zone.tabMessages", n: zone.stats.messages },
-      { key: "comments", label: "zone.tabComments", n: zone.stats.comments }
+      { key: "all", label: "zone.tabAll", n: data.posts.length + data.comments.length },
+      { key: "messages", label: "zone.tabMessages", n: data.posts.length },
+      { key: "comments", label: "zone.tabComments", n: data.comments.length }
     ].forEach(function (d) {
       var tab = el("button", "zone-tab" + (feedFilter === d.key ? " is-active" : ""));
       tab.type = "button";
@@ -289,8 +327,10 @@
     if (items.length === 0) {
       C.renderStateBox(feed, {
         emoji: "🌤️",
-        titleKey: "zone.emptyTitle",
-        descKey: "zone.emptyDesc"
+        titleKey: zoneDomain === "liked" ? "zone.emptyLikedTitle"
+          : zoneDomain === "favorite" ? "zone.emptyFavoriteTitle" : "zone.emptyTitle",
+        descKey: zoneDomain === "liked" ? "zone.emptyLikedDesc"
+          : zoneDomain === "favorite" ? "zone.emptyFavoriteDesc" : "zone.emptyDesc"
       });
       return;
     }
@@ -428,6 +468,7 @@
         $("zoneArea").textContent = "";
         $("zoneArea").hidden = true;
         renderHero();
+        renderMainTabs();
         renderTabs();
         renderFeed();
         renderSide();

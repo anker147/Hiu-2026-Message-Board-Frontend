@@ -48,6 +48,7 @@
     write("messages", SEED.MESSAGES);
     write("comments", SEED.COMMENTS);
     write("likes", SEED.LIKES);
+    write("favorites", []);           // 用户收藏（userId + targetId 唯一）
     write("sessions", []);            // 所有会话令牌（token→userId）
     write("loginFails", {});          // {account: {count, lockUntil}}
     write("rateWindow", {});          // {userIdKey: [timestamps]}
@@ -96,6 +97,15 @@
     saveLikes: function (l) { write("likes", l); },
     hasLike: function (userId, targetId) {
       return this.getLikes().some(function (x) {
+        return x.userId === userId && x.targetId === targetId;
+      });
+    },
+
+    /* —— 收藏 —— */
+    getFavorites: function () { return read("favorites", []); },
+    saveFavorites: function (f) { write("favorites", f); },
+    hasFavorite: function (userId, targetId) {
+      return this.getFavorites().some(function (x) {
         return x.userId === userId && x.targetId === targetId;
       });
     },
