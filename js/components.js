@@ -339,49 +339,50 @@
     mount.appendChild(backTop);
     HMB.i18n.apply(mount);
 
-    /* —— 下滑挤占收起：banner 顶边上移穿过导航带时按进度写 --crowd(0→1)，
-       CSS 三层错峰消费（两翼滑出 → 导航岛收紧 → 岛吸顶露小边），顶栏全程完全透明；
-       banner 隐藏（软切换到关于视图）视为无挤占，复位展开态。 —— */
+    /* —— 下滑挤占收起（全站通用）：按内容上移穿过导航带的进度写 --crowd(0→1)，
+       CSS 三层错峰消费（两翼滑出 → 导航岛收紧 → 岛吸顶露小边），顶栏全程完全透明。
+       进度统一用滚动位移 scrollY/80：首页 banner 静置 top=80，滚动后 top=80−scrollY，
+       原 (80−top)/80 与 scrollY/80 数学等价；其他页面（详情/个人主页/全部留言/关于/
+       编辑/设置/状态/GM 独立页）没有 banner，同样按滚动位移折算，行为完全一致。
+       例外：首页软切到"关于"视图时 banner 被隐藏，视为无挤占，复位展开态。 —— */
     var banner = document.querySelector(".banner");
-    if (banner) {
-      var updateCrowd = function () {
-        var v;
-        if (!banner.offsetWidth) {   // display:none（关于视图激活）→ 无挤占
-          v = "0";
-        } else {
-          var top = banner.getBoundingClientRect().top;   // 静置时 top = 80（顶栏 60 + 外边距 20）
-          v = (Math.min(1, Math.max(0, (80 - top) / 80))).toFixed(3);
-        }
-        // MO 监听全页属性变更，本函数自身也写 style/class —— Chromium 对 classList.toggle
-        // 即使值未变也会派发 class 属性变更记录，必须逐项"值变化才写"，
-        // 否则"写 → 触发 MO → 再写"会无限自旋饿死微任务队列
-        if (mount.style.getPropertyValue("--crowd") !== v) {
-          mount.style.setProperty("--crowd", v);
-        }
-        var crowded = v !== "0" && parseFloat(v) >= 0.98;
-        if (crowded !== mount.classList.contains("is-crowded")) {
-          mount.classList.toggle("is-crowded", crowded);
-        }
-        if (!crowded && mount.classList.contains("is-popped")) {
-          mount.classList.remove("is-popped");   // 离开完全收起态 → 弹出态复位（视图切换，不播果冻）
-          nav.classList.remove("is-retracting");
-        }
-      };
-      window.addEventListener("scroll", function () {
-        // 弹出态下再次滚动（进度仍为满）→ 果冻收回小边，回到吸顶待命
-        if (mount.classList.contains("is-popped") &&
-            parseFloat(mount.style.getPropertyValue("--crowd") || "0") >= 0.98) {
-          retractIsland();
-        }
-        updateCrowd();
-      }, { passive: true });
-      if (window.MutationObserver) {   // banner 所在视图的显示切换（软切换"关于"）不伴随 scroll，
-        new MutationObserver(updateCrowd).observe(document.body, {   // 用 MO 捕获 hidden/class/style 变更
-          attributes: true, attributeFilter: ["hidden", "class", "style"], subtree: true,
-        });
+    var updateCrowd = function () {
+      var v;
+      // banner 隐藏（display:none，关于视图激活）→ 无挤占；其余情况一律按滚动位移
+      if (banner && !banner.offsetWidth && (window.scrollY || window.pageYOffset || 0) < 1) {
+        v = "0";
+      } else {
+        v = (Math.min(1, Math.max(0, (window.scrollY || window.pageYOffset || 0) / 80))).toFixed(3);
+      }
+      // MO 监听全页属性变更，本函数自身也写 style/class —— Chromium 对 classList.toggle
+      // 即使值未变也会派发 class 属性变更记录，必须逐项"值变化才写"，
+      // 否则"写 → 触发 MO → 再写"会无限自旋饿死微任务队列
+      if (mount.style.getPropertyValue("--crowd") !== v) {
+        mount.style.setProperty("--crowd", v);
+      }
+      var crowded = v !== "0" && parseFloat(v) >= 0.98;
+      if (crowded !== mount.classList.contains("is-crowded")) {
+        mount.classList.toggle("is-crowded", crowded);
+      }
+      if (!crowded && mount.classList.contains("is-popped")) {
+        mount.classList.remove("is-popped");   // 离开完全收起态 → 弹出态复位（视图切换，不播果冻）
+        nav.classList.remove("is-retracting");
+      }
+    };
+    window.addEventListener("scroll", function () {
+      // 弹出态下再次滚动（进度仍为满）→ 果冻收回小边，回到吸顶待命
+      if (mount.classList.contains("is-popped") &&
+          parseFloat(mount.style.getPropertyValue("--crowd") || "0") >= 0.98) {
+        retractIsland();
       }
       updateCrowd();
+    }, { passive: true });
+    if (window.MutationObserver) {   // banner 所在视图的显示切换（软切换"关于"）不伴随 scroll，
+      new MutationObserver(updateCrowd).observe(document.body, {   // 用 MO 捕获 hidden/class/style 变更
+        attributes: true, attributeFilter: ["hidden", "class", "style"], subtree: true,
+      });
     }
+    updateCrowd();
   }
 
   /* ================= 榜单卡（9.3 六区） ================= */
