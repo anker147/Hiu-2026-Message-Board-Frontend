@@ -6,6 +6,9 @@
  * 仅展示当前账号有权看到的留言（公开帖；作者可见自己的仅自己可见帖），
  * 按发布时间倒序，支持按标题 / 内容 / 作者 / 话题搜索，前端分页。
  * 不显示排名数字（rank=null）、不提供排序规则选择 —— 排名只属于双榜。
+ * NEW 徽章口径：不使用后端常驻的 isNew，而是页面首次打开时拍快照；
+ * 只有本次打开之后新出现、或标题 / 正文 / 编辑状态发生变化的帖子才临时标 NEW，
+ * 刷新页面即重新拍快照，旧帖不再常驻 NEW。
  * ============================================================ */
 (function (window, document) {
   "use strict";
@@ -50,6 +53,45 @@
   var session = { loggedIn: false };
   var likedSet = {};
   var likeIntent = {};
+
+  /* 本次页面打开的基线快照：只随代码上下文存活，刷新即重来，不写本地存储 */
+  var baselineReady = false;
+  var baselineOk = false;
+  var baseline = {};   // resourceId -> 内容签名
+
+  function msgSignature(m) {
+    return [m.createdAt || 0, m.edited ? 1 : 0, m.title || "", String(m.content || "")].join("\u0001");
+  }
+
+  /** 首帧拉一次不带搜索词的全量列表，作为「本次打开时已存在」的基线 */
+  function ensureBaseline(cb) {
+    if (baselineReady) { cb(); return; }
+    api.getMessages({ tab: "all", sort: "latest" }).then(function (resp) {
+      baseline = {};
+      baselineOk = !!resp.success;
+      if (baselineOk) {
+        (resp.data.list || []).forEach(function (m) {
+          baseline[m.resourceId] = msgSignature(m);
+        });
+      }
+      baselineReady = true;
+      cb();
+    });
+  }
+
+  /** 本次打开之后新增或内容有变化的帖子才是 NEW；基线失败时一律不标 */
+  function sessionNew(m) {
+    if (!baselineOk || !baseline) return false;
+    if (!Object.prototype.hasOwnProperty.call(baseline, m.resourceId)) return true;
+    return baseline[m.resourceId] !== msgSignature(m);
+  }
+
+  function withSessionNew(m) {
+    var copy = {};
+    Object.keys(m).forEach(function (k) { copy[k] = m[k]; });
+    copy.isNew = sessionNew(m);   // 覆盖后端常驻 isNew
+    return copy;
+  }
 
   /* 打开详情 / F8 幂等点赞（与首页 board.js 同口径，350ms 内双击复用同一幂等键） */
   function openDetail(msg) {
@@ -114,6 +156,7 @@
   }
 
   function load() {
+    if (!baselineReady) { ensureBaseline(load); return; }
     var listEl = $("allList");
     listEl.textContent = "";
     $("allPager").textContent = "";
@@ -151,7 +194,8 @@
 
       var totalPages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
       if (state.page > totalPages) state.page = totalPages;
-      var slice = all.slice((state.page - 1) * PAGE_SIZE, state.page * PAGE_SIZE);
+      var viewList = all.map(withSessionNew);
+      var slice = viewList.slice((state.page - 1) * PAGE_SIZE, state.page * PAGE_SIZE);
       slice.forEach(function (m, i) {
         var card = C.renderCard(m, {
           rank: null,                 // 全部留言不显示排名（排名只属双榜）
