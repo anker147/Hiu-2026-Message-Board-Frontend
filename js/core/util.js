@@ -19,10 +19,34 @@
 
   function frag() { return document.createDocumentFragment(); }
 
-  /** 搜索命中高亮：textContent 安全拼装 + <mark> */
-  function highlightMatch(text, q) {
-    var node = frag();
+  /* ---------------- 前台敏感词展示脱敏（只读展示层，不回写数据） ----------------
+     写接口已拦截敏感词；这里处理历史帖 / 后加词库命中的情况。
+     编辑页回填走原始 content，不经过这里，避免把屏蔽文案保存进库。 */
+  var SENSITIVE_MASK = "[该词涉嫌敏感词已被屏蔽]";
+
+  function currentSensitiveWords() {
+    try {
+      if (!HMB.db || typeof HMB.db.getSettings !== "function") return [];
+      var list = HMB.db.getSettings().sensitiveWords || [];
+      return list.filter(function (w) { return typeof w === "string" && w.length; })
+        .sort(function (a, b) { return b.length - a.length; }); // 长词优先，避免“刷单”先吃掉“刷单返利”
+    } catch (e) { return []; }
+  }
+
+  function maskSensitive(text, words) {
     var src = String(text == null ? "" : text);
+    if (!src) return src;
+    var list = words || currentSensitiveWords();
+    for (var i = 0; i < list.length; i++) {
+      if (src.indexOf(list[i]) >= 0) src = src.split(list[i]).join(SENSITIVE_MASK);
+    }
+    return src;
+  }
+
+  /** 搜索命中高亮：textContent 安全拼装 + <mark>；先脱敏再高亮 */
+  function highlightMatch(text, q, words) {
+    var node = frag();
+    var src = maskSensitive(String(text == null ? "" : text), words);
     if (!q) { node.appendChild(document.createTextNode(src)); return node; }
     var lower = src.toLowerCase(), needle = q.toLowerCase(), i = 0, idx;
     while ((idx = lower.indexOf(needle, i)) >= 0) {
@@ -108,19 +132,21 @@
     return (box.textContent || box.innerText || "").replace(/\u00a0/g, " ").trim();
   }
 
-  /** 富文本安全渲染：白名单保留排版，q 非空时对文本节点做命中高亮 */
-  function renderRich(html, q) {
+  /** 富文本安全渲染：白名单保留排版；文本节点先做敏感词展示脱敏，q 非空时再高亮。
+   *  opts.mask=false 供 GM 审核查看原文（不影响 C 端展示）。 */
+  function renderRich(html, q, opts) {
     var box = document.createElement("div");
     box.innerHTML = sanitizeRichHtml(html);
+    var words = (opts && opts.mask === false) ? [] : currentSensitiveWords();
     var frag = document.createDocumentFragment();
     function walk(from, to) {
       for (var i = 0; i < from.childNodes.length; i++) {
         var n = from.childNodes[i];
         if (n.nodeType === 3) {
           if (q) {
-            var hm = highlightMatch(n.nodeValue, q);
+            var hm = highlightMatch(n.nodeValue, q, words);
             while (hm.firstChild) to.appendChild(hm.firstChild);
-          } else to.appendChild(document.createTextNode(n.nodeValue));
+          } else to.appendChild(document.createTextNode(maskSensitive(n.nodeValue, words)));
         } else if (n.nodeType === 1) {
           var c = document.createElement(n.tagName.toLowerCase());
           var st = n.getAttribute("style");
@@ -969,6 +995,7 @@
   HMB.util = {
     el: el,
     frag: frag,
+    maskSensitive: maskSensitive,
     highlightMatch: highlightMatch,
     sanitizeRichHtml: sanitizeRichHtml,
     richTextToPlain: richTextToPlain,
