@@ -59,9 +59,6 @@
 
   function init() {
     els.topbar = $("topbar");
-    els.searchInput = $("searchInput");
-    els.searchIcon = $("searchIcon");
-    els.periodDropdown = $("periodDropdown");
     els.listCaption = $("listCaption");
     els.boardList = $("boardList");
     els.publishFloatBtn = $("publishFloatBtn");
@@ -75,15 +72,13 @@
     if (m && ["hot", "latest", "mine", "about", "all", "gm"].indexOf(m[1]) >= 0) state.tab = m[1];
 
     // 图标（静态 SVG 常量）
-    els.searchIcon.appendChild(U.icon("search"));
     $("publishIcon").appendChild(U.icon("pencil"));
     $("blindboxIcon").appendChild(U.icon("gift"));
 
-    // 视图外壳随 tab 切换（banner 标题/期次徽章 + 工具栏下拉组合）
+    // 视图外壳随 tab 切换（banner 标题/期次徽章）
     els.banner = document.querySelector(".banner");
     els.bannerTitle = document.querySelector(".banner-title");
     updateView();
-    renderPeriodDropdown();
 
     api.getSession().then(function (resp) {
       session = resp.data;
@@ -130,8 +125,6 @@
     els.bannerTitle.textContent = t(key);
     els.banner.setAttribute("aria-label", t(latest ? "banner.ariaNew" : "banner.ariaHot"));
     refreshIssueBadge();
-    // 排名规则固定：不再提供排序下拉；期次下拉仅双榜视图需要
-    els.periodDropdown.hidden = state.tab === "mine";
   }
 
   /** 期次徽章：热榜显示统计周（默认上一期，仅标签不筛选），新帖随所选期次（默认本期） */
@@ -143,46 +136,15 @@
     els.issueText.textContent = t("banner.issue", { n: periodNo, range: period ? period.range : "" });
   }
 
-  /** 期次下拉按 tab 重建（makeDropdown 不清空挂载点，切 tab 需显式重渲染）：
-   *  热度周榜只列“已发布且有数据”的统计周；本周新帖保留本周但不再标注“统计中”；
-   *  下拉只表达期次本身，不承载任何排名信息。 */
-  function renderPeriodDropdown() {
-    els.periodDropdown.textContent = "";   // makeDropdown 不清空挂载点：切 tab 重建前必须先清，否则 btn/menu 逐次叠加
-    var isHot = state.tab === "hot";
-    var pool = isHot ? publishedPeriods() : periodList();
-    if (isHot && !pool.some(function (p) { return p.no === state.hotPeriod; }) && pool.length) {
-      state.hotPeriod = pool[0].no;
-    }
-    var items = pool.map(function (p) {
-      var key = (!isHot && p.no === currentPeriod) ? "common.periodThisWeek" : "common.periodN";
-      return { key: String(p.no), label: t(key, { n: p.no }) };
-    });
-    U.makeDropdown(els.periodDropdown, items,
-      String(isHot ? state.hotPeriod : state.period),
-      function (k) {
-        if (isHot) state.hotPeriod = parseInt(k, 10);
-        else state.period = parseInt(k, 10);
-        refreshIssueBadge();
-        loadList();
-      });
-  }
-
-  /* ---------------- 工具栏：下拉 + 搜索 ---------------- */
+  /* ---------------- 顶栏全局搜索 ---------------- */
 
   function bindToolbar() {
-    // 排名规则由榜单类型固定（周榜/新帖榜按热度，我的留言按最新），不向用户开放排序选择。
-    // 期次下拉由 renderPeriodDropdown 按 tab 重建（bindToolbar 仅在会话就绪时调用一次）
-
-    var debounced = U.debounce(function () {
-      state.q = els.searchInput.value.trim();
+    // 搜索已上移至顶栏全局搜索框：输入经 hmb:globalsearch 事件传来（含 200ms 防抖）
+    window.addEventListener("hmb:globalsearch", function (e) {
+      // 岛内视图（all/gm/about）激活时，搜索由各自页面消费，榜单不响应
+      if (state.tab !== "hot" && state.tab !== "latest" && state.tab !== "mine") return;
+      state.q = e.detail.q;
       loadList();
-    }, 200); // 搜索防抖 200ms（PRD 9.4）
-    els.searchInput.addEventListener("input", debounced);
-    els.searchInput.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
-        state.q = els.searchInput.value.trim();
-        loadList();
-      }
     });
   }
 
@@ -380,7 +342,6 @@
       if (!isFinite(next) || next < 1 || next === currentPeriod) return false;
       currentPeriod = next;
       state.period = next;
-      renderPeriodDropdown();
       refreshIssueBadge();
       loadList();
       return true;
@@ -410,7 +371,8 @@
       state.tab = key;
       state._topbarTab = key;
       updateView();
-      renderPeriodDropdown(); // 期次下拉按新 tab 的条目/选中项重建
+      // 顶栏搜索框作用域随 tab 切换；岛内视图由各自页面接管搜索
+      if (C.setSearchScope) C.setSearchScope(key);
       // 岛内视图（about / all / gm）：统一先收起全部，再显示目标
       if (key === "about" || key === "all" || key === "gm") {
         listReqSeq++;                                  // 使在途列表响应过期

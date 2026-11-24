@@ -12,6 +12,76 @@
 
   /* ================= 顶栏 ================= */
 
+  /* ---------------- 全局搜索框（顶栏头像左侧） ----------------
+   * 作用域随当前页面 / 岛内 tab 变化；无列表可搜的页面返回 null（不渲染搜索框）。
+   * 关键词保存在 HMB.globalSearch.q，切 tab / 换页后由 renderTopbar 回填。
+   * scope: board-hot / board-latest / board-mine / all / zone
+   */
+  HMB.globalSearch = HMB.globalSearch || { q: "" };
+
+  var SEARCH_SCOPES = {
+    hot:    { scope: "board-hot",    key: "search.scopeHot" },
+    latest: { scope: "board-latest", key: "search.scopeLatest" },
+    mine:   { scope: "board-mine",   key: "search.scopeMine" },
+    all:    { scope: "all",          key: "search.scopeAll" },
+    zone:   { scope: "zone",         key: "search.scopeZone" }
+  };
+  function resolveScope(activeTab) {
+    if (!activeTab) {
+      // zone.html 独立页：activeTab=null，用路径识别（个人主页可搜该用户留言）
+      if (/zone\.html$/.test(window.location.pathname || "")) return SEARCH_SCOPES.zone;
+      return null;
+    }
+    return SEARCH_SCOPES[activeTab] || null;
+  }
+
+  function buildGlobalSearch(activeTab) {
+    var conf = resolveScope(activeTab);
+    var box = el("div", "topbar-search");
+    box.dataset.scope = conf ? conf.scope : "";
+    var ico = el("span", "topbar-search-ico");
+    ico.appendChild(U.icon("search"));
+    box.appendChild(ico);
+    var input = el("input", "topbar-search-input");
+    input.type = "search";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.setAttribute("aria-label", t(conf ? conf.key : "common.searchPlaceholder"));
+    input.setAttribute("placeholder", t(conf ? conf.key : "common.searchPlaceholder"));
+    input.setAttribute("data-text-placeholder", conf ? conf.key : "common.searchPlaceholder");
+    input.value = HMB.globalSearch.q || "";
+    var emit = function () {
+      HMB.globalSearch.q = input.value.trim();
+      window.dispatchEvent(new CustomEvent("hmb:globalsearch", {
+        detail: { q: HMB.globalSearch.q, scope: box.dataset.scope }
+      }));
+    };
+    input.addEventListener("input", U.debounce(emit, 200));
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); emit(); }
+    });
+    box.appendChild(input);
+    return box;
+  }
+
+  /** 供页面在岛内切 tab / 进入时更新搜索框作用域与占位文案（不重建顶栏）。 */
+  function setSearchScope(activeTab) {
+    var box = document.querySelector(".topbar-search");
+    if (!box) return;
+    var conf = resolveScope(activeTab);
+    // 切到无列表视图（about/gm）：隐藏搜索框；切回榜单/全部留言：显示
+    box.hidden = !conf;
+    if (!conf) return;
+    box.dataset.scope = conf.scope;
+    var input = box.querySelector(".topbar-search-input");
+    if (input) {
+      input.setAttribute("placeholder", t(conf.key));
+      input.setAttribute("data-text-placeholder", conf.key);
+      input.setAttribute("aria-label", t(conf.key));
+      input.value = HMB.globalSearch.q || "";
+    }
+  }
+
   /* —— 线性匀速回顶（切换 tag / 回顶按钮共用）：rAF 逐帧线性插值 scrollY，
         匀速 1.6px/ms（短距下限 280ms、长距上限 800ms）；动画期间临时关掉
         CSS scroll-behavior:smooth，防止逐帧 scrollTo 被浏览器平滑动画吞掉；
@@ -282,6 +352,14 @@
     window.addEventListener("resize", U.debounce(function () { placePill(); }, 150));
 
     var right = el("div", "topbar-right");
+
+    /* —— 全局搜索框（头像左侧）：作用域随当前页面/岛内 tab 变化 ——
+       始终渲染容器（无列表可搜的页面隐藏），这样岛内切 tab 时 setSearchScope 可即时显示/换域。
+       输入写入 HMB.globalSearch.q 并派发 hmb:globalsearch 事件，由当前页的页面脚本消费。 */
+    var gsBox = buildGlobalSearch(activeTab);
+    if (resolveScope(activeTab) === null) gsBox.hidden = true;
+    right.appendChild(gsBox);
+
     if (session && session.loggedIn) {
       var wrap = el("div", "identity-wrap");
       // 注意：不能用 var pill —— 会覆盖闭包里的导航胶囊引用，placePill/slidePillTo 将错操作此按钮
@@ -991,6 +1069,7 @@
 
   HMB.components = {
     renderTopbar: renderTopbar,
+    setSearchScope: setSearchScope,
     replayFloatActions: replayFloatActions,
     renderCard: renderCard,
     renderSkeleton: renderSkeleton,

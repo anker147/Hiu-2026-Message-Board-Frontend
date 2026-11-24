@@ -31,14 +31,6 @@
     '    <h1 class="all-head-title" data-text="all.title">全部留言</h1>',
     '    <p class="all-head-sub" data-text="all.subtitle">看看大家写下的每一条</p>',
     '  </section>',
-    '  <section class="toolbar" aria-label="搜索">',
-    '    <div class="search-box">',
-    '      <span class="search-icon" id="allSearchIcon"></span>',
-    '      <input type="search" class="search-input" id="allSearchInput"',
-    '             data-text-placeholder="all.searchPlaceholder"',
-    '             placeholder="搜索留言内容 / 作者 / 话题" aria-label="搜索留言">',
-    '    </div>',
-    '  </section>',
     '  <div class="list-caption" id="allCaption" aria-live="polite"></div>',
     '  <section class="board-list stagger" id="allList" aria-label="全部留言列表"></section>',
     '  <div class="all-pager" id="allPager"></div>',
@@ -108,13 +100,14 @@
       if (!embedded) C.renderTopbar($("topbar"), "all", session);
       U.renderDebugPanel();
 
-      var icon = $("allSearchIcon");
-      if (icon) icon.appendChild(U.icon("search"));
-      $("allSearchInput").addEventListener("input", U.debounce(function () {
-        state.q = $("allSearchInput").value.trim();
+      // 顶栏全局搜索框（作用域＝全部留言）：由 hmb:globalsearch 事件驱动
+      state.q = (HMB.globalSearch && HMB.globalSearch.q) || "";
+      window.addEventListener("hmb:globalsearch", function (e) {
+        state.q = e.detail.q;
         state.page = 1;
         load();
-      }, 220));
+      });
+      if (!embedded && C.setSearchScope) C.setSearchScope("all");
 
       load();
     });

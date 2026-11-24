@@ -10,10 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/tokens.css?v=20261124an">
-  <link rel="stylesheet" href="../css/base.css?v=20261124an">
-  <link rel="stylesheet" href="../css/components.css?v=20261124an">
-  <link rel="stylesheet" href="../css/pages.css?v=20261124an">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261124ao">
+  <link rel="stylesheet" href="../css/base.css?v=20261124ao">
+  <link rel="stylesheet" href="../css/components.css?v=20261124ao">
+  <link rel="stylesheet" href="../css/pages.css?v=20261124ao">
 </head>
 <body>
   <div class="grain" aria-hidden="true"></div>
@@ -50,17 +50,7 @@
       </div>
     </section>
 
-    <!-- 搜索工具栏（搜索框 + 期次下拉；排名规则由榜单固定，不提供排序选择） -->
-    <section class="toolbar" aria-label="搜索与筛选">
-      <div class="search-box">
-        <span class="search-icon" id="searchIcon"></span>
-        <input type="search" class="search-input" id="searchInput"
-               data-text-placeholder="common.searchPlaceholder"
-               placeholder="搜索留言内容 / 作者 / 话题" aria-label="搜索留言">
-      </div>
-      <div class="dropdown" id="periodDropdown"></div>
-      <a class="btn btn--soft toolbar-all" href="index.html?tab=all" data-goto-tab="all" data-text="common.allMessages">全部留言</a>
-    </section>
+    <!-- 搜索已上移至顶栏全局搜索框（作用域随当前 tab 变化）；期次由榜单自动取最新已发布统计周 -->
 
     <div class="list-caption" id="listCaption" aria-live="polite"></div>
 
@@ -86,16 +76,16 @@
   <!-- 管理视图：岛内“管理员”tag 软切换的挂载点（js/pages/gm.js 惰性构建，仅 admin 可见） -->
   <div id="gmView" hidden></div>
 
-  <script src="../js/ui-text.js?v=20261124an"></script>
-  <script src="../js/mock/seed.js?v=20261124an"></script>
-  <script src="../js/mock/db.js?v=20261124an"></script>
-  <script src="../js/mock/api.js?v=20261124an"></script>
-  <script src="../js/core/util.js?v=20261124an"></script>
-  <script src="../js/core/media.js?v=20261124an"></script>
-  <script src="../js/components.js?v=20261124an"></script>
-  <script src="../js/pages/board.js?v=20261124an"></script>
-  <script src="../js/pages/about.js?v=20261124an"></script>
-  <script src="../js/pages/all.js?v=20261124an"></script>
-  <script src="../js/pages/gm.js?v=20261124an"></script>
+  <script src="../js/ui-text.js?v=20261124ao"></script>
+  <script src="../js/mock/seed.js?v=20261124ao"></script>
+  <script src="../js/mock/db.js?v=20261124ao"></script>
+  <script src="../js/mock/api.js?v=20261124ao"></script>
+  <script src="../js/core/util.js?v=20261124ao"></script>
+  <script src="../js/core/media.js?v=20261124ao"></script>
+  <script src="../js/components.js?v=20261124ao"></script>
+  <script src="../js/pages/board.js?v=20261124ao"></script>
+  <script src="../js/pages/about.js?v=20261124ao"></script>
+  <script src="../js/pages/all.js?v=20261124ao"></script>
+  <script src="../js/pages/gm.js?v=20261124ao"></script>
 </body>
 </html>

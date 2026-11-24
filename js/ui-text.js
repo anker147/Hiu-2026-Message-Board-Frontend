@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 18; // v18：头像上传文案
+  var VERSION = 19; // v19：顶栏全局搜索框作用域文案
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -45,6 +45,12 @@
     "common.latest": "本周新帖",
     "common.mine": "我的留言",
     "common.searchPlaceholder": "搜索留言内容 / 作者 / 话题",
+    /* —— 顶栏全局搜索框（作用域随页面变化） —— */
+    "search.scopeHot": "搜索热度周榜…",
+    "search.scopeLatest": "搜索本周新帖…",
+    "search.scopeMine": "搜索我的留言…",
+    "search.scopeAll": "搜索全部留言…",
+    "search.scopeZone": "搜索 TA 的留言…",
     "common.period": "统计周",
     "common.periodThisWeek": "第 {n} 期（本周）",
     "common.periodN": "第 {n} 期",
