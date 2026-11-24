@@ -8,10 +8,10 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="description" content="留言板管理后台 — 账号权限、内容处置、操作审计与站点设置">
   <title>留言板管理 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css?v=20261124ap">
-  <link rel="stylesheet" href="../css/base.css?v=20261124ap">
-  <link rel="stylesheet" href="../css/components.css?v=20261124ap">
-  <link rel="stylesheet" href="../css/pages.css?v=20261124ap">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261124aq">
+  <link rel="stylesheet" href="../css/base.css?v=20261124aq">
+  <link rel="stylesheet" href="../css/components.css?v=20261124aq">
+  <link rel="stylesheet" href="../css/pages.css?v=20261124aq">
 </head>
 <body data-page="gm">
   <div class="grain" aria-hidden="true"></div>
@@ -144,6 +144,7 @@
               <h3 class="gm-card-title gm-card-title--gap" data-text="gm.settings.periodTitle">当前期次</h3>
               <p class="gm-card-desc" data-text="gm.settings.periodDesc">新发布的留言会归入该期次；期次只能前进，不能回退</p>
               <input type="number" class="gm-input" id="gmPeriod" min="1" step="1" aria-label="当前期次">
+              <p class="gm-field-err gm-field-err--hidden" id="gmPeriodErr" role="alert"></p>
               <div class="gm-card-actions">
                 <button type="button" class="btn btn--primary btn--sm" id="gmSettingsSave" data-text="gm.settings.save">保存设置</button>
               </div>
@@ -161,13 +162,13 @@
 
   <div id="gmModalRoot"></div>
 
-  <script src="../js/ui-text.js?v=20261124ap"></script>
-  <script src="../js/mock/seed.js?v=20261124ap"></script>
-  <script src="../js/mock/db.js?v=20261124ap"></script>
-  <script src="../js/mock/api.js?v=20261124ap"></script>
-  <script src="../js/core/util.js?v=20261124ap"></script>
-  <script src="../js/core/media.js?v=20261124ap"></script>
-  <script src="../js/components.js?v=20261124ap"></script>
-  <script src="../js/pages/gm.js?v=20261124ap"></script>
+  <script src="../js/ui-text.js?v=20261124aq"></script>
+  <script src="../js/mock/seed.js?v=20261124aq"></script>
+  <script src="../js/mock/db.js?v=20261124aq"></script>
+  <script src="../js/mock/api.js?v=20261124aq"></script>
+  <script src="../js/core/util.js?v=20261124aq"></script>
+  <script src="../js/core/media.js?v=20261124aq"></script>
+  <script src="../js/components.js?v=20261124aq"></script>
+  <script src="../js/pages/gm.js?v=20261124aq"></script>
 </body>
 </html>

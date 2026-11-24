@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 20; // v20：GM 图标按钮/代码块/逐条飞入改版（文案 key 未变，仅刷新缓存）
+  var VERSION = 21; // v21：GM 期次字段校验文案
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -729,6 +729,9 @@
     "gm.settings.resetBtn": "重置数据",
     "gm.settings.resetConfirm": "确认重置全部演示数据？你发布的留言和账号都会被清除",
     "gm.settings.saved": "设置已保存",
+    "gm.settings.periodRequired": "请填写当前期次",
+    "gm.settings.periodInteger": "期次必须是整数",
+    "gm.settings.periodBack": "期次只能前进，不能回退（当前第 {n} 期）",
     "gm.settings.resetDone": "演示数据已重置，正在返回首页",
     "gm.empty": "暂无数据",
     "gm.prev": "上一页",
