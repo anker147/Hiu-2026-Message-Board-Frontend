@@ -32,13 +32,17 @@
   var GM_TEMPLATE = [
     '<main class="gm-page container">',
     '  <section class="gm-head">',
-    '    <div>',
-    '      <h1 class="gm-head-title" data-text="gm.title">留言板管理</h1>',
+    '    <div class="gm-head-copy">',
+    '      <div class="gm-head-titlerow">',
+    '        <h1 class="gm-head-title" data-text="gm.title">留言板管理</h1>',
+    '        <span class="gm-head-chip" aria-hidden="true">GM</span>',
+    '      </div>',
     '      <p class="gm-head-sub" data-text="gm.subtitle">账号、内容与运行数据，统一在这里管理</p>',
     '    </div>',
     '  </section>',
     '  <div class="gm-shell">',
     '    <nav class="gm-side" id="gmSide" aria-label="管理功能">',
+    '      <div class="gm-side-title" data-text="gm.sideTitle">控制面板</div>',
     '      <button type="button" class="gm-side-btn is-active" data-panel="overview" data-text="gm.tabOverview">概览</button>',
     '      <button type="button" class="gm-side-btn" data-panel="users" data-text="gm.tabUsers">用户管理</button>',
     '      <button type="button" class="gm-side-btn" data-panel="content" data-text="gm.tabContent">内容管理</button>',
@@ -68,6 +72,7 @@
     '            <option value="admin" data-text="gm.user.roleAdmin">管理员</option>',
     '          </select>',
     '          <button type="button" class="btn btn--soft btn--sm" id="gmUserReload" data-text="common.retry">重试</button>',
+    '          <span class="gm-result-count" id="gmUserCount"></span>',
     '        </div>',
     '        <div class="gm-table-wrap" id="gmUserTable"></div>',
     '        <div class="gm-pager" id="gmUserPager"></div>',
@@ -90,13 +95,17 @@
     '            <option value="1" data-text="gm.content.hiddenYes">已隐藏</option>',
     '          </select>',
     '          <button type="button" class="btn btn--soft btn--sm" id="gmContentReload" data-text="common.retry">重试</button>',
+    '          <span class="gm-result-count" id="gmContentCount"></span>',
     '        </div>',
     '        <div class="gm-table-wrap" id="gmContentTable"></div>',
     '        <div class="gm-pager" id="gmContentPager"></div>',
     '      </div>',
     '      <div class="gm-panel" id="panel-actions">',
     '        <h2 class="gm-section-title" data-text="gm.tabActions">操作审计</h2>',
-    '        <p class="gm-note" data-text="gm.actions.note">所有管理操作都会留痕，记录不可修改或删除。</p>',
+    '        <div class="gm-toolbar gm-toolbar--simple">',
+    '          <p class="gm-note" data-text="gm.actions.note">所有管理操作都会留痕，记录不可修改或删除。</p>',
+    '          <span class="gm-result-count" id="gmActionCount"></span>',
+    '        </div>',
     '        <div class="gm-table-wrap" id="gmActionTable"></div>',
     '        <div class="gm-pager" id="gmActionPager"></div>',
     '      </div>',
@@ -309,15 +318,17 @@
           } else {
             actions.appendChild(btn("gm.user.mute", "btn--soft btn--sm", function () { openMute(u); }));
           }
-          actions.appendChild(btn(u.role === "admin" ? "gm.user.demote" : "gm.user.promote",
-            "btn--ghost btn--sm", function () { openRole(u); }));
-          actions.appendChild(btn("gm.user.editProfile", "btn--ghost btn--sm", function () { openProfile(u); }));
-          actions.appendChild(btn("gm.user.resetPassword", "btn--ghost btn--sm", function () { openResetPwd(u); }));
+          actions.appendChild(moreMenu([
+            { key: u.role === "admin" ? "gm.user.demote" : "gm.user.promote", onClick: function () { openRole(u); } },
+            { key: "gm.user.editProfile", onClick: function () { openProfile(u); } },
+            { key: "gm.user.resetPassword", onClick: function () { openResetPwd(u); } }
+          ]));
         }
         return [userCell, roleCell, statusCell, statsCell, actions];
       });
       renderTable(wrap, headers, rows);
       renderPager($("gmUserPager"), "users", d, loadUsers);
+      setResultCount("gmUserCount", d.total);
     });
   }
 
@@ -499,6 +510,7 @@
       });
       renderTable(wrap, headers, rows);
       renderPager($("gmContentPager"), "content", d, loadContent);
+      setResultCount("gmContentCount", d.total);
     });
   }
 
@@ -523,6 +535,7 @@
       });
       renderTable(wrap, headers, rows, "gm.actions.empty");
       renderPager($("gmActionPager"), "actions", d, loadActions);
+      setResultCount("gmActionCount", d.total);
     });
   }
 
@@ -580,6 +593,48 @@
     b.type = "button";
     b.addEventListener("click", onClick);
     return b;
+  }
+
+  /** 行内「更多」菜单：把低频操作收进弹出层，表格只留封禁/禁言两个高频动作 */
+  function moreMenu(items) {
+    var wrap = el("div", "gm-more");
+    var toggle = el("button", "btn btn--soft btn--sm gm-more-btn", t("gm.common.more"));
+    toggle.type = "button";
+    toggle.setAttribute("aria-haspopup", "true");
+    toggle.setAttribute("aria-expanded", "false");
+    var menu = el("div", "gm-more-menu");
+    function close() {
+      wrap.classList.remove("is-open");
+      toggle.setAttribute("aria-expanded", "false");
+      document.removeEventListener("click", outside);
+    }
+    function outside(e) { if (!wrap.contains(e.target)) close(); }
+    items.forEach(function (it) {
+      var item = el("button", "gm-more-item", t(it.key));
+      item.type = "button";
+      item.addEventListener("click", function (e) {
+        e.stopPropagation();
+        close();
+        it.onClick();
+      });
+      menu.appendChild(item);
+    });
+    toggle.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (wrap.classList.contains("is-open")) { close(); return; }
+      document.querySelectorAll(".gm-more.is-open").forEach(function (m) { m.classList.remove("is-open"); });
+      wrap.classList.add("is-open");
+      toggle.setAttribute("aria-expanded", "true");
+      document.addEventListener("click", outside);
+    });
+    wrap.appendChild(toggle);
+    wrap.appendChild(menu);
+    return wrap;
+  }
+
+  function setResultCount(id, total) {
+    var node = $(id);
+    if (node) node.textContent = t("gm.resultCount", { n: total || 0 });
   }
 
   function badge(labelKey, tone) {

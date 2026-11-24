@@ -771,9 +771,9 @@ body[data-page="login"] {
   padding: clamp(28px, 5vh, 56px) calc(clamp(40px, 12vw, 180px) + 5vw) clamp(28px, 5vh, 56px) clamp(32px, 7vw, 96px);
 }
 
-/* ===== 左侧品牌核心展示（内容靠左上角，页脚沉底） ===== */
+/* ===== 左侧品牌核心展示（恢复调整前的分布：页头在上、主文案居中、页脚沉底） ===== */
 .login-brand {
-  display: flex; flex-direction: column; justify-content: flex-start;
+  display: flex; flex-direction: column; justify-content: space-between;
   gap: 40px; min-height: 0; height: 100%; color: #fff;
 }
 .brand-head { display: flex; align-items: center; gap: 12px; }
@@ -816,7 +816,7 @@ body[data-page="login"] {
   background: rgba(143,208,255,.22); color: #8fd0ff;
   font-size: 10px; font-weight: 800; flex: none;
 }
-.brand-foot { margin-top: auto; color: rgba(255,255,255,.72); font-size: 12px; text-shadow: 0 1px 8px rgba(6,18,36,.5); }
+.brand-foot { color: rgba(255,255,255,.72); font-size: 12px; text-shadow: 0 1px 8px rgba(6,18,36,.5); }
 
 /* 入场动画 */
 @keyframes login-slide-left { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: none; } }
@@ -1899,6 +1899,62 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
 .gm-field { display: flex; flex-direction: column; gap: 6px; }
 .gm-field-label { font-size: 13.5px; font-weight: 700; color: var(--ink-2); }
 .gm-field .gm-input, .gm-field .gm-select { width: 100%; }
+
+/* ===== GM 操作台优化：层级更清晰、常用操作更顺手 ===== */
+.gm-head-titlerow { display: flex; align-items: center; gap: 11px; }
+.gm-head-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 24px; padding: 0 9px; border-radius: 999px;
+  background: linear-gradient(135deg, var(--blue), #6a5fd0);
+  color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .1em;
+  box-shadow: 0 4px 12px rgba(53, 158, 255, .28);
+}
+.gm-side { padding: 12px; gap: 6px; }
+.gm-side-title {
+  padding: 4px 14px 10px; color: var(--ink-3);
+  font-size: 11px; font-weight: 800; letter-spacing: .12em;
+}
+.gm-side-btn { position: relative; display: flex; align-items: center; gap: 10px; }
+.gm-side-btn::before {
+  content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--line); transition: background 160ms ease, box-shadow 160ms ease;
+}
+.gm-side-btn.is-active::before { background: var(--blue); box-shadow: 0 0 0 4px var(--blue-soft); }
+.gm-side-btn.is-active::after {
+  content: ""; position: absolute; left: 0; top: 11px; bottom: 11px;
+  width: 3px; border-radius: 999px; background: var(--blue);
+}
+.gm-toolbar { flex-wrap: wrap; }
+.gm-toolbar--simple { align-items: center; margin: 0 0 12px; }
+.gm-toolbar--simple .gm-note { margin: 0; }
+.gm-result-count {
+  margin-left: auto; font-size: 13px; font-weight: 700;
+  color: var(--ink-3); white-space: nowrap;
+}
+.gm-table thead th { position: sticky; top: 0; z-index: 2; }
+.gm-table tbody tr { transition: background 140ms ease; }
+.gm-table tbody tr:hover { background: var(--blue-soft); }
+.gm-badge::before {
+  content: ""; display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; margin-right: 6px; background: currentColor; opacity: .85;
+}
+.gm-actions-cell { gap: 8px; min-width: 250px; }
+/* 菜单不能被表格容器的滚动裁剪；窄屏才恢复横向滚动 */
+.gm-table-wrap { overflow: visible; }
+@media (max-width: 1200px) { .gm-table-wrap { overflow-x: auto; } }
+.gm-more { position: relative; }
+.gm-more-menu {
+  display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
+  min-width: 150px; padding: 6px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-pop);
+}
+.gm-more.is-open .gm-more-menu { display: block; }
+.gm-more-item {
+  display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 7px;
+  background: transparent; color: var(--ink-2); text-align: left; cursor: pointer;
+  font: inherit; font-size: 13px;
+}
+.gm-more-item:hover { background: var(--blue-soft); color: var(--blue); }
 
 @media (max-width: 900px) {
   .gm-shell { grid-template-columns: 1fr; }

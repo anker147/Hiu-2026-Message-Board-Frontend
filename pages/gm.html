@@ -8,10 +8,10 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="description" content="留言板管理后台 — 账号权限、内容处置、操作审计与站点设置">
   <title>留言板管理 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css?v=20261124n">
-  <link rel="stylesheet" href="../css/base.css?v=20261124n">
-  <link rel="stylesheet" href="../css/components.css?v=20261124n">
-  <link rel="stylesheet" href="../css/pages.css?v=20261124n">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261124o">
+  <link rel="stylesheet" href="../css/base.css?v=20261124o">
+  <link rel="stylesheet" href="../css/components.css?v=20261124o">
+  <link rel="stylesheet" href="../css/pages.css?v=20261124o">
 </head>
 <body data-page="gm">
   <div class="grain" aria-hidden="true"></div>
@@ -20,8 +20,11 @@
 
   <main class="gm-page container">
     <section class="gm-head">
-      <div>
-        <h1 class="gm-head-title" data-text="gm.title">留言板管理</h1>
+      <div class="gm-head-copy">
+        <div class="gm-head-titlerow">
+          <h1 class="gm-head-title" data-text="gm.title">留言板管理</h1>
+          <span class="gm-head-chip" aria-hidden="true">GM</span>
+        </div>
         <p class="gm-head-sub" data-text="gm.subtitle">账号、内容与运行数据，统一在这里管理</p>
       </div>
       <a class="btn btn--ghost gm-back" href="index.html" data-text="common.backHome">回首页</a>
@@ -29,6 +32,7 @@
 
     <div class="gm-shell">
       <nav class="gm-side" id="gmSide" aria-label="管理功能">
+        <div class="gm-side-title" data-text="gm.sideTitle">控制面板</div>
         <button type="button" class="gm-side-btn is-active" data-panel="overview" data-text="gm.tabOverview">概览</button>
         <button type="button" class="gm-side-btn" data-panel="users" data-text="gm.tabUsers">用户管理</button>
         <button type="button" class="gm-side-btn" data-panel="content" data-text="gm.tabContent">内容管理</button>
@@ -64,6 +68,7 @@
               <option value="admin" data-text="gm.user.roleAdmin">管理员</option>
             </select>
             <button type="button" class="btn btn--soft btn--sm" id="gmUserReload" data-text="common.retry">重试</button>
+            <span class="gm-result-count" id="gmUserCount"></span>
           </div>
           <div class="gm-table-wrap" id="gmUserTable"></div>
           <div class="gm-pager" id="gmUserPager"></div>
@@ -90,6 +95,7 @@
               <option value="1" data-text="gm.content.hiddenYes">已隐藏</option>
             </select>
             <button type="button" class="btn btn--soft btn--sm" id="gmContentReload" data-text="common.retry">重试</button>
+            <span class="gm-result-count" id="gmContentCount"></span>
           </div>
           <div class="gm-table-wrap" id="gmContentTable"></div>
           <div class="gm-pager" id="gmContentPager"></div>
@@ -98,7 +104,10 @@
         <!-- 操作审计 -->
         <div class="gm-panel" id="panel-actions">
           <h2 class="gm-section-title" data-text="gm.tabActions">操作审计</h2>
-          <p class="gm-note" data-text="gm.actions.note">所有管理操作都会留痕，记录不可修改或删除。</p>
+          <div class="gm-toolbar gm-toolbar--simple">
+            <p class="gm-note" data-text="gm.actions.note">所有管理操作都会留痕，记录不可修改或删除。</p>
+            <span class="gm-result-count" id="gmActionCount"></span>
+          </div>
           <div class="gm-table-wrap" id="gmActionTable"></div>
           <div class="gm-pager" id="gmActionPager"></div>
         </div>
@@ -133,12 +142,12 @@
 
   <div id="gmModalRoot"></div>
 
-  <script src="../js/ui-text.js?v=20261124n"></script>
-  <script src="../js/mock/seed.js?v=20261124n"></script>
-  <script src="../js/mock/db.js?v=20261124n"></script>
-  <script src="../js/mock/api.js?v=20261124n"></script>
-  <script src="../js/core/util.js?v=20261124n"></script>
-  <script src="../js/components.js?v=20261124n"></script>
-  <script src="../js/pages/gm.js?v=20261124n"></script>
+  <script src="../js/ui-text.js?v=20261124o"></script>
+  <script src="../js/mock/seed.js?v=20261124o"></script>
+  <script src="../js/mock/db.js?v=20261124o"></script>
+  <script src="../js/mock/api.js?v=20261124o"></script>
+  <script src="../js/core/util.js?v=20261124o"></script>
+  <script src="../js/components.js?v=20261124o"></script>
+  <script src="../js/pages/gm.js?v=20261124o"></script>
 </body>
 </html>

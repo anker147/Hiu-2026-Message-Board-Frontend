@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 11; // v11：期次下拉去排名、折线图逐周实时折算并外显数值、字号放大
+  var VERSION = 12; // v12：登录品牌名 Board + 品牌区复位、GM 操作台上UI重构
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -356,6 +356,10 @@
     "login.registerLink": "去注册",
     "login.demoHint": "演示账号见左下角演示面板",
     "login.title": "登录 · 留言板",
+    "login.brandName": "Board",
+    "gm.sideTitle": "控制面板",
+    "gm.common.more": "更多",
+    "gm.resultCount": "共 {n} 条",
     "login.heroTitle": "把想说的话，留在榜上",
     "login.heroDesc": "热度周榜、盲盒祝福、隐私脱敏——一站式记录你的每一次表达。",
     "login.declaration": "本站为课程演示项目，所有数据仅保存在你的浏览器中",
