@@ -22,7 +22,14 @@
   var state = {
     tab: "hot",       // hot | latest | mine
     sortKey: "heat",  // heat | latest | likes | comments
-    period: currentPeriod,
+    period: currentPeriod,   // 新帖榜所选期次（默认本期）
+    // 热榜所选期次（周榜按期次出版：默认最新已发布期次 = 上一期，即“上一周的数据”）
+    hotPeriod: (function () {
+      var prev = HMB.SEED.PERIODS.filter(function (p) { return p.no < currentPeriod; })
+        .map(function (p) { return p.no; })
+        .sort(function (a, b) { return b - a; })[0];
+      return prev || currentPeriod; // 无更早期次时回退本期（统计中预览）
+    })(),
     q: ""
   };
 
@@ -57,6 +64,7 @@
     els.banner = document.querySelector(".banner");
     els.bannerTitle = document.querySelector(".banner-title");
     updateView();
+    renderPeriodDropdown();
 
     api.getSession().then(function (resp) {
       session = resp.data;
@@ -83,9 +91,10 @@
 
   /* ---------------- 视图外壳随 tab 切换（Banner + 工具栏） ---------------- */
 
-  /** 双榜视图语义：
-   *  - 热榜（周榜）：榜身份页，标题“留言板热榜”+本期徽章，全量帖子折合分排序；
-   *  - 最新（新帖榜）：标题“本周新帖”，期次徽章随所选期次（可回看往期新帖榜）；
+  /** 双榜视图语义（周榜按期次出版，biliboard 式）：
+   *  - 热榜（周榜）：已发布存档榜，默认显示上一期（“上一周的数据”），期次下拉可回看往期，
+   *    当前期标注“统计中”可实时预览；
+   *  - 新帖（新帖榜）：本周新帖按折合分实时排序，期次下拉可回看往期；
    *  - 我的留言：隐藏 banner 与两个下拉（固定最新优先，无期次语义，卡片无排名显示）；
    *  - 关于视图由 boardView 整体隐藏承接 */
   function updateView() {
@@ -98,14 +107,42 @@
     els.bannerTitle.setAttribute("data-text", key);
     els.bannerTitle.textContent = t(key);
     els.banner.setAttribute("aria-label", t(latest ? "banner.ariaNew" : "banner.ariaHot"));
-    // 期次徽章：新帖榜随所选期次，其余视图显示本期
-    var periodNo = latest ? state.period : currentPeriod;
+    refreshIssueBadge();
+    // 工具栏：排序下拉在我的留言隐藏（固定最新优先）；期次下拉仅双榜视图需要
+    els.sortDropdown.hidden = state.tab === "mine";
+    els.periodDropdown.hidden = state.tab === "mine";
+  }
+
+  /** 期次徽章：热榜随所选期次（默认上一期已发布榜），新帖随所选期次（默认本期） */
+  function refreshIssueBadge() {
+    var periodNo = state.tab === "hot" ? state.hotPeriod
+      : (state.tab === "latest" ? state.period : currentPeriod);
     var period = HMB.SEED.PERIODS.find(function (p) { return p.no === periodNo; });
     els.issueBadge.textContent = String(periodNo);
     els.issueText.textContent = t("banner.issue", { n: periodNo, range: period ? period.range : "" });
-    // 工具栏：排序下拉在我的留言隐藏（固定最新优先）；期次下拉仅新帖榜需要
-    els.sortDropdown.hidden = state.tab === "mine";
-    els.periodDropdown.hidden = state.tab !== "latest";
+  }
+
+  /** 期次下拉按 tab 重建（makeDropdown 不清空挂载点，切 tab 需显式重渲染）：
+   *  热榜当前期标注“统计中”，新榜当前期标注“本期” */
+  function renderPeriodDropdown() {
+    els.periodDropdown.textContent = "";   // makeDropdown 不清空挂载点：切 tab 重建前必须先清，否则 btn/menu 逐次叠加
+    var isHot = state.tab === "hot";
+    var items = HMB.SEED.PERIODS.map(function (p) {
+      return {
+        key: String(p.no),
+        label: p.no === currentPeriod
+          ? t(isHot ? "common.periodOngoing" : "common.periodCurrent", { n: p.no })
+          : t("common.periodN", { n: p.no })
+      };
+    });
+    U.makeDropdown(els.periodDropdown, items,
+      String(isHot ? state.hotPeriod : state.period),
+      function (k) {
+        if (isHot) state.hotPeriod = parseInt(k, 10);
+        else state.period = parseInt(k, 10);
+        refreshIssueBadge();
+        loadList();
+      });
   }
 
   /* ---------------- 工具栏：下拉 + 搜索 ---------------- */
@@ -120,19 +157,7 @@
       state.sortKey = key;
       loadList();
     });
-
-    var periodItems = HMB.SEED.PERIODS.map(function (p) {
-      return {
-        key: String(p.no),
-        label: p.no === currentPeriod ? t("common.periodCurrent", { n: p.no }) : t("common.periodN", { n: p.no })
-      };
-    });
-    U.makeDropdown(els.periodDropdown, periodItems, String(state.period),
-      function (key) {
-        state.period = parseInt(key, 10);
-        updateView(); // 新帖榜的期次徽章随所选期次刷新
-        loadList();
-      });
+    // 期次下拉由 renderPeriodDropdown 按 tab 重建（bindToolbar 仅在会话就绪时调用一次）
 
     var debounced = U.debounce(function () {
       state.q = els.searchInput.value.trim();
@@ -237,8 +262,10 @@
     var seq = ++listReqSeq;
     api.getMessages({
       tab: state.tab,
-      sort: state.tab === "mine" ? "latest" : state.sortKey,            // 我的留言固定最新优先
-      period: state.tab === "latest" ? state.period : undefined,        // 期次仅作用于新帖榜；周榜=全量帖子
+      sort: state.tab === "mine" ? "latest" : state.sortKey,  // 我的留言固定最新优先
+      // 热榜=所选期次的已发布周榜（默认上一期）；新帖榜=所选期次（默认本期）
+      period: state.tab === "hot" ? state.hotPeriod
+        : (state.tab === "latest" ? state.period : undefined),
       q: state.q
     }).then(function (resp) {
       if (seq !== listReqSeq) return;   // 过期响应：用户已切到别的 tab
@@ -324,7 +351,8 @@
       return api.getMessages({
         tab: key,
         sort: key === "mine" ? "latest" : state.sortKey,
-        period: key === "latest" ? state.period : undefined,
+        period: key === "hot" ? state.hotPeriod
+          : (key === "latest" ? state.period : undefined),
         q: state.q
       }).then(function (resp) {
         if (!resp.success || !els.boardView || !els.boardList) return Infinity;
@@ -338,6 +366,7 @@
       state.tab = key;
       state._topbarTab = key;
       updateView();
+      renderPeriodDropdown(); // 期次下拉按新 tab 的条目/选中项重建
       if (key === "about") {
         listReqSeq++;                                  // 使在途列表响应过期
         if (els.boardView) els.boardView.hidden = true;

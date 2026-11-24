@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 3; // 文案变更必须递增（?v=N 防缓存，ADR-003）；v3：双榜模型（新帖 tab/本周新帖/双榜峰值标签）
+  var VERSION = 4; // 文案变更必须递增（?v=N 防缓存，ADR-003）；v4：热榜期次出版语义（统计中）
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -52,6 +52,7 @@
     "common.sortLikes": "点赞",
     "common.sortComments": "评论",
     "common.periodCurrent": "第 {n} 期（本期）",
+    "common.periodOngoing": "第 {n} 期（统计中）", // 热榜出版语义：当期周榜尚未发布
     "common.periodN": "第 {n} 期",
     "common.foundCount": "找到 {n} 条相关留言",
     "common.likes": "赞",
@@ -303,8 +304,6 @@
     "guide.btn": "去登录",
 
     /* —— 登录页（P-05） —— */
-    "login.phoneLabel": "手机号",
-    "login.pwdLabel": "密码",
     "login.tabLogin": "账号登录",
     "login.tabReg": "注册账号",
     "login.skip": "暂不登录",
@@ -322,10 +321,6 @@
     "login.demoHint": "演示账号见左下角演示面板",
 
     /* —— 注册页（P-02） —— */
-    "register.phoneLabel": "手机号 账号",
-    "register.pwdLabel": "密码",
-    "register.confirmLabel": "确认密码",
-    "register.optionalLabel": "真实姓名 / 邮箱（选填）",
     "register.phonePlaceholder": "请输入 11 位大陆手机号",
     "register.pwdPlaceholder": "至少 8 位，含字母与数字",
     "register.confirmPlaceholder": "再次输入密码",
