@@ -29,6 +29,7 @@
   var zone = null;        // getZone 返回的聚合数据
   var zoneDomain = "feed"; // feed / liked / favorite（主 tab）
   var feedFilter = "all"; // all / messages / comments（子筛选）
+  var feedQ = "";         // 顶栏全局搜索框关键词（作用域＝该用户留言）
   var titleInfo = null;   // 活跃度称号：仅本页进入后按需计算，其他页面不引用不计算
 
   function qsUser() {
@@ -331,10 +332,16 @@
   function renderFeed() {
     var feed = $("zoneFeed");
     feed.textContent = "";
+    var q = feedQ.toLowerCase();
     var items = buildFeed().filter(function (it) {
-      if (feedFilter === "messages") return it.kind === "post";
-      if (feedFilter === "comments") return it.kind === "reply";
-      return true;
+      if (feedFilter === "messages" && it.kind !== "post") return false;
+      if (feedFilter === "comments" && it.kind !== "reply") return false;
+      if (!q) return true;
+      // 搜索该用户留言/评论：匹配正文 + 标题 + 话题（本人主页作用域）
+      var text = it.kind === "post"
+        ? [(it.msg.title || ""), (it.msg.content || ""), (it.msg.topicTag || "")].join(" ")
+        : [(it.c.content || ""), (it.c.authorName || "")].join(" ");
+      return String(text).replace(/<[^>]*>/g, "").toLowerCase().indexOf(q) >= 0;
     });
     if (items.length === 0) {
       C.renderStateBox(feed, {
@@ -510,6 +517,13 @@
       session = resp.data;
       C.renderTopbar(document.getElementById("topbar"), null, session);
       HMB.util.renderDebugPanel();
+
+      // 顶栏全局搜索框（作用域＝该用户留言）：仅过滤已加载的主页动态，不新增接口
+      feedQ = (HMB.globalSearch && HMB.globalSearch.q) || "";
+      window.addEventListener("hmb:globalsearch", function (e) {
+        feedQ = e.detail.q;
+        if (zone) renderFeed();
+      });
 
       if (!displayId) return renderNoId();
       C.renderSkeleton($("zoneArea"), 2);
