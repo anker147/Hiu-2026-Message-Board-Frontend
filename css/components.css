@@ -345,16 +345,13 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .peak-stack { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .peak-zone--dual .peak-label { font-size: 12px; white-space: nowrap; }
 .peak-zone--dual .peak-num { font-size: 26px; }
-/* 无历史记录：虚线空态徽标，避免把 0 误读成“第 0 名” */
+/* 无历史记录：纯文字 --（不加框，避免把 0 误读成“第 0 名”） */
 .peak-num--empty {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 52px; height: 36px; margin-top: 4px;
-  border: 1px dashed var(--line); border-radius: 9px;
-  background: var(--bg); color: var(--ink-3);
-  font-size: 20px; font-weight: 700; letter-spacing: .06em;
+  color: var(--ink-3);
+  font-size: 26px; font-weight: 700; letter-spacing: .06em;
   -webkit-text-stroke: 0;
 }
-.peak-zone--dual .peak-num--empty { min-width: 42px; height: 32px; font-size: 18px; }
+.peak-zone--dual .peak-num--empty { font-size: 22px; }
 
 /* ---------- 骨架卡 ---------- */
 .skeleton-card {
