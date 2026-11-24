@@ -29,6 +29,7 @@
   var zone = null;        // getZone 返回的聚合数据
   var zoneDomain = "feed"; // feed / liked / favorite（主 tab）
   var feedFilter = "all"; // all / messages / comments（子筛选）
+  var titleInfo = null;   // 活跃度称号：仅本页进入后按需计算，其他页面不引用不计算
 
   function qsUser() {
     var m = window.location.search.match(/[?&]u=([^&#]+)/);
@@ -82,6 +83,17 @@
 
     var nameRow = el("div", "zone-name-row");
     nameRow.appendChild(el("span", "zone-name", u.nickname));
+    // 活跃称号主徽章（本页进入时才计算；无称号时不渲染）
+    if (titleInfo && titleInfo.primary && HMB.titles) {
+      var pr = HMB.titles.rule(titleInfo.primary);
+      if (pr) {
+        var badge = el("span", "zone-title-badge zone-title-badge--t" + pr.tier);
+        badge.appendChild(el("span", "zone-title-badge-icon", pr.icon));
+        badge.appendChild(el("span", "zone-title-badge-name", t("title." + pr.id)));
+        badge.title = t("title.primaryChip") + " · " + t("title.tier" + pr.tier);
+        nameRow.appendChild(badge);
+      }
+    }
     nameRow.appendChild(el("span", "zone-id-chip", "ID " + u.displayId));
     if (zone.isSelf) {
       var selfChip = el("span", "zone-self-chip");
@@ -400,6 +412,45 @@
     career.appendChild(metrics);
     side.appendChild(career);
 
+    /* 活跃称号：纯前端计算的结果，只在本页渲染（数据来自 getZone 已有公开字段） */
+    if (HMB.titles) {
+      var tc = el("div", "zone-side-card zone-title-card");
+      var tcHead = el("div", "zone-career-head");
+      tcHead.appendChild(el("div", "zone-side-title", t("title.sectionTitle")));
+      tc.appendChild(tcHead);
+
+      var grid = el("div", "zone-title-grid");
+      var awarded = (titleInfo && titleInfo.awarded) || [];
+      HMB.titles.RULES.forEach(function (r) {
+        var owned = awarded.indexOf(r.id) >= 0;
+        var item = el("div", "zone-title-item" + (owned ? " is-owned" : " is-locked"));
+        item.appendChild(el("span", "zone-title-icon", owned ? r.icon : "🔒"));
+        var body = el("div", "zone-title-body");
+        body.appendChild(el("div", "zone-title-name", t("title." + r.id)));
+        body.appendChild(el("div", "zone-title-desc", t("title." + r.id + "Desc")));
+        item.appendChild(body);
+        item.appendChild(el("span", "zone-title-tier", t("title.tier" + r.tier)));
+        grid.appendChild(item);
+      });
+      tc.appendChild(grid);
+
+      var next = HMB.titles.nextTitle(titleInfo);
+      if (next) {
+        var hint = el("div", "zone-title-next");
+        hint.appendChild(el("span", "zone-title-next-text", t("title.lockedHint")));
+        var bar = el("div", "zone-title-bar");
+        var fill = el("div", "zone-title-bar-fill");
+        var ratio = next.progress.max ? Math.min(1, next.progress.cur / next.progress.max) : 0;
+        fill.style.width = Math.round(ratio * 100) + "%";
+        bar.appendChild(fill);
+        hint.appendChild(bar);
+        hint.appendChild(el("span", "zone-title-next-num",
+          t("title.nextProgress", { cur: next.progress.cur, max: next.progress.max })));
+        tc.appendChild(hint);
+      }
+      side.appendChild(tc);
+    }
+
     /* 我送出的盲盒祝福：仅本人可见，他人访问不渲染这一卡 */
     if (zone.isSelf) {
       var bb = el("div", "zone-side-card zone-blindbox-card");
@@ -467,6 +518,8 @@
         zone = r.data;
         $("zoneArea").textContent = "";
         $("zoneArea").hidden = true;
+        // 按需计算：仅进入需要显示称号的个人主页时触发；缓存命中则直接复用，不重算。
+        titleInfo = HMB.titles ? HMB.titles.ensure(zone) : null;
         renderHero();
         renderMainTabs();
         renderTabs();

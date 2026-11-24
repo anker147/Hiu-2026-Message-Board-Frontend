@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 16; // v16：收藏、详情页图标化互动、个人主页互动域文案
+  var VERSION = 17; // v17：活跃度称号系统文案（纯前端计算 + 本地缓存）
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -503,6 +503,34 @@
     "profile.emptyBtn": "去发布",
     "profile.needLogin": "个人中心需要登录后查看",
     "profile.nicknameTooLong": "昵称需为 1–20 个字符",
+
+    /* —— 活跃度称号（纯前端计算，进入个人主页时才触发） —— */
+    "title.sectionTitle": "活跃称号",
+    "title.primaryChip": "主称号",
+    "title.lockedHint": "再进一步就能解锁下一枚称号",
+    "title.nextProgress": "进度 {cur}/{max}",
+    "title.tier1": "见习",
+    "title.tier2": "进阶",
+    "title.tier3": "资深",
+    "title.tier4": "传奇",
+    "title.firstStep": "初来乍到",
+    "title.firstStepDesc": "写下第一条留言",
+    "title.voice": "发声达人",
+    "title.voiceDesc": "参与第一次讨论",
+    "title.weekGuest": "一周常客",
+    "title.weekGuestDesc": "加入留言板满 7 天",
+    "title.regular": "落笔不休",
+    "title.regularDesc": "累计写下 5 条留言",
+    "title.topicFinder": "话题发现家",
+    "title.topicFinderDesc": "留下 3 个不同话题的足迹",
+    "title.warmHeart": "暖心人气",
+    "title.warmHeartDesc": "累计收到 50 次点赞",
+    "title.veteran": "留言板老友",
+    "title.veteranDesc": "加入满 30 天且留下 5 条留言",
+    "title.popular": "热度之星",
+    "title.popularDesc": "累计收到 300 次点赞",
+    "title.boardLegend": "留言板传奇",
+    "title.boardLegendDesc": "8 条留言、3 条讨论、500 次点赞",
 
     /* —— 关于页 —— */
     "about.title": "关于留言板",

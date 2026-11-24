@@ -550,6 +550,15 @@ out.isMine = (session != null && session.userId == message.ownerId)
 
 联调入口：`python -m http.server 8080` → `http://localhost:8080/pages/index.html`
 
+### 4.1 活跃度称号系统（纯前端，不新增接口）
+
+称号**是否颁发、等级、主称号、解锁进度全部在前端计算**，后端不参与判定：
+- 数据源只用 E2 `GET /api/zone` 已返回的 `stats.messages` / `stats.comments` / `stats.likesReceived`、`memberDays`、`topics[]`，**不新增任何字段、不新增接口、不落库**。
+- 触发时机：只有进入需要显示称号的页面（当前为 `zone.html` 个人主页）才调用 `HMB.titles.ensure(zone)`；其他页面不引用该模块，加载脚本本身不计算任何用户。
+- 缓存：结果写入浏览器 `localStorage` 的 `hmb_v1_titles`（非后端表），按 `displayId` 存储并带输入数据签名 `sig`；签名一致直接复用，数据变化才重算回写。规则表版本号变更会让旧缓存自动失效。
+- 隐私：判定不读取掩码字段与他人盲盒数据；任何用户只能通过公开主页看到同样的称号结果。
+- 后端联调无需任何改动；若未来改为服务端颁发，需另立接口契约，当前版本明确不需要。
+
 ---
 
 ## 5. 待后端确认的开放项
