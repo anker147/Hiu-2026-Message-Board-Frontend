@@ -927,9 +927,19 @@
     });
   }
 
-  /** 详情弹窗：审计记录 = 元信息 + 单列的文字描述 + 代码块形式的原始记录。
-   *  原始记录用 <pre><code> 呈现（保留原始文本、等宽、可换行），不再当普通正文渲染；
-   *  功能简述（人类可读）单独一条列出，与机器原始记录分离。 */
+  /** 详情弹窗：审计记录 = 元信息 + 单列的功能简述 + 代码块形式的原始数据。
+   *  原始记录 = 审计条目的完整原始字段（字符串 / JSON），用 JSON 呈现，不做中文改写；
+   *  detail 若本身是 JSON 字符串则解析回对象，避免双重转义成 "\"{...}\""。
+   *  功能简述（人类可读的 action 名称）单独一条，与机器原始数据分离。 */
+  function rawRecordText(a) {
+    var raw = {};
+    Object.keys(a || {}).forEach(function (k) { raw[k] = a[k]; });
+    if (typeof raw.detail === "string" && raw.detail) {
+      try { raw.detail = JSON.parse(raw.detail); } catch (e) { /* 普通字符串保持原样 */ }
+    }
+    try { return JSON.stringify(raw, null, 2); }
+    catch (e) { return String((a && a.detail) || "—"); }
+  }
   function openActionDetail(a) {
     var body = el("div", "gm-modal-fields");
     body.appendChild(detailMeta([
@@ -944,10 +954,10 @@
     var briefBox = el("div", "gm-detail-content", actionLabel(a.action));
     body.appendChild(briefBox);
 
-    // 原始记录按代码展示
+    // 原始记录 = 审计条目原始数据（字符串 / JSON），按代码展示
     body.appendChild(el("div", "gm-detail-section-title", t("gm.detail.raw")));
     var codeBox = el("pre", "gm-detail-code");
-    var code = el("code", null, String(a.detail || "—"));
+    var code = el("code", null, rawRecordText(a));
     codeBox.appendChild(code);
     body.appendChild(codeBox);
 

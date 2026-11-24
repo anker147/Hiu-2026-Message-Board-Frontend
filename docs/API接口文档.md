@@ -908,6 +908,8 @@ out.isMine = (session != null && session.userId == message.ownerId)
 | `page` / `pageSize` | 默认 1 / 20 |
 
 **出参** `list[]`：`{ id, actorId, actorNickname, action, targetType, targetId, detail, ip, createdAt }`。
+
+> `detail` 是**原始记录字段**，取值可以是普通字符串，也可以是 JSON 字符串（对象/数组序列化结果）；后端只负责原样存入，不要改写成人类可读句子。GM 详情弹窗按字符串 / JSON 兼容渲染整条审计记录，`action` 对应的功能简述另起一条展示，不混入 `detail`。
 **红线**：审计日志不可删除、不可修改；只有 `admin` 可读。
 
 **`detail` 文案规范（人类可读，禁止直接拼接口参数）**：
