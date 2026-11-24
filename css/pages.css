@@ -917,17 +917,17 @@ body[data-page="login"] {
   pointer-events: none; transform-origin: left center;
   transition: top .2s var(--ease-out), transform .2s var(--ease-out), color .2s var(--ease-out);
 }
-/* 聚焦 或 已有内容 → 缩小并移到输入框上边框上方（无背景，文字不压线）；
-   top 让标签底边落在框顶之外，避免边框线穿过文字；left 与输入文字左对齐 */
+/* 聚焦 或 已有内容 → 缩小并骑到输入框上边框上（描边式浮动标签）：
+   位置沿用原「压边框」方案，仅按要求去掉遮罩色块（背景透明），文字不上移飞出框外；
+   left 与 padding 补偿后仍与输入文字左对齐 */
 .login-field:focus-within .float-label,
 .login-field .input:not(:placeholder-shown) ~ .float-label {
-  top: -2px;
-  left: 39px;
-  padding: 0;
-  border-radius: 0;
+  top: -9px;
+  left: 34px;
+  padding: 0 5px;
+  border-radius: 4px;
   background: transparent;
-  transform: translateY(-100%) scale(.76);
-  transform-origin: left bottom;
+  transform: translateY(0) scale(.76);
   color: #8fd0ff;
 }
 .float-label .req-star { color: #ff9a9a; font-size: 14px; font-weight: 700; line-height: 1; }
