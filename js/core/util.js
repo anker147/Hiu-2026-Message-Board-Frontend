@@ -197,34 +197,42 @@
     }
   }
 
-  /** 近 8 期热度序列：优先用后端算好的 heatHistory；否则用后端逐周原始统计
+  /** 热度序列：优先用后端算好的 heatHistory；否则用后端逐周原始统计
    *  weeklyStats[{period, stats, empty?}]，按榜单同一套 messageScore 公式实时折算各周热度。
-   *  一个点就是一期真实数据；发布前的周标记 empty=true、stats 为 0，折线按 0 画贴底平线，
+   *  最多画 8 周：接口返回超过 8 期时只取最近 8 期（末尾 8 项），不足 8 期时前面补 0 贴底平线。
+   *  一个点就是一期真实数据，发布前的周标记 empty=true、stats 为 0，折线按 0 画贴底平线，
    *  不反推/扰动/估算。0 表示真实没有量，平线如实呈现，不伪造上升也不留白。 */
   function deriveHistory(m) {
     var direct = m && (m.heatHistory || m.history);
     var weekly = m && m.weeklyStats;
     var values = [];
+    var directLen = direct ? direct.length : 0;
+    var weeklyLen = weekly ? weekly.length : 0;
+    var WINDOW = 8;
+    // 不足 8 期固定留 8 个位置（前面 0 值贴底）；超过 8 期只取最近 8 期。
+    var count = WINDOW;
+    var directOff = Math.max(0, directLen - WINDOW);
+    var weeklyOff = Math.max(0, weeklyLen - WINDOW);
     function n(x) { return (typeof x === "number" && isFinite(x)) ? x : 0; }
     function score(stats) {
       return messageScore({
         stats: stats, period: m.period, createdAt: m.createdAt
       }) / 10000;
     }
-    for (var i = 0; i < 8; i++) {
+    for (var i = 0; i < count; i++) {
       var v = null, empty = false;
-      var raw = direct && direct[i];
+      var raw = direct && direct[i + directOff];
       if (raw && typeof raw.value === "number" && isFinite(raw.value)) v = raw.value;
       else if (typeof raw === "number" && isFinite(raw)) v = raw;
       else {
-        var week = weekly && weekly[i];
-        if (!week && i === 7 && m && m.stats) {
+        var week = weekly && weekly[i + weeklyOff];
+        if (!week && i === count - 1 && m && m.stats) {
           v = score(m.stats);   // 无历史字段：本期按当前 stats 折算一个点
         } else {
           var ws = week && (week.stats || week);
           empty = !!(week && week.empty) ||
             !!(week && typeof week.period === "number" && m && typeof m.period === "number" && week.period < m.period) ||
-            (!week && i < 7);
+            (!week && i < count - 1);
           if (ws && typeof ws === "object" && !empty) {
             v = score({
               views: n(ws.views), likes: n(ws.likes),

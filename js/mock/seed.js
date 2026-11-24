@@ -91,6 +91,30 @@
     return out;
   }
 
+  /** 跨 24 期样本帖的逐周增量统计：每周 stats 是「当周新增」的四项，
+   *  24 周逐项相加精确等于总 stats 的四项（views/likes/comments/favorites 分别回加对上）。
+   *  权重带起伏，用来观察多期时折线的真实波动；不估算、不伪造，最后一期用减法兜齐误差。 */
+  function makeLongRunWeeklyStats(total, fromPeriod, weeks) {
+    var growth = [0.60, 0.90, 1.20, 0.80, 1.50, 1.10, 0.70, 1.30, 1.60, 1.00, 0.90, 1.40,
+                  1.10, 0.80, 1.20, 1.50, 0.70, 1.00, 1.30, 0.90, 1.10, 0.60, 0.80, 0.50];
+    var keys = ["views", "likes", "comments", "favorites"];
+    var all = 0, out = [], acc = {}, i, k;
+    for (i = 0; i < weeks; i++) all += growth[i % growth.length];
+    for (k = 0; k < keys.length; k++) acc[keys[k]] = 0;
+    for (i = 0; i < weeks; i++) {
+      var stats = {};
+      for (k = 0; k < keys.length; k++) {
+        var key = keys[k];
+        stats[key] = (i === weeks - 1)
+          ? total[key] - acc[key]   // 末期兜齐四舍五入误差，保证逐项相加 === 总 stats
+          : Math.round(total[key] * growth[i % growth.length] / all);
+        acc[key] += stats[key];
+      }
+      out.push({ period: fromPeriod + i, stats: stats });
+    }
+    return out;
+  }
+
   /* —— 用户（密码为演示明文，mock 校验用；真实系统为 PBKDF2 加盐哈希） —— */
   var USERS = [
     { id: 1, account: "13800000001", password: "abc12345", displayId: "20849317", nickname: "小满",   avatarEnum: 1, realName: "王小满",  email: "xiaoman@hiu.edu.cn", flagName: true,  flagEmail: false, flagPhone: false, bio: "喜欢在晚自习后去操场看晚霞", createdAt: now - 30 * DAY },
@@ -206,11 +230,27 @@
       createdAt: now - 7 * DAY - 2 * HOUR,
       stats: { views: 3870, likes: 88, comments: 15, favorites: 30 },
       heatDelta: 2.3, peakRank: 2, peakNewRank: 2, isNew: false
+    },
+    /* —— 跨 24 期样本帖（第 1 期发布，连续 24 期有真实周数据，用来观察多期折线）——
+       每周 stats 是当周新增，24 周四项逐项相加精确等于总 stats 四项；
+       折线最多画最近 8 周（本项目口径），一期一个真实点，不做任何估算。 */
+    {
+      resourceId: "a1f0b2c3-2401-0001-9d09-000000000009", title: "连载二十四周的一封信", no: "24010009",
+      ownerId: 1, content: "从第一期开始每周写一封短信，记录校园里的天气、食堂和晚霞。连载到第二十四期，感谢一路陪伴。",
+      nicknameSnapshot: "小满", avatarEnum: 1, displayId: "20849317",
+      topicTag: "校园日常", isPublic: true, period: 1,
+      createdAt: now - ((24 - 1) * 7 + 2) * DAY - 5 * HOUR,
+      stats: { views: 24000, likes: 480, comments: 96, favorites: 120 },
+      heatDelta: 6.8, peakRank: 1, peakNewRank: 24, isNew: false,
+      weeklyStats: makeLongRunWeeklyStats(
+        { views: 24000, likes: 480, comments: 96, favorites: 120 }, 1, 24)
     }
   ];
 
   // 逐周原始统计由 mock“后端”随留言一并返回；前端只负责按公式实时折算与画图
-  MESSAGES.forEach(function (m) { m.weeklyStats = makeWeeklyStats(m.stats, m.period, m.no); });
+  MESSAGES.forEach(function (m) {
+    if (!m.weeklyStats) m.weeklyStats = makeWeeklyStats(m.stats, m.period, m.no);
+  });
 
   /* —— 评论树（画布 04/16 原值，挂在第 1 条留言下） —— */
   var COMMENTS = [
@@ -292,7 +332,7 @@
 
   window.HMB = window.HMB || {};
   window.HMB.SEED = {
-    VERSION: 12, // v12：收藏表 + 我赞过/我收藏展示开关
+    VERSION: 13, // v13：新增跨 24 期样本帖（逐周累计 stats 四项可回加）；折线支持任意期数
     AVATARS: AVATARS,
     NICK_ADJ: NICK_ADJ,
     NICK_ANIMAL: NICK_ANIMAL,
