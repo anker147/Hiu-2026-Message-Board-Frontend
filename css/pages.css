@@ -2095,6 +2095,16 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
   color: var(--ink); font-size: 14px; font-family: var(--font);
 }
 .gm-select:focus, .gm-input:focus, .gm-textarea:focus { outline: none; border-color: var(--blue); box-shadow: var(--focus-ring); }
+/* 期次字段校验：错误态输入框 + 字段级提示 */
+.gm-input--error, .gm-input--error:focus {
+  border-color: var(--danger, #e5534b);
+  box-shadow: 0 0 0 3px rgba(229, 83, 75, .14);
+}
+.gm-field-err {
+  margin: 7px 0 0; font-size: 12.5px; font-weight: 600;
+  color: var(--danger, #e5534b); line-height: 1.5;
+}
+.gm-field-err--hidden { display: none; }
 .gm-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
 .gm-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .gm-table th {

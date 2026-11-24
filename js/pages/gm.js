@@ -26,6 +26,7 @@
   var current = "overview";
   var page = { users: 1, content: 1, actions: 1 };
   var PAGE_SIZE = 20;
+  var settingsBasePeriod = 0;   // 设置面板加载时的当前期次，用于本地校验“只能前进”
 
   /* 岛内模式的 GM 结构模板（静态可信结构，无用户输入；文案由 data-text 交 i18n 注入）。
      与 pages/gm.html 的 <main> 保持一致，去掉"回首页"按钮（岛内返回由导航岛承接）。 */
@@ -138,6 +139,7 @@
     '            <h3 class="gm-card-title gm-card-title--gap" data-text="gm.settings.periodTitle">当前期次</h3>',
     '            <p class="gm-card-desc" data-text="gm.settings.periodDesc">新发布的留言会归入该期次；期次只能前进，不能回退</p>',
     '            <input type="number" class="gm-input" id="gmPeriod" min="1" step="1" aria-label="当前期次">',
+    '            <p class="gm-field-err gm-field-err--hidden" id="gmPeriodErr" role="alert"></p>',
     '            <div class="gm-card-actions">',
     '              <button type="button" class="btn btn--primary btn--sm" id="gmSettingsSave" data-text="gm.settings.save">保存设置</button>',
     '            </div>',
@@ -233,6 +235,7 @@
     $("gmContentReload").addEventListener("click", loadContent);
 
     $("gmSettingsSave").addEventListener("click", saveSettings);
+    $("gmPeriod").addEventListener("input", clearPeriodError);   // 重新输入即清除错误态
     $("gmDataReset").addEventListener("click", confirmResetData);
   }
 
@@ -772,18 +775,60 @@
       if (!resp.success) { toastFail(resp); return; }
       var s = resp.data.settings || {};
       $("gmWords").value = (s.sensitiveWords || []).join("\n");
-      $("gmPeriod").value = s.currentPeriod;
+      settingsBasePeriod = Number(s.currentPeriod) || 0;
+      $("gmPeriod").value = settingsBasePeriod;
+      clearPeriodError();
     });
   }
 
+  function clearPeriodError() {
+    var input = $("gmPeriod");
+    if (!input) return;
+    input.classList.remove("gm-input--error");
+    input.removeAttribute("aria-invalid");
+    var tip = $("gmPeriodErr");
+    if (tip) { tip.textContent = ""; tip.classList.add("gm-field-err--hidden"); }
+  }
+
+  function showPeriodError(msg) {
+    var input = $("gmPeriod");
+    if (input) {
+      input.classList.add("gm-input--error");
+      input.setAttribute("aria-invalid", "true");
+      input.focus();
+      input.select();
+    }
+    var tip = $("gmPeriodErr");
+    if (tip) { tip.textContent = msg; tip.classList.remove("gm-field-err--hidden"); }
+    U.toast(msg, "error");
+  }
+
+  /** 期次本地校验：非空 / 整数 / ≥ 加载时当前期次。返回 {ok, period, msg}。 */
+  function validatePeriod() {
+    var raw = ($("gmPeriod").value || "").trim();
+    if (raw === "") return { ok: false, msg: t("gm.settings.periodRequired") };
+    var n = Number(raw);
+    if (!isFinite(n) || Math.floor(n) !== n || n < 1) {
+      return { ok: false, msg: t("gm.settings.periodInteger") };
+    }
+    if (n < settingsBasePeriod) {
+      return { ok: false, msg: t("gm.settings.periodBack", { n: settingsBasePeriod }) };
+    }
+    return { ok: true, period: n };
+  }
+
   function saveSettings() {
+    clearPeriodError();
+    // 先做本地校验：非法期次直接拦截，避免敏感词已写入、期次却失败导致“部分保存”
+    var v = validatePeriod();
+    if (!v.ok) { showPeriodError(v.msg); return; }
     var words = $("gmWords").value.split("\n");
-    var period = Number($("gmPeriod").value);
     api.gmSetSensitiveWords({ words: words, csrf: session.csrf }).then(function (r1) {
       if (!r1.success) { toastFail(r1); return; }
-      return api.gmSetCurrentPeriod({ period: period, csrf: session.csrf }).then(function (r2) {
-        if (!r2.success) { toastFail(r2); return; }
+      return api.gmSetCurrentPeriod({ period: v.period, csrf: session.csrf }).then(function (r2) {
+        if (!r2.success) { showPeriodError(r2.message || t("gm.settings.periodInteger")); return; }
         U.toast(t("gm.settings.saved"), "success");
+        settingsBasePeriod = v.period;                      // 成功后抬高基线，允许连续前进
         // 期次前进后同步首页榜单的本地缓存与下拉，避免仍停留在旧期
         if (HMB.pages.board && HMB.pages.board.syncPeriod) HMB.pages.board.syncPeriod();
         loadOverview();
