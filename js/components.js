@@ -364,6 +364,11 @@
       if (crowded !== mount.classList.contains("is-crowded")) {
         mount.classList.toggle("is-crowded", crowded);
       }
+      // 回顶按钮出现（is-crowded）时，右下角浮动组同步收起为圆形图标（hover 展开）
+      var fa = document.querySelector(".float-actions");
+      if (fa && crowded !== fa.classList.contains("is-crowded")) {
+        fa.classList.toggle("is-crowded", crowded);
+      }
       if (!crowded && mount.classList.contains("is-popped")) {
         mount.classList.remove("is-popped");   // 离开完全收起态 → 弹出态复位（视图切换，不播果冻）
         nav.classList.remove("is-retracting");
@@ -383,6 +388,8 @@
       });
     }
     updateCrowd();
+    // 每次顶栏渲染（= 每次页面加载/进入）都重放右下角浮动组从下往上逐层飞入
+    replayFloatActions();
   }
 
   /* ================= 榜单卡（9.3 六区） ================= */
@@ -962,10 +969,29 @@
     return modal;
   }
 
+  /* ---------------- 浮动按钮飞入重放 ----------------
+     参考追风杯「identity + 递增 key 强制重挂载以重放 CSS 动画」：切页/软切换后调用，
+     remove .is-fly-in → 强制回流 → add，令两个按钮再次逐层从下往上飞入。
+     与 is-crowded（收起态）正交：回顶态下重放时不改变收起尺寸，仅重播位移/透明度。 */
+  var flyEpoch = 0;
+  function replayFloatActions() {
+    var fa = document.querySelector(".float-actions");
+    if (!fa) return;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    fa.classList.remove("is-fly-in");
+    // 触发同步重排，确保浏览器把移除当作一次新动画的起点（而非连续帧）
+    void fa.offsetWidth;
+    flyEpoch++;
+    fa.setAttribute("data-fly-epoch", String(flyEpoch));
+    fa.classList.add("is-fly-in");
+  }
+
   /* ---------------- 汇出 ---------------- */
 
   HMB.components = {
     renderTopbar: renderTopbar,
+    replayFloatActions: replayFloatActions,
     renderCard: renderCard,
     renderSkeleton: renderSkeleton,
     renderStateBox: renderStateBox,

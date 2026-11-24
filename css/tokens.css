@@ -60,6 +60,12 @@
   /* —— 缓动 —— */
   --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-std: cubic-bezier(0.4, 0, 0.2, 1);          /* 追风杯 Material 标准曲线：交互态统一节奏 */
+
+  /* —— 动效时长（token 化，参考追风杯 fast/normal/slow 三挡）—— */
+  --t-fast: 180ms;
+  --t-normal: 280ms;
+  --t-slow: 450ms;
 
   /* —— 字体 —— */
   --font: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif;

@@ -428,6 +428,10 @@
       if (HMB.pages.gm) HMB.pages.gm.hide();
       if (els.boardView) els.boardView.hidden = false;
       loadList({ skipTopbar: true });
+      // 岛内切回榜单：重放右下角浮动组从下往上逐层飞入（切页仪式感）
+      window.setTimeout(function () {
+        if (C.replayFloatActions) C.replayFloatActions();
+      }, 140);
     }
   };
 })(window, document);

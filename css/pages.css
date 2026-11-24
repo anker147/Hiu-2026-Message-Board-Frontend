@@ -93,18 +93,29 @@
   pointer-events: none;
   will-change: transform;
 }
-/* 岛点击后的转场：当前视图先淡出下沉（130ms），目标内容随后才载入，消除“卡手” */
+/* 岛点击后的转场：当前视图先淡出下沉（130ms，追风杯 Material 曲线），
+   目标内容随后才载入，消除"卡手"；新视图载入时由 .view-in 逐层上浮淡入 */
 #boardView, #aboutView, #allView, #gmView {
-  transition: opacity 130ms var(--ease-out), transform 130ms var(--ease-out);
+  transition: opacity var(--t-fast) var(--ease-std), transform var(--t-fast) var(--ease-std);
 }
 body.is-tab-switching #boardView,
 body.is-tab-switching #aboutView,
 body.is-tab-switching #allView,
 body.is-tab-switching #gmView {
-  opacity: .12;
-  transform: translateY(8px);
+  opacity: .1;
+  transform: translateY(10px) scale(.994);
   pointer-events: none;
 }
+/* 视图入场：目标视图显示后逐层上浮淡入（克制位移 + Material 曲线） */
+@keyframes view-rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.view-in > * { animation: view-rise-in var(--t-slow) var(--ease-std) backwards; }
+.view-in > *:nth-child(1) { animation-delay: 0ms; }
+.view-in > *:nth-child(2) { animation-delay: 60ms; }
+.view-in > *:nth-child(3) { animation-delay: 120ms; }
+.view-in > *:nth-child(n+4) { animation-delay: 160ms; }
 .nav-tab {
   position: relative; z-index: 1;
   display: inline-flex; align-items: center;
@@ -713,23 +724,66 @@ body.is-tab-switching #gmView {
   transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
 }
 .float-btn:hover { transform: translateY(-2px); }
+.float-actions .float-btn-ico {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px;
+}
+.float-actions .float-btn-ico svg { width: 16px; height: 16px; }
 .float-btn--publish { background: var(--blue); color: #fff; }
 .float-btn--blindbox { background: var(--card); color: var(--accent); border: 1px solid #FFD3E1; box-shadow: 0 8px 22px rgba(251, 114, 153, 0.25); }
 
-/* 浮动操作组：两个按钮从右下方逐层飞入（沿用 PRD 9.4 子层进入规范）
-   backwards 让延迟帧保持隐藏，动画结束后 transform 归还给 :hover，避免 hover 失效。 */
+/* 浮动操作组：两个按钮逐层「从下往上」飞入（沿 +Y 起始、归零；不再横向偏移）。
+   backwards 让延迟帧保持隐藏；animation 结束时用 forwards 之外的方式——结束帧 transform 归零，
+   与 :hover 的 translateY 由 transition 接管，不冲突。重放由 JS 切 .is-fly-in 类触发。 */
 @keyframes float-fly-in {
-  from { opacity: 0; transform: translate3d(36px, 18px, 0) scale(.92); }
+  from { opacity: 0; transform: translate3d(0, 64px, 0) scale(.9); }
+  60%  { opacity: 1; }
   to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 }
+.float-actions { --fly-dur: 520ms; }
 .float-actions .float-btn {
-  animation: float-fly-in 480ms var(--ease-spring) backwards;
-  animation-delay: calc(90ms + var(--i, 0) * 120ms);
+  transition: transform var(--t-normal) var(--ease-out),
+              box-shadow var(--t-normal) var(--ease-out),
+              width var(--t-normal) var(--ease-std),
+              height var(--t-normal) var(--ease-std),
+              padding var(--t-normal) var(--ease-std),
+              opacity var(--t-normal) var(--ease-out);
+}
+/* 每次渲染/切页都重放：用 .is-fly-in 类承载动画，JS remove→reflow→add 重挂载式重放
+   （参考追风杯「identity + 递增 key 强制重挂载重放 CSS 动画」的思路） */
+.float-actions.is-fly-in .float-btn {
+  animation: float-fly-in var(--fly-dur) var(--ease-std) backwards;
+  animation-delay: calc(100ms + var(--i, 0) * 130ms);
 }
 .float-actions .float-btn:nth-child(1) { --i: 0; }  /* 盲盒先入 */
 .float-actions .float-btn:nth-child(2) { --i: 1; }  /* 发布压轴 */
+
+/* 回顶按钮出现（顶栏 is-crowded）时，浮动组收起为纯圆形图标；hover 展开为完整按钮。
+   is-crowded 加在 .float-actions 自身（由 renderTopbar 的 updateCrowd 同步写入）。 */
+.float-actions .float-btn-label {
+  white-space: nowrap; overflow: hidden;
+  max-width: 160px; opacity: 1;
+  transition: max-width var(--t-normal) var(--ease-std),
+              opacity var(--t-fast) var(--ease-out);
+}
+.float-actions.is-crowded .float-btn {
+  width: 46px; height: 46px; padding: 0;
+  border-radius: 50%; justify-content: center;
+}
+.float-actions.is-crowded .float-btn-label {
+  max-width: 0; opacity: 0; pointer-events: none;
+}
+.float-actions.is-crowded .float-btn:hover,
+.float-actions.is-crowded .float-btn:focus-visible {
+  width: auto; height: 46px; padding: 0 22px;
+  border-radius: var(--radius-pill); justify-content: flex-start;
+}
+.float-actions.is-crowded .float-btn:hover .float-btn-label,
+.float-actions.is-crowded .float-btn:focus-visible .float-btn-label {
+  max-width: 160px; opacity: 1; pointer-events: auto;
+}
 @media (prefers-reduced-motion: reduce) {
-  .float-actions .float-btn { animation: none; }
+  .float-actions.is-fly-in .float-btn { animation: none; }
 }
 
 /* ---------- 榜单列表 ---------- */
