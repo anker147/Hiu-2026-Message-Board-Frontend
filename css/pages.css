@@ -2020,6 +2020,10 @@ body[data-page="login"] :is(button, a, input, [tabindex]):focus-visible { outlin
 .gm-table--users th:nth-child(4), .gm-table--users td:nth-child(4) { width: 18%; }
 .gm-table--users th:nth-child(5), .gm-table--users td:nth-child(5) { width: 30%; }
 .gm-table--users .gm-user-cell { min-width: 0; }
+/* 头像基础样式是 width/height:100%，在 flex 单元格里会被拉成长条；此处锁定 1:1 */
+.gm-table--users .gm-user-cell .avatar {
+  width: 40px; height: 40px; flex: none; font-size: 22px;
+}
 .gm-table--users .gm-user-info { overflow: hidden; }
 .gm-table--users .gm-user-name,
 .gm-table--users .gm-user-sub { white-space: normal; word-break: break-word; }
