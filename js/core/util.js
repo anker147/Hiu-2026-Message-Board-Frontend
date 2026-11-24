@@ -198,33 +198,42 @@
   }
 
   /** 近 8 期热度序列：优先用后端算好的 heatHistory；否则用后端逐周原始统计
-   *  weeklyStats[{period, stats}]，按榜单同一套 messageScore 公式实时折算各周热度。
-   *  折线走向因此完全由真实数据算出；帖子发布前/缺失的周一律 0，不反推、不扰动、不估算。 */
+   *  weeklyStats[{period, stats, empty?}]，按榜单同一套 messageScore 公式实时折算各周热度。
+   *  一个点就是一期真实数据；发布前的周标记 empty=true（折线图不画点、不连线），
+   *  不用 0 伪造转折，也不反推/扰动/估算。没有 weeklyStats 时只有本期一个点。 */
   function deriveHistory(m) {
     var direct = m && (m.heatHistory || m.history);
     var weekly = m && m.weeklyStats;
     var values = [];
     function n(x) { return (typeof x === "number" && isFinite(x)) ? x : 0; }
+    function score(stats) {
+      return messageScore({
+        stats: stats, period: m.period, createdAt: m.createdAt
+      }) / 10000;
+    }
     for (var i = 0; i < 8; i++) {
+      var v = null, empty = false;
       var raw = direct && direct[i];
-      var v = null;
       if (raw && typeof raw.value === "number" && isFinite(raw.value)) v = raw.value;
       else if (typeof raw === "number" && isFinite(raw)) v = raw;
       else {
         var week = weekly && weekly[i];
-        var ws = week && (week.stats || week);
-        if (ws && typeof ws === "object") {
-          v = messageScore({
-            stats: {
+        if (!week && i === 7 && m && m.stats) {
+          v = score(m.stats);   // 无历史字段：本期按当前 stats 折算一个点
+        } else {
+          var ws = week && (week.stats || week);
+          empty = !!(week && week.empty) ||
+            !!(week && typeof week.period === "number" && m && typeof m.period === "number" && week.period < m.period) ||
+            (!week && i < 7);
+          if (ws && typeof ws === "object" && !empty) {
+            v = score({
               views: n(ws.views), likes: n(ws.likes),
               comments: n(ws.comments), favorites: n(ws.favorites)
-            },
-            period: m.period,
-            createdAt: m.createdAt
-          }) / 10000;
+            });
+          }
         }
       }
-      values.push({ value: v === null ? 0 : v, isolated: false, synthetic: false });
+      values.push({ value: v === null ? 0 : v, empty: empty, isolated: false, synthetic: false });
     }
     return values;
   }
@@ -287,7 +296,11 @@
     });
 
     var vals = (values && values.length) ? values : [{ value: 0 }];
-    var nums = vals.map(function (v) { return (v && typeof v.value === "number" && isFinite(v.value)) ? v.value : null; })
+    // empty = 该期帖子尚未发布，不是 0 热度；不参与坐标计算，避免画出假转折
+    function hasValue(v) {
+      return !!(v && typeof v.value === "number" && isFinite(v.value) && !v.empty);
+    }
+    var nums = vals.map(function (v) { return hasValue(v) ? v.value : null; })
       .filter(function (x) { return x !== null; });
     var min = nums.length ? Math.min.apply(null, nums) : 0;
     var max = nums.length ? Math.max.apply(null, nums) : 1;
@@ -298,7 +311,7 @@
 
     var pts = vals.map(function (v, i) {
       var x = SPARK_PAD_X + i / Math.max(vals.length - 1, 1) * innerW;
-      var y = (v && typeof v.value === "number" && isFinite(v.value))
+      var y = hasValue(v)
         ? SPARK_PAD_Y + innerH - (v.value - min) / (max - min) * innerH
         : null;
       return { x: x, y: y, raw: v || {}, idx: i };
@@ -352,6 +365,13 @@
       if (seg.kind === "dashed") attrs["stroke-dasharray"] = "3 3";
       g.appendChild(svgEl("path", attrs));
     });
+    // 只有一期真实数据时画单个圆点，不编造折线转折
+    if (valid.length === 1) {
+      g.appendChild(svgEl("circle", {
+        cx: valid[0].x.toFixed(2), cy: valid[0].y.toFixed(2), r: "3.6",
+        fill: stroke, stroke: "#ffffff", "stroke-width": "1.2"
+      }));
+    }
     svg.appendChild(g);
 
     // hover 指示：竖线 + 圆点 + tooltip

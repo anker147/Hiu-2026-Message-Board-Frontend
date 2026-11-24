@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 12; // v12：登录品牌名 Board + 品牌区复位、GM 操作台上UI重构
+  var VERSION = 13; // v13：折线按真实期数画点、去数值外显，历史最高无数据显示 --
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -102,7 +102,7 @@
     "board.peakHot": "周榜最高",
     "board.peakNew": "新帖最高",
     "board.heatLabel": "本周热度",
-    "board.trendRange": "{a}→{b}万",
+    "board.noPeakRecord": "暂无历史最高记录",
     "board.changeRate": "较上周变化",
     "board.lastRank": "上周排名",
     "board.tabHot": "热度周榜",

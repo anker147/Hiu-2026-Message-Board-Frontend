@@ -318,12 +318,8 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .rate-pill--down { background: var(--down-soft); color: var(--down); }
 .rate-pill--flat { background: #EEF1F4; color: var(--ink-3); }
 
-/* 折线图区（88×48 SVG + 外显起止数值，官网 sparkline 形制） */
-.card-spark {
-  width: 112px; flex: none;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-}
-.sparkline-caption { font-size: 11px; font-weight: 700; white-space: nowrap; line-height: 1.2; }
+/* 折线图区（88×48 SVG，官网 sparkline 形制；一期一个点，不额外标数值） */
+.card-spark { width: 88px; flex: none; display: flex; align-items: center; justify-content: center; }
 .sparkline { position: relative; display: inline-block; vertical-align: middle; }
 .sparkline-tip {
   position: absolute; z-index: 20; pointer-events: none;
@@ -349,6 +345,16 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .peak-stack { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .peak-zone--dual .peak-label { font-size: 10px; white-space: nowrap; }
 .peak-zone--dual .peak-num { font-size: 20px; }
+/* 无历史记录：虚线空态徽标，避免把 0 误读成“第 0 名” */
+.peak-num--empty {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; height: 30px; margin-top: 3px;
+  border: 1px dashed var(--line); border-radius: 8px;
+  background: var(--bg); color: var(--ink-3);
+  font-size: 17px; font-weight: 700; letter-spacing: .06em;
+  -webkit-text-stroke: 0;
+}
+.peak-zone--dual .peak-num--empty { min-width: 36px; height: 26px; font-size: 15px; }
 
 /* ---------- 骨架卡 ---------- */
 .skeleton-card {

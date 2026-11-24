@@ -82,7 +82,7 @@
            + weeklyStats[] + heatDelta + heatHistory[] + lastRank + peakRank + peakNewRank
 前端计算:  折合分(heat) / 当前期排序 / 近 8 期各周热度（按同一公式逐周实时折算）
 前端展示:  历史字段只按后端返回值展示；缺失一律显示 0（上周排名显示 --）
-           折线图外显首末两期折算值，期次下拉不承载任何排名信息
+           折线图一期一个真实点（未发布期不画点不连线），期次下拉不承载任何排名信息
 ```
 
 原因：得分公式与时间修正由前端 `HMB.util.rankBoard` 统一实现，biliboard 公示口径：
@@ -93,7 +93,10 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 ```
 
 - `heatDelta`：相对上周变动百分比（12.4 表示 +12.4%），后端原样透传；缺失时前端胶囊显示 `0%`。
-- `weeklyStats[]`：近 8 期逐周**原始统计**（由近到远顺序固定，每项 `{period:number, stats:{views,likes,comments,favorites}}`）。后端只给原始 stats；前端用与当前期相同的 `messageScore` 公式逐周实时折算热度并画折线，首末值外显在卡片上。**帖子发布前的周、字段缺失的周一律按 0 处理，不估算**。若后端已能直接给 `heatHistory[]`，则优先使用，不重复折算。
+- `weeklyStats[]`：近 8 期逐周**原始统计**（由近到远顺序固定，每项 `{period:number, stats:{views,likes,comments,favorites}, empty?:boolean}`）。后端只给原始 stats；前端用与当前期相同的 `messageScore` 公式逐周实时折算热度并画折线。
+  - **一个点 = 一期真实数据**：只有「发布期 → 本期」之间的周有值；发布前的周请带 `empty:true`（或干脆不返回该期），前端**不画点、不连线，不用 0 伪造转折**。本周新帖只有本期一个点，因此不应出现多段折线。
+  - `heatHistory[]` 优先级更高；若后端已能直接给真实历史热度序列，前端按该序列画折线，不重复折算。
+  - 历史最高 `peakRank/peakNewRank` 为 0 时前端显示 `--`，不显示「第 0 名」。
 - `heatHistory[]`：近 8 期真实热度序列（每项 `{value:number}`），**缺失的期次前端补 0，不做反推/扰动/估算**。
 - `lastRank`：上周名次；没有就是 `0`，展示为 `--`。**不得用 peakRank、当前名次或变化率倒推。**
 - `peakRank` / `peakNewRank`：历史最高名次，由后端在周榜结算时写入并透传；**前端不再在浏览时反写补算**。
@@ -227,7 +230,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
       "stats": { "views": 12000, "likes": 328, "comments": 46, "favorites": 89 },
       "heatDelta": 12.4,
       "weeklyStats": [
-        { "period": 17, "stats": { "views": 0, "likes": 0, "comments": 0, "favorites": 0 } },
+        { "period": 17, "empty": true, "stats": { "views": 0, "likes": 0, "comments": 0, "favorites": 0 } },
         { "period": 24, "stats": { "views": 12000, "likes": 328, "comments": 46, "favorites": 89 } }
       ],
       "heatHistory": [{ "value": 0 }, { "value": 0 }],
@@ -255,8 +258,8 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 | `isMine` | ⭐ **新增字段**（本次"所有帖子"功能需要）：当前用户是否为作者。未登录恒 `false`。前端据此显示"编辑/删除"入口 |
 | `maskedXxx` | F6 掩码，受用户三项公开开关控制；未开启时返回空串 |
 | `heatDelta` | 相对上周变动百分比，后端原样透传；缺失时前端显示 `0%` |
-| `weeklyStats` | 近 8 期逐周原始统计 `[{period,stats}]`；前端按同一公式实时折算各周热度并外显首末值，缺期按 0；**不接受估算值** |
-| `heatHistory` | 近 8 期真实热度序列，优先级高于 `weeklyStats`；缺期由前端补 0；**不接受估算值** |
+| `weeklyStats` | 近 8 期逐周原始统计 `[{period,stats,empty?}]`；前端按同一公式逐周折算画折线，一个点 = 一期真实数据；发布前的周带 `empty:true`（或不返回该期），前端不画点不连线；**不接受估算值** |
+| `heatHistory` | 近 8 期真实热度序列（含 `empty?` 标记），优先级高于 `weeklyStats`；未发布期不画点不连线；**不接受估算值** |
 | `lastRank` | 上周名次；`0` = 无数据，前端显示 `--`；**禁止用其他字段倒推** |
 | `peakRank` / `peakNewRank` | 历史最高名次，由后端结算写入并透传；前端只展示，首次为 `0` |
 | `likedIds` | 当前用户点过赞的 targetId 列表；未登录为 `[]` |

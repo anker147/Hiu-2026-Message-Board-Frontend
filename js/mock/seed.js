@@ -40,33 +40,37 @@
   var CURRENT_PERIOD = PERIODS[0].no;
 
   /* 近 8 期逐周原始统计（后端字段 weeklyStats 的 mock 实现）。
-     每帖按自身编号取一组固定走势，属于“后端提供的真实周数据”，不是前端估算；
-     末周比例恒为 1，保证周统计与当前 stats 一致。前端 rankBoard 用与榜单同一套
-     messageScore 公式逐周实时折算热度，折线图据此画走向；字段缺失的周一律 0。 */
-  var WEEKLY_PATTERNS = [
-    [0.30, 0.36, 0.44, 0.52, 0.62, 0.73, 0.86, 1],
-    [0.70, 0.62, 0.55, 0.51, 0.58, 0.69, 0.82, 1],
-    [0.45, 0.62, 0.50, 0.70, 0.58, 0.78, 0.70, 1],
-    [0.86, 0.88, 0.85, 0.90, 0.87, 0.91, 0.89, 1],
-    [0.15, 0.22, 0.30, 0.40, 0.52, 0.66, 0.82, 1],
-    [0.60, 0.58, 0.61, 0.57, 0.62, 0.60, 0.58, 1]
-  ];
-  function makeWeeklyStats(stats, key) {
+     只有“发布期 → 本期”之间的周才有数据；发布前的周标记 empty=true，
+     前端折线图不画点、不连线（没有数据不估算，也不拿 0 伪造转折）。
+     本期 stats 与当前 stats 完全一致，保证卡片热度与折线末点同源。 */
+  function makeWeeklyStats(stats, periodNo, key) {
+    var first = CURRENT_PERIOD - 7;
+    var span = CURRENT_PERIOD - periodNo;          // 可用周跨度；0 = 本周新帖
+    var firstIdx = 7 - span;
     var sum = 0;
     String(key || "").replace(/./g, function (ch) { sum += ch.charCodeAt(0); return ch; });
-    var ratios = WEEKLY_PATTERNS[sum % WEEKLY_PATTERNS.length];
+    var jitter = 0.94 + (sum % 5) * 0.03;          // 往期轻微差异，末周不受影响
     var out = [];
-    for (var i = 0; i < ratios.length; i++) {
-      var r = ratios[i];
-      out.push({
-        period: CURRENT_PERIOD - (ratios.length - 1) + i,
-        stats: {
-          views: Math.round(stats.views * r),
-          likes: Math.round(stats.likes * r),
-          comments: Math.round(stats.comments * r),
-          favorites: Math.round(stats.favorites * r)
-        }
-      });
+    for (var i = 0; i < 8; i++) {
+      var p = first + i;
+      if (p < periodNo) {
+        out.push({
+          period: p, empty: true,
+          stats: { views: 0, likes: 0, comments: 0, favorites: 0 }
+        });
+      } else {
+        var step = span > 0 ? (i - firstIdx) / span : 1;
+        var r = i === 7 ? 1 : Math.min(0.92, Math.max(0.25, (0.45 + 0.5 * step) * jitter));
+        out.push({
+          period: p,
+          stats: {
+            views: Math.round(stats.views * r),
+            likes: Math.round(stats.likes * r),
+            comments: Math.round(stats.comments * r),
+            favorites: Math.round(stats.favorites * r)
+          }
+        });
+      }
     }
     return out;
   }
@@ -188,7 +192,7 @@
   ];
 
   // 逐周原始统计由 mock“后端”随留言一并返回；前端只负责按公式实时折算与画图
-  MESSAGES.forEach(function (m) { m.weeklyStats = makeWeeklyStats(m.stats, m.no); });
+  MESSAGES.forEach(function (m) { m.weeklyStats = makeWeeklyStats(m.stats, m.period, m.no); });
 
   /* —— 评论树（画布 04/16 原值，挂在第 1 条留言下） —— */
   var COMMENTS = [
@@ -268,7 +272,7 @@
 
   window.HMB = window.HMB || {};
   window.HMB.SEED = {
-    VERSION: 8, // v8：逐周统计按帖子取不同真实走势，折线图实时折算并外显
+    VERSION: 9, // v9：逐周统计只覆盖发布期起，未发布的周标记 empty，折线不造假转折
     AVATARS: AVATARS,
     NICK_ADJ: NICK_ADJ,
     NICK_ANIMAL: NICK_ANIMAL,

@@ -413,8 +413,10 @@
     var label = el("div", "peak-label");
     label.setAttribute("data-text", labelKey);
     stack.appendChild(label);
-    var n = el("div", "peak-num" + (num <= 3 && num > 0 ? " peak-num--top" : ""));
-    n.textContent = num > 0 ? String(num < 10 ? "0" + num : num) : "0";
+    var has = (typeof num === "number" && isFinite(num) && num > 0);
+    var n = el("div", "peak-num" + (has && num <= 3 ? " peak-num--top" : "") + (has ? "" : " peak-num--empty"));
+    n.textContent = has ? String(num < 10 ? "0" + num : num) : "--";
+    if (!has) n.setAttribute("aria-label", t("board.noPeakRecord"));
     stack.appendChild(n);
     return stack;
   }
@@ -522,16 +524,6 @@
       width: 88, height: 48, stroke: sparkColor, fill: sparkColor,
       label: "本周热度趋势"
     }));
-    // 趋势数值外显：起止两期由真实 weeklyStats 实时折算，缺失期次显示 0
-    var trend = msg.rateHistory || [];
-    var trendCaption = el("span", "sparkline-caption");
-    trendCaption.setAttribute("title", "近8期热度走向（首期→本期）");
-    trendCaption.style.color = sparkColor;
-    trendCaption.textContent = t("board.trendRange", {
-      a: U.fmtHeat(trend.length ? trend[0].value : 0),
-      b: U.fmtHeat(trend.length ? trend[trend.length - 1].value : 0)
-    });
-    sparkWrap.appendChild(trendCaption);
     card.appendChild(sparkWrap);
 
     /* 06 最高区：单榜显示本榜历史最高；双榜（我的留言）并排显示周榜/新帖两榜历史最高。
