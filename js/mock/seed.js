@@ -37,6 +37,39 @@
     { no: 22, range: "2026.11.08–11.14" },
     { no: 21, range: "2026.11.01–11.07" }
   ];
+  var CURRENT_PERIOD = PERIODS[0].no;
+
+  /* 近 8 期逐周原始统计（后端字段 weeklyStats 的 mock 实现）。
+     每帖按自身编号取一组固定走势，属于“后端提供的真实周数据”，不是前端估算；
+     末周比例恒为 1，保证周统计与当前 stats 一致。前端 rankBoard 用与榜单同一套
+     messageScore 公式逐周实时折算热度，折线图据此画走向；字段缺失的周一律 0。 */
+  var WEEKLY_PATTERNS = [
+    [0.30, 0.36, 0.44, 0.52, 0.62, 0.73, 0.86, 1],
+    [0.70, 0.62, 0.55, 0.51, 0.58, 0.69, 0.82, 1],
+    [0.45, 0.62, 0.50, 0.70, 0.58, 0.78, 0.70, 1],
+    [0.86, 0.88, 0.85, 0.90, 0.87, 0.91, 0.89, 1],
+    [0.15, 0.22, 0.30, 0.40, 0.52, 0.66, 0.82, 1],
+    [0.60, 0.58, 0.61, 0.57, 0.62, 0.60, 0.58, 1]
+  ];
+  function makeWeeklyStats(stats, key) {
+    var sum = 0;
+    String(key || "").replace(/./g, function (ch) { sum += ch.charCodeAt(0); return ch; });
+    var ratios = WEEKLY_PATTERNS[sum % WEEKLY_PATTERNS.length];
+    var out = [];
+    for (var i = 0; i < ratios.length; i++) {
+      var r = ratios[i];
+      out.push({
+        period: CURRENT_PERIOD - (ratios.length - 1) + i,
+        stats: {
+          views: Math.round(stats.views * r),
+          likes: Math.round(stats.likes * r),
+          comments: Math.round(stats.comments * r),
+          favorites: Math.round(stats.favorites * r)
+        }
+      });
+    }
+    return out;
+  }
 
   /* —— 用户（密码为演示明文，mock 校验用；真实系统为 PBKDF2 加盐哈希） —— */
   var USERS = [
@@ -154,6 +187,9 @@
     }
   ];
 
+  // 逐周原始统计由 mock“后端”随留言一并返回；前端只负责按公式实时折算与画图
+  MESSAGES.forEach(function (m) { m.weeklyStats = makeWeeklyStats(m.stats, m.no); });
+
   /* —— 评论树（画布 04/16 原值，挂在第 1 条留言下） —— */
   var COMMENTS = [
     {
@@ -232,7 +268,7 @@
 
   window.HMB = window.HMB || {};
   window.HMB.SEED = {
-    VERSION: 6, // v6：GM 权限模块（admin/admin、role/status/muteUntil/hidden、admin_actions 审计表）
+    VERSION: 8, // v8：逐周统计按帖子取不同真实走势，折线图实时折算并外显
     AVATARS: AVATARS,
     NICK_ADJ: NICK_ADJ,
     NICK_ANIMAL: NICK_ANIMAL,

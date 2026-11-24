@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 10; // v10：登录表单浮动标签 + 注册必填/选填外显标记，修正选填文案重复
+  var VERSION = 11; // v11：期次下拉去排名、折线图逐周实时折算并外显数值、字号放大
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -46,8 +46,7 @@
     "common.mine": "我的留言",
     "common.searchPlaceholder": "搜索留言内容 / 作者 / 话题",
     "common.period": "统计周",
-    "common.periodWithRank": "第 {n} 期 · 上周排名 {r}",
-    "common.periodThisWeekWithRank": "第 {n} 期（本周）· 上周排名 {r}",
+    "common.periodThisWeek": "第 {n} 期（本周）",
     "common.periodN": "第 {n} 期",
     "common.foundCount": "找到 {n} 条相关留言",
     "common.likes": "赞",
@@ -103,6 +102,7 @@
     "board.peakHot": "周榜最高",
     "board.peakNew": "新帖最高",
     "board.heatLabel": "本周热度",
+    "board.trendRange": "{a}→{b}万",
     "board.changeRate": "较上周变化",
     "board.lastRank": "上周排名",
     "board.tabHot": "热度周榜",

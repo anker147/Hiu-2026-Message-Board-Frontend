@@ -7,7 +7,7 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   height: 40px; padding: 0 22px;
   border-radius: var(--radius-btn);
-  font-size: 14px; font-weight: 600;
+  font-size: 15px; font-weight: 600;
   transition: transform 120ms ease, box-shadow 120ms ease,
               background-color 120ms ease, opacity 120ms ease;
   user-select: none;
@@ -31,11 +31,11 @@
 .btn--ghost:hover { background: #E6EDF5; color: var(--ink); }
 
 .btn--lg { height: 46px; width: 100%; font-size: 15px; }
-.btn--sm { height: 32px; padding: 0 14px; font-size: 13px; }
+.btn--sm { height: 34px; padding: 0 15px; font-size: 14px; }
 
 /* ---------- 输入框 ---------- */
 .field { margin-bottom: 18px; }
-.field-label { display: block; font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+.field-label { display: block; font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
 .field-input {
   width: 100%; height: 42px; padding: 0 14px;
   background: #F6F9FC; border: 1px solid transparent; border-radius: var(--radius-input);
@@ -171,8 +171,8 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
   transition: background-color 120ms ease, color 120ms ease;
 }
 .modal-close:hover { background: #F1F5F9; color: var(--ink); }
-.modal-title { font-size: 20px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
-.modal-sub { font-size: 13px; color: var(--ink-2); margin-bottom: 20px; }
+.modal-title { font-size: 22px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+.modal-sub { font-size: 14px; color: var(--ink-2); margin-bottom: 20px; }
 
 /* ---------- Toast ---------- */
 .toast-wrap {
@@ -267,7 +267,7 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 /* 主信息区 */
 .main-zone { flex: 1; min-width: 0; }
 .card-title {
-  font-size: 15px; font-weight: 700; color: var(--ink);
+  font-size: 16px; font-weight: 700; color: var(--ink);
   line-height: 1.4; cursor: pointer;
   display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
   overflow: hidden; word-break: break-all;
@@ -276,13 +276,13 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .card-title mark { background: rgba(53, 158, 255, 0.16); color: inherit; padding: 0 1px; border-radius: 2px; }
 .card-meta {
   display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
-  margin-top: 5px; font-size: 12px; color: var(--ink-3);
+  margin-top: 5px; font-size: 13px; color: var(--ink-3);
 }
 .card-meta .sep { color: #D5DEE8; }
 .card-meta .topic { color: var(--blue); }
 .card-meta .vis { color: var(--ink-3); }
 .card-stats { display: flex; align-items: center; gap: 14px; margin-top: 7px; }
-.stat { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.stat { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--ink-3); white-space: nowrap; }
 .stat svg { width: 14px; height: 14px; }
 .stat--likebtn { cursor: pointer; transition: color 120ms ease, transform 120ms ease; }
 .stat--likebtn:hover { color: var(--up); }
@@ -291,7 +291,7 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 
 /* 热度区（biliboard 首页形制：本周分数 + 变化率胶囊） */
 .heat-zone { width: 116px; flex: none; text-align: right; }
-.heat-label { font-size: 11px; color: var(--ink-3); }
+.heat-label { font-size: 12px; color: var(--ink-3); }
 .heat-value {
   font-size: 24px; font-weight: 800; line-height: 1.2; white-space: nowrap;
   color: var(--blue-pale-ink);
@@ -303,7 +303,7 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .rate-pill {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 18px; min-height: 16px; margin-top: 3px;
-  border-radius: var(--radius-pill); font-size: 11px; font-weight: 700;
+  border-radius: var(--radius-pill); font-size: 12px; font-weight: 700;
   overflow: hidden; white-space: nowrap;
   transition: background-color 380ms ease;
 }
@@ -318,8 +318,12 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .rate-pill--down { background: var(--down-soft); color: var(--down); }
 .rate-pill--flat { background: #EEF1F4; color: var(--ink-3); }
 
-/* 折线图区（88×48 SVG，官网 sparkline 形制） */
-.card-spark { width: 88px; flex: none; display: flex; align-items: center; justify-content: center; }
+/* 折线图区（88×48 SVG + 外显起止数值，官网 sparkline 形制） */
+.card-spark {
+  width: 112px; flex: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+.sparkline-caption { font-size: 11px; font-weight: 700; white-space: nowrap; line-height: 1.2; }
 .sparkline { position: relative; display: inline-block; vertical-align: middle; }
 .sparkline-tip {
   position: absolute; z-index: 20; pointer-events: none;
@@ -333,7 +337,7 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 
 /* 最高区 74px */
 .peak-zone { width: 74px; flex: none; text-align: center; }
-.peak-label { font-size: 11px; color: var(--ink-3); }
+.peak-label { font-size: 12px; color: var(--ink-3); }
 .peak-num {
   font-size: 26px; font-weight: 800; color: transparent; line-height: 1.25;
   -webkit-text-stroke: 1.6px var(--rank-n);
@@ -365,7 +369,7 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 .state-box { padding: 56px 24px; text-align: center; }
 .state-box .state-emoji { font-size: 44px; margin-bottom: 14px; }
 .state-box .state-title { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
-.state-box .state-desc { font-size: 13px; color: var(--ink-3); margin-bottom: 20px; }
+.state-box .state-desc { font-size: 14px; color: var(--ink-3); margin-bottom: 20px; }
 .state-box .btn { margin: 0 auto; }
 
 /* ---------- 评论树 ---------- */

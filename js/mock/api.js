@@ -339,6 +339,8 @@
       },
       // heat 不落库、不由后端计算：前端 rankBoard 按原始 stats 实时折算（万分制展示）
       heatDelta: m.heatDelta, peakRank: m.peakRank, peakNewRank: m.peakNewRank || 0,
+      // 逐周原始统计：后端只给原始 stats，前端折线图按同一套公式实时折算各周热度
+      weeklyStats: m.weeklyStats || [],
       // 展示辅助（非后端契约，页面渲染用）
       no: m.no, isNew: !!m.isNew, isPublic: m.isPublic !== false, period: m.period,
       edited: !!m.edited,
@@ -588,6 +590,7 @@
         createdAt: Date.now(),
         stats: { views: 0, likes: 0, comments: 0, favorites: 0 },
         heatDelta: 0, peakRank: 0, peakNewRank: 0, // heat 由出口层按周榜分数公式实时计算，不落库；双榜历史最高各自维护
+        weeklyStats: [], // 新帖暂无历史周数据，折线图缺失期次一律 0，不估算
         isNew: true
       };
       var messages = db.getMessages();

@@ -99,45 +99,37 @@
         if (pair[0] === "about" && location.pathname.indexOf("about.html") >= 0) {
           e.preventDefault(); e.stopPropagation(); return;
         }
-        // 榜单页内软切换（含“关于”视图切换）：胶囊滑向新位置（replaceState 不计文档导航）
+        // 榜单页内软切换：先立即播岛内动效（零等待、不卡手），再加载目标视图
         if (board && typeof board.switchTab === "function" &&
             !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
           e.preventDefault();
           e.stopPropagation();   // 软切换不交给页面过渡层（否则 140ms 后会被导航）
-          var myEpoch = ++switchEpoch;
-          var doSwap = function () {
-            if (myEpoch !== switchEpoch) return;   // 过期点击：更新的一击已接管
-            if (current === pair[0]) return;
-            if (history.replaceState) history.replaceState(null, "", "index.html?tab=" + pair[0]);
-            var prev = nav.querySelector(".nav-tab.is-active");
-            if (prev) {
-              prev.classList.remove("is-active");
-              var ptxt = prev.querySelector(".nav-txt");
-              if (ptxt) ptxt.style.width = "0px";          // 旧当前项折叠为纯图标
-            }
-            a.classList.add("is-active");
-            var ntxt = a.querySelector(".nav-txt");
-            if (ntxt) ntxt.style.width = ntxt.scrollWidth + "px";  // 新当前项弹性展开（CSS 弹性缓动）
-            slidePillTo(pair[0]);
-            current = pair[0];
-            board.switchTab(pair[0]);
-          };
           if (current === pair[0]) { smoothScrollToTop(); return; }   // 回点当前项：线性回顶
-          /* 当前滚动位置在目标页不存在（scrollY > 目标页最大滚动值，含目标页 ≤ 一屏）
-             → 逐层退出当前页 → 换页+不可见回顶 → 逐级飞入目标页；
-             滚动位置仍有效 / 已在顶部 → 原路径：换内容 + 线性回顶滑行。 */
-          var boardView = document.getElementById("boardView");
-          var predict = board.predictTargetMaxScroll
-            ? board.predictTargetMaxScroll(pair[0])
-            : Promise.resolve(Infinity);
-          predict.then(function (maxScroll) {
-            if (window.scrollY > 0 && window.scrollY > maxScroll && boardView && U.pageTransition) {
-              U.pageTransition(boardView, doSwap);
-            } else {
-              doSwap();
-              smoothScrollToTop();
-            }
-          });
+
+          var myEpoch = ++switchEpoch;
+          current = pair[0];
+
+          // ① 同步动效：胶囊滑行 + 标签折叠展开 + 当前视图淡出
+          var prev = nav.querySelector(".nav-tab.is-active");
+          if (prev) {
+            prev.classList.remove("is-active");
+            var ptxt = prev.querySelector(".nav-txt");
+            if (ptxt) ptxt.style.width = "0px";          // 旧当前项折叠为纯图标
+          }
+          a.classList.add("is-active");
+          var ntxt = a.querySelector(".nav-txt");
+          if (ntxt) ntxt.style.width = ntxt.scrollWidth + "px";  // 新当前项弹性展开
+          slidePillTo(pair[0]);
+          document.body.classList.add("is-tab-switching");
+          smoothScrollToTop();
+
+          // ② 动效起步后才真正加载页面（含岛内 show() 建 DOM / 列表请求）
+          window.setTimeout(function () {
+            document.body.classList.remove("is-tab-switching");
+            if (myEpoch !== switchEpoch) return;   // 过期点击：最新的一击已接管
+            if (history.replaceState) history.replaceState(null, "", "index.html?tab=" + pair[0]);
+            board.switchTab(pair[0]);
+          }, 130);
         }
         // 非榜单页 / 修饰键点击 → 默认整页跳转
       });
@@ -530,6 +522,16 @@
       width: 88, height: 48, stroke: sparkColor, fill: sparkColor,
       label: "本周热度趋势"
     }));
+    // 趋势数值外显：起止两期由真实 weeklyStats 实时折算，缺失期次显示 0
+    var trend = msg.rateHistory || [];
+    var trendCaption = el("span", "sparkline-caption");
+    trendCaption.setAttribute("title", "近8期热度走向（首期→本期）");
+    trendCaption.style.color = sparkColor;
+    trendCaption.textContent = t("board.trendRange", {
+      a: U.fmtHeat(trend.length ? trend[0].value : 0),
+      b: U.fmtHeat(trend.length ? trend[trend.length - 1].value : 0)
+    });
+    sparkWrap.appendChild(trendCaption);
     card.appendChild(sparkWrap);
 
     /* 06 最高区：单榜显示本榜历史最高；双榜（我的留言）并排显示周榜/新帖两榜历史最高。

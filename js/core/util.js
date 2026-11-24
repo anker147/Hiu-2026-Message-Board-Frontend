@@ -197,17 +197,34 @@
     }
   }
 
-  /** 近 8 期热度序列：只认后端真实提供的 heatHistory，缺哪期就补 0。
-   *  不做任何反推/扰动/估算（用户红线：没有数据不要估算，没有数据就标记 0）。 */
+  /** 近 8 期热度序列：优先用后端算好的 heatHistory；否则用后端逐周原始统计
+   *  weeklyStats[{period, stats}]，按榜单同一套 messageScore 公式实时折算各周热度。
+   *  折线走向因此完全由真实数据算出；帖子发布前/缺失的周一律 0，不反推、不扰动、不估算。 */
   function deriveHistory(m) {
-    var src = m && (m.heatHistory || m.history);
+    var direct = m && (m.heatHistory || m.history);
+    var weekly = m && m.weeklyStats;
     var values = [];
+    function n(x) { return (typeof x === "number" && isFinite(x)) ? x : 0; }
     for (var i = 0; i < 8; i++) {
-      var raw = src && src[i];
-      var v = (raw && typeof raw.value === "number" && isFinite(raw.value))
-        ? raw.value
-        : (typeof raw === "number" && isFinite(raw) ? raw : 0);
-      values.push({ value: v, isolated: false, synthetic: false });
+      var raw = direct && direct[i];
+      var v = null;
+      if (raw && typeof raw.value === "number" && isFinite(raw.value)) v = raw.value;
+      else if (typeof raw === "number" && isFinite(raw)) v = raw;
+      else {
+        var week = weekly && weekly[i];
+        var ws = week && (week.stats || week);
+        if (ws && typeof ws === "object") {
+          v = messageScore({
+            stats: {
+              views: n(ws.views), likes: n(ws.likes),
+              comments: n(ws.comments), favorites: n(ws.favorites)
+            },
+            period: m.period,
+            createdAt: m.createdAt
+          }) / 10000;
+        }
+      }
+      values.push({ value: v === null ? 0 : v, isolated: false, synthetic: false });
     }
     return values;
   }

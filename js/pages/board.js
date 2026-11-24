@@ -133,20 +133,9 @@
     els.issueText.textContent = t("banner.issue", { n: periodNo, range: period ? period.range : "" });
   }
 
-  /** 该期次真实的上周排名；没有数据返回 0 → 下拉显示 --（不估算） */
-  function periodLastRank(p) {
-    var found = 0;
-    HMB.db.getMessages().forEach(function (m) {
-      if (!found && m.period === p.no && typeof m.lastRank === "number" && m.lastRank > 0) {
-        found = m.lastRank;
-      }
-    });
-    return found;
-  }
-
   /** 期次下拉按 tab 重建（makeDropdown 不清空挂载点，切 tab 需显式重渲染）：
    *  热度周榜只列“已发布且有数据”的统计周；本周新帖保留本周但不再标注“统计中”；
-   *  没有上周排名的统一显示 --。 */
+   *  下拉只表达期次本身，不承载任何排名信息。 */
   function renderPeriodDropdown() {
     els.periodDropdown.textContent = "";   // makeDropdown 不清空挂载点：切 tab 重建前必须先清，否则 btn/menu 逐次叠加
     var isHot = state.tab === "hot";
@@ -155,10 +144,8 @@
       state.hotPeriod = pool[0].no;
     }
     var items = pool.map(function (p) {
-      var rankText = periodLastRank(p) > 0 ? String(periodLastRank(p)) : "--";
-      var key = (!isHot && p.no === currentPeriod)
-        ? "common.periodThisWeekWithRank" : "common.periodWithRank";
-      return { key: String(p.no), label: t(key, { n: p.no, r: rankText }) };
+      var key = (!isHot && p.no === currentPeriod) ? "common.periodThisWeek" : "common.periodN";
+      return { key: String(p.no), label: t(key, { n: p.no }) };
     });
     U.makeDropdown(els.periodDropdown, items,
       String(isHot ? state.hotPeriod : state.period),
@@ -194,9 +181,11 @@
     document.querySelectorAll("[data-goto-tab]").forEach(function (a) {
       a.addEventListener("click", function (e) {
         var key = a.getAttribute("data-goto-tab");
-        if (HMB.pages.board && typeof HMB.pages.board.switchTab === "function") {
+        // 统一走导航岛的点击路径：先播胶囊/淡出动效，再加载目标视图
+        var navTab = document.querySelector('.nav-tab[data-tab="' + key + '"]');
+        if (navTab) {
           e.preventDefault();
-          HMB.pages.board.switchTab(key);
+          navTab.click();
         }
       });
     });

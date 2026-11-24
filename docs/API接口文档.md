@@ -79,9 +79,10 @@
 
 ```
 后端提供:  stats{views, likes, comments, favorites} + period + createdAt
-           + heatDelta + heatHistory[] + lastRank + peakRank + peakNewRank
-前端计算:  折合分(heat) / 当前期排序
+           + weeklyStats[] + heatDelta + heatHistory[] + lastRank + peakRank + peakNewRank
+前端计算:  折合分(heat) / 当前期排序 / 近 8 期各周热度（按同一公式逐周实时折算）
 前端展示:  历史字段只按后端返回值展示；缺失一律显示 0（上周排名显示 --）
+           折线图外显首末两期折算值，期次下拉不承载任何排名信息
 ```
 
 原因：得分公式与时间修正由前端 `HMB.util.rankBoard` 统一实现，biliboard 公示口径：
@@ -92,6 +93,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 ```
 
 - `heatDelta`：相对上周变动百分比（12.4 表示 +12.4%），后端原样透传；缺失时前端胶囊显示 `0%`。
+- `weeklyStats[]`：近 8 期逐周**原始统计**（由近到远顺序固定，每项 `{period:number, stats:{views,likes,comments,favorites}}`）。后端只给原始 stats；前端用与当前期相同的 `messageScore` 公式逐周实时折算热度并画折线，首末值外显在卡片上。**帖子发布前的周、字段缺失的周一律按 0 处理，不估算**。若后端已能直接给 `heatHistory[]`，则优先使用，不重复折算。
 - `heatHistory[]`：近 8 期真实热度序列（每项 `{value:number}`），**缺失的期次前端补 0，不做反推/扰动/估算**。
 - `lastRank`：上周名次；没有就是 `0`，展示为 `--`。**不得用 peakRank、当前名次或变化率倒推。**
 - `peakRank` / `peakNewRank`：历史最高名次，由后端在周榜结算时写入并透传；**前端不再在浏览时反写补算**。
@@ -224,6 +226,10 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
       "createdAt": 1730000000000,
       "stats": { "views": 12000, "likes": 328, "comments": 46, "favorites": 89 },
       "heatDelta": 12.4,
+      "weeklyStats": [
+        { "period": 17, "stats": { "views": 0, "likes": 0, "comments": 0, "favorites": 0 } },
+        { "period": 24, "stats": { "views": 12000, "likes": 328, "comments": 46, "favorites": 89 } }
+      ],
       "heatHistory": [{ "value": 0 }, { "value": 0 }],
       "lastRank": 0,
       "peakRank": 0,
@@ -249,7 +255,8 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 | `isMine` | ⭐ **新增字段**（本次"所有帖子"功能需要）：当前用户是否为作者。未登录恒 `false`。前端据此显示"编辑/删除"入口 |
 | `maskedXxx` | F6 掩码，受用户三项公开开关控制；未开启时返回空串 |
 | `heatDelta` | 相对上周变动百分比，后端原样透传；缺失时前端显示 `0%` |
-| `heatHistory` | 近 8 期真实热度序列，缺期由前端补 0；**不接受估算值** |
+| `weeklyStats` | 近 8 期逐周原始统计 `[{period,stats}]`；前端按同一公式实时折算各周热度并外显首末值，缺期按 0；**不接受估算值** |
+| `heatHistory` | 近 8 期真实热度序列，优先级高于 `weeklyStats`；缺期由前端补 0；**不接受估算值** |
 | `lastRank` | 上周名次；`0` = 无数据，前端显示 `--`；**禁止用其他字段倒推** |
 | `peakRank` / `peakNewRank` | 历史最高名次，由后端结算写入并透传；前端只展示，首次为 `0` |
 | `likedIds` | 当前用户点过赞的 targetId 列表；未登录为 `[]` |
@@ -521,7 +528,7 @@ out.isMine = (session != null && session.userId == message.ownerId)
 ## 5. 待后端确认的开放项
 
 1. **peakRank / peakNewRank 的写入**：改由后端在周榜结算时计算并持久化；前端**不再**在浏览时用当前名次反写（无数据就是 0）。确认是否需要独立的结算任务/接口。
-2. **heatDelta / heatHistory / lastRank 来源**：目前 `heatDelta` 是种子演示值，`heatHistory` 与 `lastRank` 全缺失 → 前端按红线显示 0 / `--`。真实系统需要后端按"本周分 vs 上周分"计算 `(本周−上周)/上周×100`（浮点保留 1 位），并提供近 8 期真实序列与上周名次；**任何字段缺失都不能由前端估算**。
+2. **heatDelta / weeklyStats / heatHistory / lastRank 来源**：目前 `heatDelta`、`weeklyStats` 是种子演示数据，`heatHistory` 与 `lastRank` 全缺失 → 前端按红线显示 0 / `--`。折线图由 `weeklyStats` 逐周原始 stats 实时折算走向，不再依赖缺失的 `heatHistory`。真实系统需要后端按"本周分 vs 上周分"计算 `(本周−上周)/上周×100`（浮点保留 1 位），并提供近 8 期真实逐周统计（或真实热度序列）与上周名次；**任何字段缺失都不能由前端估算**。期次下拉只显示期号，不承载排名。
 3. **分页**：当前 Mock 一次性返回全量。数据量上来后建议 API-04 加 `page`/`pageSize`，前端列表改为滚动加载（**需前端配合改代码**）。
 4. **统计口径**：`stats` 的"新增互动"语义 —— 帖子 `period` 归属期次，stats 即该期新增。真实后端需按周窗口聚合，不能是历史累计值。
 5. **`no` 字段**：8 位随机展示号（非主键），用于卡片 "NO.7f3a9c21" 展示；是否保留请确认。
