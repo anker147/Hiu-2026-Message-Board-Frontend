@@ -1053,10 +1053,10 @@ body[data-page="login"] {
 .login-field .input:not(:placeholder-shown) ~ .float-label .opt-tag { color: rgba(143,208,255,.8); border-color: rgba(143,208,255,.35); }
 .login-field:hover { --line-c: rgba(255,255,255,.26); background: rgba(255,255,255,.08); }
 .login-field:focus-within {
-  --line-c: rgba(143,208,255,.7);
+  --line-c: rgba(255,255,255,.34);   /* 聚焦边框保持中性白，不要蓝色 */
   transform: translateY(-2px);
   background: rgba(255,255,255,.1);
-  box-shadow: 0 8px 22px rgba(6,18,36,.35), 0 0 0 3px rgba(93,155,214,.16);
+  box-shadow: 0 8px 22px rgba(6,18,36,.35);   /* 去掉蓝色外发光 */
 }
 .login-field.is-error { --line-c: rgba(255,138,138,.7); background: rgba(255,138,138,.08); }
 .field-ico { flex: 0 0 16px; width: 16px; height: 16px; color: rgba(238,242,247,.55); transition: color .22s var(--ease-out); }
