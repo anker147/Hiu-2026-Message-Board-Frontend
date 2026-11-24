@@ -351,7 +351,8 @@
       list.forEach(function (m, i) {
         var card = C.renderCard(m, {
           rank: state.tab === "mine" ? null : i + 1,                        // 我的留言无排名显示
-          peakMode: state.tab === "mine" ? "dual" : (state.tab === "latest" ? "new" : "hot"),
+          peakMode: state.tab === "mine" ? "dual" : (state.tab === "latest" ? "none" : "hot"), // 本周新帖不显示历史最高
+          peakRankFallback: state.tab === "hot" && !state.q,                // 仅完整周榜用当前真实名次兜底首次上榜
           q: state.q,
           session: session,
           likedSet: likedSet,
