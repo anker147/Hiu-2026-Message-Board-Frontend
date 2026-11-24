@@ -45,8 +45,8 @@
 .field-input::placeholder { color: var(--ink-3); }
 .field-input:hover { background: #F2F6FB; }
 .field-input:focus {
-  outline: none; background: #fff; border-color: var(--blue);
-  box-shadow: var(--focus-ring);
+  outline: none; background: #fff; border-color: var(--ink-3);
+  box-shadow: none;
 }
 .field-input--error { border-color: var(--danger); background: #FFF7F7; }
 .field-error {
