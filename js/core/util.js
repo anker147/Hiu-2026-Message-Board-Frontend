@@ -199,8 +199,8 @@
 
   /** 近 8 期热度序列：优先用后端算好的 heatHistory；否则用后端逐周原始统计
    *  weeklyStats[{period, stats, empty?}]，按榜单同一套 messageScore 公式实时折算各周热度。
-   *  一个点就是一期真实数据；发布前的周标记 empty=true（折线图不画点、不连线），
-   *  不用 0 伪造转折，也不反推/扰动/估算。没有 weeklyStats 时只有本期一个点。 */
+   *  一个点就是一期真实数据；发布前的周标记 empty=true、stats 为 0，折线按 0 画贴底平线，
+   *  不反推/扰动/估算。0 表示真实没有量，平线如实呈现，不伪造上升也不留白。 */
   function deriveHistory(m) {
     var direct = m && (m.heatHistory || m.history);
     var weekly = m && m.weeklyStats;
@@ -296,15 +296,19 @@
     });
 
     var vals = (values && values.length) ? values : [{ value: 0 }];
-    // empty = 该期帖子尚未发布，不是 0 热度；不参与坐标计算，避免画出假转折
+    // 0 值期（含未发布的 empty 期）按 0 画贴底平线，不跳过；只有非数字才不画。
+    // 这样新帖前面是一条平线、有数据的期次抬起来，而不是整段空白或凭空造转折。
     function hasValue(v) {
-      return !!(v && typeof v.value === "number" && isFinite(v.value) && !v.empty);
+      return !!(v && typeof v.value === "number" && isFinite(v.value));
     }
     var nums = vals.map(function (v) { return hasValue(v) ? v.value : null; })
       .filter(function (x) { return x !== null; });
     var min = nums.length ? Math.min.apply(null, nums) : 0;
     var max = nums.length ? Math.max.apply(null, nums) : 1;
-    if (min === max) { min -= 1; max += 1; }
+    if (min === max) {
+      if (min === 0) { min = 0; max = 1; }   // 全 0：平线贴底，不抬到中间
+      else { min -= 1; max += 1; }
+    }
     var innerW = Math.max(W - SPARK_PAD_X * 2, 1);
     var innerH = Math.max(H - SPARK_PAD_Y * 2, 1);
     var baseY = H - 1;

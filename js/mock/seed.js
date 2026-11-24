@@ -40,8 +40,8 @@
   var CURRENT_PERIOD = PERIODS[0].no;
 
   /* 近 8 期逐周原始统计（后端字段 weeklyStats 的 mock 实现）。
-     只有“发布期 → 本期”之间的周才有数据；发布前的周标记 empty=true，
-     前端折线图不画点、不连线（没有数据不估算，也不拿 0 伪造转折）。
+     只有“发布期 → 本期”之间的周才有真实统计；发布前的周标记 empty=true、stats 全 0，
+     前端折线把 0 值期画成贴底平线（不估算、不伪造热度，0 就是真的没有量）。
      本期 stats 与当前 stats 完全一致，保证卡片热度与折线末点同源。 */
   function makeWeeklyStats(stats, periodNo, key) {
     var first = CURRENT_PERIOD - 7;
@@ -272,7 +272,7 @@
 
   window.HMB = window.HMB || {};
   window.HMB.SEED = {
-    VERSION: 9, // v9：逐周统计只覆盖发布期起，未发布的周标记 empty，折线不造假转折
+    VERSION: 10, // v10：未发布期 stats 填 0、折线按 0 画贴底平线（不造假上升也不留白）
     AVATARS: AVATARS,
     NICK_ADJ: NICK_ADJ,
     NICK_ANIMAL: NICK_ANIMAL,
