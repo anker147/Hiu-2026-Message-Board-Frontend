@@ -1716,6 +1716,26 @@ body[data-page="login"] :is(button, a, [tabindex]):focus-visible { outline: 2px 
   border: 1px solid var(--line); border-radius: var(--radius-btn);
 }
 .editor-select .dropdown-btn.editor-select-btn:hover { background: var(--blue-soft); border-color: var(--blue-pale); color: var(--blue); }
+
+/* 自定义话题：内联输入 + 确定，紧随话题下拉 */
+.custom-topic-wrap {
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.custom-topic-wrap[hidden] { display: none; }
+.custom-topic-input {
+  height: 34px; width: 170px; padding: 0 10px;
+  font-size: 13px; color: var(--ink);
+  background: #fff; border: 1px solid var(--blue-pale);
+  border-radius: var(--radius-btn); outline: none;
+}
+.custom-topic-input::placeholder { color: var(--ink-3); }
+.custom-topic-input.is-error { border-color: var(--danger); }
+.custom-topic-ok {
+  height: 34px; padding: 0 14px; font-size: 13px; font-weight: 700;
+  color: #fff; background: var(--blue); border: 1px solid var(--blue);
+  border-radius: var(--radius-btn); cursor: pointer;
+}
+.custom-topic-ok:hover { filter: brightness(1.06); }
 .editor-mode-chip {
   display: inline-flex; align-items: center; height: 26px; padding: 0 11px;
   border-radius: var(--radius-pill); background: var(--blue-soft);

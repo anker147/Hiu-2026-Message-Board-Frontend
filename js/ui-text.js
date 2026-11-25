@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 26; // v26：补 common.sortXxx 样张页文案；修复编辑器字号精确应用
+  var VERSION = 27; // v27：新增自定义话题文案；演示数据已清空
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -192,6 +192,10 @@
     "edit.rich.fontPixel": "像素字体",
     "editPage.modeNew": "新建",
     "editPage.modeEdit": "编辑",
+    "editPage.topicCustom": "＋ 自定义话题",
+    "editPage.topicCustomPlaceholder": "输入话题（最多16字）",
+    "editPage.topicCustomOk": "确定",
+    "editPage.topicCustomDone": "话题已设为「{name}」",
     "editPage.settingsLabel": "设置",
     "editPage.publishSettings": "发布设置",
     "editPage.coverLabel": "设置封面",

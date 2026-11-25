@@ -62,13 +62,9 @@
 
   // 期次（留言板自有周榜期次，严禁“第 128 期 / 术力口”语义）
   // 周界口径：一周 = 周日 00:00 → 周六 24:00（非周一到周日）；range 起始日即周日
-  var PERIODS = [
-    { no: 24, range: "2026.11.22–11.28" },
-    { no: 23, range: "2026.11.15–11.21" },
-    { no: 22, range: "2026.11.08–11.14" },
-    { no: 21, range: "2026.11.01–11.07" }
-  ];
-  var CURRENT_PERIOD = PERIODS[0].no;
+  // 演示期次已清空：接真实后端后，期次清单与当前期次由后端提供。
+  var PERIODS = [];
+  var CURRENT_PERIOD = 24; // 占位默认值；真实期次以后端返回为准（board.js 依赖此值，不可为空）
 
   /* 近 8 期逐周原始统计（后端字段 weeklyStats 的 mock 实现）。
      只有“发布期 → 本期”之间的周才有真实统计；发布前的周标记 empty=true、stats 全 0，
@@ -131,14 +127,8 @@
   }
 
   /* —— 用户（密码为演示明文，mock 校验用；真实系统为 PBKDF2 加盐哈希） —— */
-  var USERS = [
-    { id: 1, account: "13800000001", password: "abc12345", displayId: "20849317", nickname: "小满",   avatarEnum: 1, realName: "王小满",  email: "xiaoman@hiu.edu.cn", flagName: true,  flagEmail: false, flagPhone: false, bio: "喜欢在晚自习后去操场看晚霞", createdAt: now - 30 * DAY },
-    { id: 2, account: "13800000002", password: "abc12345", displayId: "70134852", nickname: "阿泽",   avatarEnum: 4, realName: "陈泽宇",  email: "azezey@qq.com",      flagName: false, flagEmail: false, flagPhone: false, bio: "图书馆靠窗党，耳机常备", createdAt: now - 28 * DAY },
-    { id: 3, account: "13800000003", password: "abc12345", displayId: "44920183", nickname: "橘子汽水", avatarEnum: 4, realName: "李橘橙",  email: "",                   flagName: false, flagEmail: false, flagPhone: false, bio: "食堂测评雷达，三楼蹲点中", createdAt: now - 25 * DAY },
-    { id: 4, account: "13800000004", password: "abc12345", displayId: "53871022", nickname: "匿名同学", avatarEnum: 6, realName: "",       email: "anon2026@163.com",   flagName: false, flagEmail: true,  flagPhone: false, bio: "路过，随便看看", createdAt: now - 21 * DAY },
-    { id: 5, account: "13800000005", password: "abc12345", displayId: "61590247", nickname: "树树",   avatarEnum: 7, realName: "苏树",    email: "sushu@hiu.edu.cn",   flagName: false, flagEmail: false, flagPhone: false, bio: "盲盒爱好者，专职送祝福", createdAt: now - 18 * DAY },
-    { id: 6, account: "13800000006", password: "abc12345", displayId: "36208841", nickname: "晚风",   avatarEnum: 4, realName: "林晚风",  email: "wanfeng@qq.com",     flagName: true,  flagEmail: false, flagPhone: true,  bio: "环湖散步队队长", createdAt: now - 15 * DAY }
-  ];
+  // 演示用户已清空：仅保留内置 admin 账号（见下方 ADMIN_USER）。
+  var USERS = [];
 
   /* —— 管理员账号（GM 默认账号，写死；文档 §6.1 约定）——
      id=9999 为内置保护账号：不可封禁 / 降级 / 改密 / 删除；
@@ -167,157 +157,19 @@
     createdAt: 1730000000000
   };
 
-  /* —— 留言（第 24 期 6 条：画布 01 原值；第 23 期 2 条）
-     时间锚点：周界口径为“周日 00:00 → 周六 24:00”，演示留言锚定在本期周日内
-     （第 24 期 6 条在周日内 3~19h，第 23 期 2 条在上周日晚 ~ 周一晚）；
-     热度分不落库：由 api 出口层按周榜公式实时计算（浏览基数×时间修正 + 评论×1 + 点赞×2 + 收藏×5，
-     结构参照 biliboard.uk 公示口径，绝对分值以“万”展示） —— */
-  var MESSAGES = [
-    {
-      resourceId: "a1f0b2c3-7f3a-4c21-9d01-000000000001", title: "一起去看晚霞吧", no: "7f3a9c21",
-      ownerId: 1, content: "下课后一起去看晚霞吗，操场边那棵树又开花了",
-      nicknameSnapshot: "小满", avatarEnum: 1, displayId: "20849317",
-      topicTag: "校园日常", isPublic: true, period: 24,
-      createdAt: now - 3 * HOUR,
-      stats: { views: 12000, likes: 328, comments: 46, favorites: 89 },
-      heatDelta: 12.4, peakRank: 0, peakNewRank: 0, isNew: true
-    },
-    {
-      resourceId: "a1f0b2c3-b2e1-4d94-9d02-000000000002", title: "图书馆靠窗位与耳机共享", no: "b2e1d94c",
-      ownerId: 2, content: "图书馆靠窗的位置今天没人，把耳机借给需要的同学",
-      nicknameSnapshot: "阿泽", avatarEnum: 4, displayId: "70134852",
-      topicTag: "互助", isPublic: true, period: 24,
-      createdAt: now - 7 * HOUR,
-      stats: { views: 9840, likes: 256, comments: 38, favorites: 72 },
-      heatDelta: 5.1, peakRank: 0, peakNewRank: 0, isNew: false
-    },
-    {
-      resourceId: "a1f0b2c3-c9a2-278e-9d03-000000000003", title: "糖醋排骨回归了", no: "c9a2278e",
-      ownerId: 3, content: "食堂三楼的糖醋排骨回归了，排队值得，附今日窗口实拍感受",
-      nicknameSnapshot: "橘子汽水", avatarEnum: 4, displayId: "44920183",
-      topicTag: "食堂", isPublic: true, period: 24,
-      createdAt: now - 8 * HOUR,
-      stats: { views: 8120, likes: 198, comments: 51, favorites: 63 },
-      heatDelta: -3.8, peakRank: 0, peakNewRank: 0, isNew: false
-    },
-    {
-      resourceId: "a1f0b2c3-8e7c-c35a-9d04-000000000004", title: "助攻课推荐求真实体验", no: "8e7cc35a",
-      ownerId: 4, content: "问一下大家，助攻课还有没有被推荐的老师，想听真实体验",
-      nicknameSnapshot: "匿名同学", avatarEnum: 6, displayId: "53871022",
-      topicTag: "求助", isPublic: true, period: 24,
-      createdAt: now - 12 * HOUR,
-      stats: { views: 7560, likes: 142, comments: 64, favorites: 41 },
-      heatDelta: 0, peakRank: 0, peakNewRank: 0, isNew: false
-    },
-    {
-      resourceId: "a1f0b2c3-dda5-e812-9d05-000000000005", title: "盲盒破冰成功", no: "dda5e812",
-      ownerId: 5, content: "盲盒回复太好玩了，抽到一条去年陌生同学的祝福，破冰成功",
-      nicknameSnapshot: "树树", avatarEnum: 7, displayId: "61590247",
-      topicTag: "盲盒", isPublic: true, period: 24,
-      createdAt: now - 17 * HOUR,
-      stats: { views: 6910, likes: 176, comments: 33, favorites: 58 },
-      heatDelta: 8.7, peakRank: 0, peakNewRank: 0, isNew: false
-    },
-    {
-      resourceId: "a1f0b2c3-ad8b-9f97-9d06-000000000006", title: "环湖散步路线推荐", no: "ad8b9f97",
-      ownerId: 6, content: "今天的天气太适合散步了，晚风很温柔，推荐环湖路线给大家",
-      nicknameSnapshot: "晚风", avatarEnum: 4, displayId: "36208841",
-      topicTag: "日常", isPublic: true, period: 24,
-      createdAt: now - 19 * HOUR,
-      stats: { views: 5430, likes: 121, comments: 27, favorites: 35 },
-      heatDelta: 0, peakRank: 0, peakNewRank: 0, isNew: false
-    },
-    /* —— 第 23 期 2 条（期次切换可测） —— */
-    {
-      resourceId: "a1f0b2c3-23a1-0001-9d07-000000000007", title: "英语角继续约", no: "23a10001",
-      ownerId: 2, content: "上周的英语角来了好多外教，这周继续约起来",
-      nicknameSnapshot: "阿泽", avatarEnum: 4, displayId: "70134852",
-      topicTag: "校园日常", isPublic: true, period: 23,
-      createdAt: now - 6 * DAY - 3 * HOUR,
-      stats: { views: 4210, likes: 96, comments: 18, favorites: 22 },
-      heatDelta: -1.2, peakRank: 1, peakNewRank: 1, isNew: false
-    },
-    {
-      resourceId: "a1f0b2c3-23a2-0002-9d08-000000000008", title: "期末小组自习室分享", no: "23a20002",
-      ownerId: 5, content: "分享一个期末复习的小组自习室，氛围超好",
-      nicknameSnapshot: "树树", avatarEnum: 7, displayId: "61590247",
-      topicTag: "互助", isPublic: true, period: 23,
-      createdAt: now - 7 * DAY - 2 * HOUR,
-      stats: { views: 3870, likes: 88, comments: 15, favorites: 30 },
-      heatDelta: 2.3, peakRank: 2, peakNewRank: 2, isNew: false
-    },
-    /* —— 跨 24 期样本帖（第 1 期发布，连续 24 期有真实周数据，用来观察多期折线）——
-       每周 stats 是当周新增，24 周四项逐项相加精确等于总 stats 四项；
-       折线最多画最近 8 周（本项目口径），一期一个真实点，不做任何估算。 */
-    {
-      resourceId: "a1f0b2c3-2401-0001-9d09-000000000009", title: "连载二十四周的一封信", no: "24010009",
-      ownerId: 1, content: "从第一期开始每周写一封短信，记录校园里的天气、食堂和晚霞。连载到第二十四期，感谢一路陪伴。",
-      nicknameSnapshot: "小满", avatarEnum: 1, displayId: "20849317",
-      topicTag: "校园日常", isPublic: true, period: 1,
-      createdAt: now - ((24 - 1) * 7 + 2) * DAY - 5 * HOUR,
-      stats: { views: 24000, likes: 480, comments: 96, favorites: 120 },
-      heatDelta: 6.8, peakRank: 1, peakNewRank: 24, isNew: false,
-      weeklyStats: makeLongRunWeeklyStats(
-        { views: 24000, likes: 480, comments: 96, favorites: 120 }, 1, 24)
-    }
-  ];
+  /* —— 留言数据已清空：演示帖子属于 demo 数据，接真实后端后由 /api/messages 提供 —— */
+  var MESSAGES = [];
 
   // 逐周原始统计由 mock“后端”随留言一并返回；前端只负责按公式实时折算与画图
   MESSAGES.forEach(function (m) {
     if (!m.weeklyStats) m.weeklyStats = makeWeeklyStats(m.stats, m.period, m.no);
   });
 
-  /* —— 评论树（画布 04/16 原值，挂在第 1 条留言下） —— */
-  var COMMENTS = [
-    {
-      resourceId: "c0000000-0000-4000-8000-000000000001",
-      messageId: "a1f0b2c3-7f3a-4c21-9d01-000000000001",
-      parentId: null, rootId: null, depth: 1,
-      ownerId: 2, authorName: "阿泽", authorAvatar: 4, authorDisplayId: "70134852",
-      content: "我也想去！带上相机，晚霞值得记录",
-      createdAt: now - 2 * 3600e3, likes: 12, edited: false,
-      likedBy: []
-    },
-    {
-      resourceId: "c0000000-0000-4000-8000-000000000002",
-      messageId: "a1f0b2c3-7f3a-4c21-9d01-000000000001",
-      parentId: "c0000000-0000-4000-8000-000000000001",
-      rootId: "c0000000-0000-4000-8000-000000000001", depth: 2,
-      ownerId: 1, authorName: "小满", authorAvatar: 1, authorDisplayId: "20849317",
-      atDisplayId: "70134852", atAuthorName: "阿泽",
-      content: "好呀，周六傍晚见",
-      createdAt: now - 1 * 3600e3, likes: 5, edited: false,
-      likedBy: []
-    },
-    {
-      resourceId: "c0000000-0000-4000-8000-000000000003",
-      messageId: "a1f0b2c3-7f3a-4c21-9d01-000000000001",
-      parentId: null, rootId: null, depth: 1,
-      ownerId: 5, authorName: "树树", authorAvatar: 7, authorDisplayId: "61590247",
-      content: "盲盒回复太好玩了，我也抽到过一条陌生同学的祝福",
-      createdAt: now - 3 * 3600e3, likes: 8, edited: false,
-      likedBy: []
-    },
-    /* 盲盒匿名回复示例（热心同学，橙底，F9/D-02） */
-    {
-      resourceId: "c0000000-0000-4000-8000-000000000004",
-      messageId: "a1f0b2c3-ad8b-9f97-9d06-000000000006",
-      parentId: null, rootId: null, depth: 1,
-      ownerId: 2, authorName: "热心同学", authorAvatar: 0, authorDisplayId: "",
-      isAnonymous: true,
-      content: "上周刚去过，环湖的日落特别好看，祝你玩得开心",
-      createdAt: now - 30 * 60e3, likes: 3, edited: false,
-      likedBy: []
-    }
-  ];
+  /* —— 评论数据已清空：由后端 /api/comments 提供 —— */
+  var COMMENTS = [];
 
-  /* —— 点赞记录（user_id + target_id 唯一） —— */
-  var LIKES = [
-    { userId: 1, targetId: "a1f0b2c3-ad8b-9f97-9d06-000000000006" },
-    { userId: 2, targetId: "a1f0b2c3-7f3a-4c21-9d01-000000000001" },
-    { userId: 3, targetId: "a1f0b2c3-7f3a-4c21-9d01-000000000001" },
-    { userId: 6, targetId: "a1f0b2c3-b2e1-4d94-9d02-000000000002" }
-  ];
+  /* —— 点赞数据已清空：由后端 /api/like 维护 —— */
+  var LIKES = [];
 
   function withDefaults(defaults, item) {
     var out = {}, k;
@@ -347,7 +199,7 @@
 
   window.HMB = window.HMB || {};
   window.HMB.SEED = {
-    VERSION: 14, // v14：敏感词库扩至 100 词（新增涉政公共安全 / 色情低俗 / 诈骗资金三类风险词）
+    VERSION: 15, // v15：清空 demo 数据（帖子/期次/演示用户/评论/点赞），保留敏感词库与常量
     AVATARS: AVATARS,
     NICK_ADJ: NICK_ADJ,
     NICK_ANIMAL: NICK_ANIMAL,
@@ -355,7 +207,7 @@
     TOPICS: TOPICS,
     EMOJI_LIBRARY: EMOJI_LIBRARY,
     PERIODS: PERIODS,
-    CURRENT_PERIOD: 24,
+    CURRENT_PERIOD: CURRENT_PERIOD,
     USERS: USERS_WITH_ROLE.concat([ADMIN_USER]),
     MESSAGES: MESSAGES_WITH_HIDDEN,
     COMMENTS: COMMENTS_WITH_HIDDEN,

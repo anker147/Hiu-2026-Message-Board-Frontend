@@ -7,10 +7,10 @@
   <link rel="icon" href="data:,">
   <meta name="description" content="帖子编辑器 — 新建与编辑统一入口（参照好游快爆 sendThreadShow 形制）">
   <title>帖子编辑器 · 留言板</title>
-  <link rel="stylesheet" href="../css/tokens.css?v=20261124bf">
-  <link rel="stylesheet" href="../css/base.css?v=20261124bf">
-  <link rel="stylesheet" href="../css/components.css?v=20261124bf">
-  <link rel="stylesheet" href="../css/pages.css?v=20261124bf">
+  <link rel="stylesheet" href="../css/tokens.css?v=20261124bg">
+  <link rel="stylesheet" href="../css/base.css?v=20261124bg">
+  <link rel="stylesheet" href="../css/components.css?v=20261124bg">
+  <link rel="stylesheet" href="../css/pages.css?v=20261124bg">
 </head>
 <body data-page="edit">
   <div class="grain" aria-hidden="true"></div>
@@ -23,6 +23,11 @@
       <div class="editor-topbar-left">
         <div class="dropdown editor-select" id="typeDropdown" aria-label="帖子类型"></div>
         <div class="dropdown editor-select" id="topicDropdown" aria-label="话题版块"></div>
+        <div class="custom-topic-wrap" id="customTopicWrap" hidden>
+          <input type="text" class="custom-topic-input" id="customTopicInput" maxlength="16"
+                 data-text-placeholder="editPage.topicCustomPlaceholder" aria-label="自定义话题">
+          <button type="button" class="custom-topic-ok" id="customTopicOk" data-text="editPage.topicCustomOk">确定</button>
+        </div>
         <span class="editor-mode-chip" id="modeChip"></span>
       </div>
       <div class="editor-topbar-right">
@@ -171,13 +176,13 @@
     </div>
   </div>
 
-  <script src="../js/ui-text.js?v=20261124bf"></script>
-  <script src="../js/mock/seed.js?v=20261124bf"></script>
-  <script src="../js/mock/db.js?v=20261124bf"></script>
-  <script src="../js/mock/api.js?v=20261124bf"></script>
-  <script src="../js/core/util.js?v=20261124bf"></script>
-  <script src="../js/core/media.js?v=20261124bf"></script>
-  <script src="../js/components.js?v=20261124bf"></script>
-  <script src="../js/pages/edit.js?v=20261124bf"></script>
+  <script src="../js/ui-text.js?v=20261124bg"></script>
+  <script src="../js/mock/seed.js?v=20261124bg"></script>
+  <script src="../js/mock/db.js?v=20261124bg"></script>
+  <script src="../js/api.js?v=20261124bg"></script>
+  <script src="../js/core/util.js?v=20261124bg"></script>
+  <script src="../js/core/media.js?v=20261124bg"></script>
+  <script src="../js/components.js?v=20261124bg"></script>
+  <script src="../js/pages/edit.js?v=20261124bg"></script>
 </body>
 </html>

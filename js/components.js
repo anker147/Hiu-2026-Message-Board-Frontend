@@ -271,9 +271,8 @@
     /* tab 构建器：活岛用 data-text 走 i18n 注入；测量克隆行用 withText 直接写文本（克隆不经过 i18n.apply） */
     function buildTab(pair, isActive, withText) {
       var a = el("a", "nav-tab" + (isActive ? " is-active" : ""));
-      // 关于为独立页面；GM 与其余项均在榜单页内软切换（岛内 tag）
-      a.href = (pair[0] === "about")
-        ? pair[0] + ".html" : "index.html?tab=" + pair[0];
+      // 全部为岛内 tag：关于退化为 index.html?tab=about 内嵌视图（原独立 about.html 已删），GM 与其余项软切换
+      a.href = "index.html?tab=" + pair[0];
       a.setAttribute("data-tab", pair[0]);
       var ic = el("span", "nav-ico");
       ic.appendChild(U.icon(TAB_ICONS[pair[0]]));
@@ -291,10 +290,6 @@
       var a = buildTab(pair, activeTab === pair[0], false);
       a.addEventListener("click", function (e) {
         var board = HMB.pages && HMB.pages.board;
-        // standalone about.html 上点当前页项 = 无操作（阻断页面过渡层）
-        if (pair[0] === "about" && location.pathname.indexOf("about.html") >= 0) {
-          e.preventDefault(); e.stopPropagation(); return;
-        }
         // 榜单页内软切换：先立即播岛内动效（零等待、不卡手），再加载目标视图
         if (board && typeof board.switchTab === "function" &&
             !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
