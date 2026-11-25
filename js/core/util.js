@@ -897,13 +897,11 @@
     var navRow = el("div", "dbg-row");
     [
       ["首页榜单", "index.html"],
-      ["发布留言", "post.html"],
-      ["详情/评论", "detail.html?id=a1f0b2c3-7f3a-4c21-9d01-000000000001"],
-      ["注册", "register.html"],
+      ["发布留言", "edit.html?mode=new"],
+      ["详情/评论", "detail.html"],
       ["登录", "login.html"],
       ["个人中心", "profile.html"],
-      ["关于", "about.html"],
-      ["状态样张", "states.html"]
+      ["关于", "index.html?tab=about"]
     ].forEach(function (p) {
       var a = el("a", "dbg-btn", p[0]);
       a.href = p[1];
@@ -952,7 +950,10 @@
 
     var rateNote = el("div", "dbg-note");
     function refreshRate() {
-      rateNote.textContent = t("debug.rateWindow", { n: window.HMB.api._debug.rateCount() });
+      var d = window.HMB.api && window.HMB.api._debug;
+      // 真实后端适配层由服务端限流，未提供本地 rateCount；此时显示 0
+      var n = (d && typeof d.rateCount === "function") ? d.rateCount() : 0;
+      rateNote.textContent = t("debug.rateWindow", { n: n });
     }
     refreshRate();
     setInterval(refreshRate, 1500);

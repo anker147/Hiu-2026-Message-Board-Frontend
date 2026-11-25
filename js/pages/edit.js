@@ -252,13 +252,45 @@
   }
 
   function renderTopicDropdown() {
-    var items = [{ key: "", label: t("post.tagNone") }].concat(
-      HMB.SEED.TOPICS.map(function (tag) { return { key: tag, label: tag }; })
-    );
+    // 白名单 + 当前话题（编辑回填的自定义话题 / 本次自定话题）保证标签正确显示
+    var tags = HMB.SEED.TOPICS.slice();
+    if (selectedTag && tags.indexOf(selectedTag) < 0) tags.push(selectedTag);
+    var items = [{ key: "", label: t("post.tagNone") }]
+      .concat(tags.map(function (tag) { return { key: tag, label: tag }; }))
+      .concat([{ key: "__custom__", label: t("editPage.topicCustom") }]);
     U.makeDropdown($("topicDropdown"), items, selectedTag, function (key) {
+      if (key === "__custom__") { openCustomTopic(); return; }
       selectedTag = key;
     });
     $("topicDropdown").querySelector(".dropdown-btn").classList.add("editor-select-btn");
+  }
+
+  /* ---------------- 自定义话题：输入值直接作为 selectedTag 随 topic 字段透传后端 ---------------- */
+
+  function openCustomTopic() {
+    var wrap = $("customTopicWrap"), input = $("customTopicInput");
+    if (!wrap || !input) return;
+    wrap.hidden = false;
+    input.value = "";
+    input.classList.remove("is-error");
+    input.focus();
+  }
+
+  function closeCustomTopic() {
+    var wrap = $("customTopicWrap");
+    if (wrap) wrap.hidden = true;
+  }
+
+  function commitCustomTopic() {
+    var input = $("customTopicInput");
+    if (!input) return;
+    var val = (input.value || "").trim();
+    if (!val) { input.classList.add("is-error"); input.focus(); return; }
+    if (val.length > 16) val = val.slice(0, 16);   // 与 maxlength / 后端 VARCHAR(16) 对齐
+    selectedTag = val;
+    closeCustomTopic();
+    renderTopicDropdown();
+    U.toast(t("editPage.topicCustomDone", { name: val }), "success");
   }
 
   /* ---------------- 图标工具栏：表情弹层（光标处插入）+ 禁用态 ---------------- */
@@ -447,6 +479,17 @@
     });
 
 
+    // 自定义话题：确定按钮 / 回车提交 / Esc 取消 / 输入即清错误态
+    var customWrap = $("customTopicWrap");
+    if (customWrap) {
+      $("customTopicOk").addEventListener("click", commitCustomTopic);
+      $("customTopicInput").addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); commitCustomTopic(); }
+        else if (e.key === "Escape") { e.preventDefault(); closeCustomTopic(); renderTopicDropdown(); }
+      });
+      $("customTopicInput").addEventListener("input", function () { this.classList.remove("is-error"); });
+    }
+
     // 设置卡折叠（「▼ 发布设置」）
     var settingsCard = document.querySelector(".editor-settings-card");
     $("settingsToggle").addEventListener("click", function () {
@@ -621,6 +664,7 @@
 
     renderTypeDropdown();
     renderTopicDropdown();
+    closeCustomTopic();
     buildEmojiPop();
     bindToolbar();
     bindImages();
