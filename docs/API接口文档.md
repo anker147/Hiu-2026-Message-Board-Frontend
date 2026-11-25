@@ -173,7 +173,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 | E4 | 昵称/签名/头像 | PUT | `/api/profile/nickname` | 是 | 是 |
 | E5 | 敏感信息编辑 | PUT | `/api/profile/sensitive` | 是 | 是 |
 | E6 | 会话查询 | GET | `/api/session` | 否 | 否 |
-| U1 | 图片上传（头像/文末图） | POST | `/api/upload` | 是 | 是 |
+| U1 | 图片上传（头像/封面/文末图） | POST | `/api/upload` | 是 | 是 |
 
 > 计 21 条路由（Mock 层 17 个方法：API-01~12 中 07 拆两路由、06 与 05 共用实现、加 7 扩展；U1 为本地存储实现，无需后端）。
 
@@ -568,7 +568,7 @@ t = ln(e^d + 1) + 1        d = 投稿时间 − 该帖所属期次统计起点(�
 | 字段 | 类型 | 必填 | 校验 |
 |---|---|---|---|
 | `file` | binary | 是 | 仅 `image/jpeg|png|gif|webp`，单张 ≤ 5 MB；超限 → 9001 |
-| `type` | enum | 是 | `avatar`（头像）\| `message`（文末图），仅用于后端分目录/配额，不改变返回结构 |
+| `type` | enum | 是 | `avatar`（头像）\| `cover`（封面）\| `message`（文末图），仅用于后端分目录/配额，不改变返回结构 |
 | `csrf` | string | 是 | — |
 
 **出参**
@@ -646,8 +646,8 @@ out.isMine = (session != null && session.userId == message.ownerId)
 3. **分页**：当前 Mock 一次性返回全量。数据量上来后建议 API-04 加 `page`/`pageSize`，前端列表改为滚动加载（**需前端配合改代码**）。
 4. **统计口径**：`stats` 的"新增互动"语义 —— 帖子 `period` 归属期次，stats 即该期新增。真实后端需按周窗口聚合，不能是历史累计值。
 5. **`no` 字段**：8 位随机展示号（非主键），用于卡片 "NO.7f3a9c21" 展示；是否保留请确认。
-6. **图片存储落地（本次新增）**：U1 上传接口需后端对接对象存储（OSS/S3/COS），确认存储桶、公网 CDN 域名与目录分法（`avatar/` / `message/`）；
-   建议图片入 CDN 后返回 `ref = url`，业务表只存该字符串；目录分法建议 `avatar/` / `cover/` / `message/`。
+6. **图片存储落地（本次新增）**：U1 上传接口需后端对接对象存储（OSS/S3/COS），确认存储桶、公网 CDN 域名与目录分法（`avatar/` / `cover/` / `message/`）；
+   建议图片入 CDN 后返回 `ref = url`，业务表只存该字符串。
    需确认单账号上传频率上限与是否需要图片内容审核（鉴黄/敏感图）。
    前端原型不依赖此项：`ref` 用 `localimg://<id>`、本体存 localStorage，生产替换上传实现即可，业务接口字段契约不变。
 

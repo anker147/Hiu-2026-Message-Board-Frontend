@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 25; // v25：帖子封面（独立上传 / 文末首图）+ 图片大图查看
+  var VERSION = 26; // v26：补 common.sortXxx 样张页文案；修复编辑器字号精确应用
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -44,6 +44,10 @@
     "common.hot": "热度周榜",
     "common.latest": "本周新帖",
     "common.mine": "我的留言",
+    "common.sortHeat": "按热度",
+    "common.sortLatest": "按最新",
+    "common.sortLikes": "按点赞",
+    "common.sortComments": "按评论",
     "common.searchPlaceholder": "搜索留言内容 / 作者 / 话题",
     /* —— 顶栏全局搜索框（作用域随页面变化） —— */
     "search.scopeHot": "搜索热度周榜…",
