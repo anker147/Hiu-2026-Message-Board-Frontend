@@ -730,7 +730,6 @@
     bindGlobalHandlers();
     HMB.api.getSession().then(function (resp) {
       C.renderTopbar(document.getElementById("topbar"), "about", resp.data);   // 岛内"关于"项激活
-      HMB.util.renderDebugPanel();
       build();
       HMB.i18n.apply(document.body);
       bindParallax();

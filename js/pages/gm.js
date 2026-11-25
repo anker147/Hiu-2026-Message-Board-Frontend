@@ -183,7 +183,6 @@
     api.getSession().then(function (resp) {
       session = resp.data || { loggedIn: false };
       if (!embedded) C.renderTopbar($("topbar"), "gm", session);
-      U.renderDebugPanel();
 
       if (!session.loggedIn || !session.isAdmin) {
         showNoPermission();

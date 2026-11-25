@@ -42,7 +42,6 @@
     api.getSession().then(function (resp) {
       session = resp.data;
       C.renderTopbar(els.topbar, null, session);
-      HMB.util.renderDebugPanel();
 
       if (!msgId) return renderNotFound();
       api.getMessage(msgId).then(function (r1) {

@@ -516,7 +516,6 @@
     api.getSession().then(function (resp) {
       session = resp.data;
       C.renderTopbar(document.getElementById("topbar"), null, session);
-      HMB.util.renderDebugPanel();
 
       // 顶栏全局搜索框（作用域＝该用户留言）：仅过滤已加载的主页动态，不新增接口
       feedQ = (HMB.globalSearch && HMB.globalSearch.q) || "";

@@ -387,7 +387,6 @@
         window.location.href = "index.html";
         return;
       }
-      HMB.util.renderDebugPanel();
       initLogin();       // 登录卡双 tab：登录 / 注册（register.html 已并入本页）
       initRegister();
       bindTabs();

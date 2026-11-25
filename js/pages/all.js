@@ -140,7 +140,6 @@
     api.getSession().then(function (resp) {
       session = resp.data || { loggedIn: false };
       if (!embedded) C.renderTopbar($("topbar"), "all", session);
-      U.renderDebugPanel();
 
       // 顶栏全局搜索框（作用域＝全部留言）：由 hmb:globalsearch 事件驱动
       state.q = (HMB.globalSearch && HMB.globalSearch.q) || "";
