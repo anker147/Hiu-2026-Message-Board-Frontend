@@ -78,6 +78,35 @@
     updateWordCount();
   }
 
+  /** 精确字号：execCommand('fontSize') 只认传统 1~7 档，传 '32px' 会被 clamp 到最大档（xxx-large=48px），
+   *  故直接用 Range 给选区包 <span style="font-size:32px">，编辑态与保存态尺寸一致（sanitizeStyle 白名单保留 font-size）。 */
+  function applyFontSize(px) {
+    var node = contentEl();
+    node.focus();
+    var sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    var range = sel.getRangeAt(0);
+    if (!node.contains(range.commonAncestorContainer)) return;
+    var span = document.createElement("span");
+    span.style.fontSize = px;
+    try {
+      range.surroundContents(span);
+    } catch (err) {
+      // 选区跨越多个元素：提取内容后包进 span 再插回
+      try {
+        var frag = range.extractContents();
+        span.appendChild(frag);
+        range.insertNode(span);
+      } catch (err2) { return; }
+    }
+    sel.removeAllRanges();
+    var nr = document.createRange();
+    nr.selectNodeContents(span);
+    sel.addRange(nr);
+    syncRichState();
+    updateWordCount();
+  }
+
   function toggleIndent() {
     var block = currentBlock();
     if (!block) { execRich("formatBlock", "<p>"); block = currentBlock(); }
@@ -371,7 +400,7 @@
       var v = this.value;
       execRich("fontName", v || "'Microsoft YaHei',sans-serif");
     });
-    $("rtSize").addEventListener("change", function () { execRich("fontSize", this.value); });
+    $("rtSize").addEventListener("change", function () { applyFontSize(this.value); });
     $("rtTitle").addEventListener("change", function () {
       var v = this.value;
       execRich("formatBlock", v === "p" ? "<p>" : "<" + v + ">");
