@@ -1,121 +1,111 @@
-# Hiu-2026-Message-Board-Frontend
+# Hiu-2026 留言板（全栈）
 
-黑龙江外国语学院 2024 级计算机科学与技术三班全栈开发实战项目 — 留言板
+黑龙江外国语学院 2024 级计算机科学与技术三班全栈开发实战项目 —— 留言板。
 
-> **前端 v1 · 纯前端交互原型**：依据《留言板PRD.docx》v1.4 与 Page 1 概念稿（biliboard × Stella · 玻璃拟态+Glow）实现的第一版前端。**所有数据留在前端**（Mock API + localStorage），无需后端即可完成全流程交互测试。
+前后端一体的完整项目：根目录是**零构建原生前端**（HTML/CSS/JS），`backend/` 是 **Java Servlet/JSP + MySQL 后端**（TestJDBC）。前端已接入真实后端适配层（`js/api.js`），演示数据已清空，接口路径与后端 `/api/*` 完全对齐。
 
-## 在线访问（GitHub Pages）
+---
 
-推送 main 后自动构建：
+## 仓库结构
+
+```
+.                          前端（原生 HTML/CSS/JS，零构建零依赖）
+├── index.html             根入口（GitHub Pages / 静态服务器首页）
+├── pages/                 各功能页（index / edit / zone / login / detail / profile / all / gm）
+│   └── *.html             同目录互链，资源以 ../ 引用根目录 css/js/fonts
+├── css/                   tokens / base / components / pages 样式
+├── fonts/                 fusion-pixel 像素字体（OFL 开源）
+├── js/
+│   ├── api.js             真实后端 fetch 适配层（Bearer 令牌 + csrf + 401 清令牌）
+│   ├── ui-text.js         文案集中管理（点分键 + t() + VERSION）
+│   ├── core/util.js       工具 + 页面过渡 / 逐条入场动画
+│   ├── components.js      共享组件（导航岛 / 榜单卡 / 评论树 / 弹窗 / 盲盒）
+│   ├── mock/              seed.js + db.js（仅保留常量与词库，演示数据已清空）
+│   └── pages/             各页逻辑（board/about/auth/detail/edit/profile/zone/all/gm）
+├── docs/                  API 接口文档 / 数据库表结构文档（交付后端团队的契约）
+└── backend/               TestJDBC 后端（Java Servlet/JSP）
+    ├── src/               源码（servlet / api / dao / service / domain / util / filter / db）
+    ├── WebRoot/           JSP 页面 + WEB-INF（web.xml / classes / lib）
+    ├── sql/               建表与升级脚本
+    │   ├── messageboard.sql
+    │   ├── api-contract-tables.sql
+    │   └── upgrade-2026-11-19.sql
+    ├── docs/              后端接口 / 表结构差异说明
+    └── *.docx / *.md      产品需求、功能清单、交付文档、接口差异分析
+```
+
+---
+
+## 快速开始
+
+### 前端（静态站点）
+
+无需构建、无需依赖。直接起一个静态服务器：
+
+```bash
+python -m http.server 8080
+# 打开 http://localhost:8080/  （或 http://localhost:8080/pages/index.html）
+```
+
+前端默认请求后端地址 `http://localhost:8080/TestJDBC/api`。如后端不在该地址，在引入 `js/api.js` **之前**设置：
+
+```html
+<script>window.HMB_API_BASE = "http://your-host:port/context/api";</script>
+```
+
+> 纯前端双击 `pages/*.html`（file://）仍可打开页面骨架，但接口请求需要后端可达。
+
+### 后端（TestJDBC）
+
+后端是传统 Servlet/JSP 工程（MyEclipse 风格），需部署到 **Servlet 容器（如 Tomcat）** 并连接 **MySQL**：
+
+1. **数据库**：按 `backend/sql/` 下的脚本建库建表（`messageboard.sql` → `api-contract-tables.sql` → 按需 `upgrade-2026-11-19.sql`）。
+2. **连接配置**：修改 `backend/src/db/DatabaseConn.java` 中的 URL / 端口 / 账号 / 密码为本机 MySQL 实际值。当前文件里写死的是原开发环境的参数，**需按你的环境调整**。
+3. **部署**：将 `backend/WebRoot` 作为 Web 应用部署到 Tomcat，上下文路径建议为 `TestJDBC`（与前端默认 BASE 一致）。
+4. **接口**：统一入口 `ApiServlet` 映射 `/api/*`，覆盖登录注册、会话、留言、评论、点赞收藏、盲盒、个人主页等 REST 接口。
+
+> 说明：GM 管理接口在本期后端范围未开放，前端 GM 页面骨架可正常渲染，但相关接口会返回 `code:-1`。
+
+---
+
+## 线上访问
+
+推送 `main` 后 GitHub Pages 自动构建：
 
 ```
 https://anker147.github.io/Hiu-2026-Message-Board-Frontend/
 ```
 
-根路径 index.html 自动跳转到入口页（子路径部署下的相对引用全部成立）。
+根路径 `index.html` 自动跳转到入口页。
 
-## 快速开始
+---
 
-无需构建、无需依赖——直接双击 `pages/index.html`（file:// 可用），或起一个静态服务器：
+## 主要功能
 
-```bash
-python -m http.server 8080
-# 打开 http://localhost:8080/pages/index.html
-```
+| 模块 | 说明 |
+|---|---|
+| 热度周榜 / 本周新帖 | 双榜岛内切换；热度由前端按公式实时计算，后端只提供原始 stats；折线图一期一个真实点，最多 8 周，无数据不估算 |
+| 全部留言 | 岛内视图，全站公开帖按时间倒序 + 全局搜索（标题/正文/昵称/话题/编号/用户 ID） |
+| 留言详情 | 树状评论（二级回复 + @引用）、点赞、收藏；统计四项数据联动更新 |
+| 发布 / 编辑 | 富文本编辑器（字体/字号/标题/序号/首行缩进/对齐）、自定义话题（随 `topic` 字段透传后端）、封面与文末最多 10 图 |
+| 登录 / 注册 | Stella 式沉浸设计，浮动标签表单；真实后端鉴权（Bearer 令牌 + csrf） |
+| 个人主页 | 动态 / 赞过 / 收藏 / 话题足迹；活跃度称号前端按需计算；头像上传 |
+| GM 管理 | 岛内视图；权限、封禁解封、禁言、改资料、隐藏/删除内容、审计（依赖后端 GM 接口开放） |
+| 内容安全 | 敏感词库 100 词 / 8 类，写接口拦截 + 展示层脱敏；限流由后端控制 |
 
-**演示账号**（见页面左下角 ⚙ 演示面板）：
-手机号 `13800000001` ~ `13800000006`（小满/阿泽/橘子汽水/匿名同学/树树/晚风），密码统一 `abc12345`。
-管理员账号：`admin` / `admin`（内置保护账号 id=9999，登录后导航岛出现第六项「管理员」）。
+---
 
-**演示面板**功能：一键切换身份、重置演示数据、强制会话过期（验 401）、模拟网络失败（验"保留草稿重试"）、限流窗口计数查看。
+## 文档
 
-## 目录结构
+- `docs/API接口文档.md` —— 前后端接口契约（含图片上传 U1、GM 接口 G1–G17）
+- `docs/数据库表结构文档.md` —— 表结构与 SQL 建议（基础 11 张 + GM 审计 1 张，共 12 张）
+- `backend/前后端接口差异分析.md` —— 后端视角的接口差异说明
 
-```
-pages/                全部页面（同目录互链，资源用 ../ 引用根目录的 css/js/fonts）
-  index.html          P-01 首页榜单 + 关于视图挂载点 —— 入口页
-  edit.html           帖子编辑器（新建/编辑双模式，承接原 P-03 发布语义）
-  zone.html           个人主页（好游快爆 zone 形式：头部资料 + 动态 tab + 话题足迹）
-  login.html          登录/注册（Stella 式沉浸：全屏 KV + 左品牌宣传 + 右深灰亚克力卡）
-  detail.html         P-04 详情/评论树
-  profile.html        编辑资料页（头像/昵称/签名/隐私开关/掩码预览）
-  about.html          关于页（biliboard.uk/about 源码逐值复刻的 3D 气泡星座）
-  all.html            全部留言独立页（兼容入口；主入口为 index.html 岛内第四项 tag）
-  gm.html             管理员 GM 独立页（兼容入口；主入口为 index.html 岛内第六项 tag）
-  states.html         状态与规范样张页
-  post.html           旧独立发布入口（重定向 → edit.html?mode=new）
-css/
-  tokens.css          设计令牌（--blue #359EFF、淡色阶 --blue-pale 等 + reduced-motion 降级）
-  base.css            重置 / 环境光斑 / 焦点环 / 页面过渡遮罩 / 逐层进入
-  components.css      按钮/输入/开关/下拉/弹窗/榜单卡/评论树/四态
-  pages.css           顶栏/Banner/登录页(Stella 沉浸式)/关于页/编辑器/样张页 + 断点
-fonts/
-  fusion-pixel.woff2  缝合像素字体（OFL 开源；标题牌/气泡闲置文字/登录 logo）
-js/
-  ui-text.js          ADR-003 文案集中管理（点分键 + t()/text() + data-text* 注入）
-  mock/seed.js        种子数据（第 21~24 期留言、用户、评论树、词库）
-  mock/db.js          localStorage 持久化（hmb_ 前缀）+ 重置
-  mock/api.js         API-01~12 Mock：统一响应包 + 全部错误码 + 会话/CSRF/敏感词/限流/脱敏/幂等/盲盒留痕
-  core/util.js        工具 + 乱码解码/页面过渡/演示面板 + __boardTest 测试钩子（PRD 7.2）
-  components.js       共享组件（导航岛/榜单卡/评论树/登录引导/改删确认/盲盒弹窗）
-  pages/*.js          board / about / auth / detail / edit / profile / zone / states / all / gm
-```
+---
 
-## 导航岛（软切换 + 液态胶囊）
+## 技术约定
 
-透明顶栏 + 暗玻璃导航岛，六项软切换（热度周榜/本周新帖/我的留言/全部留言/关于/管理员）；其中「全部留言」（`#allView`，列表卡片复用首页「我的留言」同款丰富榜卡 `renderCard`：头像/热度/折线/历史最高，仅不显示排名数字）、「关于」（`#aboutView`）、「管理员」（`#gmView`）均为 index 页内岛内视图（无文档导航，`?tab=<key>`）；管理员项仅 `isAdmin=true` 时渲染（普通账号接口侧也会被拒绝，不只靠前端隐藏）：
-
-- **液态胶囊**：hover 乱码解码（460ms，站内字库，70ms 换字频次，图标元素保留）；切换时前缘先行——胶囊沿移动方向拉长（长跳峰值 ≈1.96×）+ scaleY 压扁，后缘追赶收拢，越过目标 ≈8% 弹性回弹；未选中 tab 折叠为纯图标，当前项弹性展开
-- **跨页到达入场**：整页跳转到达后，胶囊自中心弹性撑开、文字同拍展开；页面过渡去闪屏（同底色遮罩淡出/淡入）
-- **滚动感知换页编排**：`U.pageTransition` 逐层退出当前页 → 不可见回顶换内容 → 逐层飞入（动画结束即清理 forwards 残留，保证下拉等浮层 z 序正常）；点击代际守卫防乱序覆盖
-- 布局：顶栏三列网格严格居中（两翼为 Logo 与登录/身份胶囊），全宽度零溢出；600px 紧凑档
-
-## 关于页（biliboard.uk/about 源码移植）
-
-- 3D 气泡星座：14 气泡规格/视差/漂浮逐值取自参考站编译产物；装饰卡为星座星象图剪影（与装扮色解耦）
-- 展开卡标题牌：逐行移植 ia 组件（双行层叠 + SVG 并集描边 + 擦写循环 + fusion-pixel 像素字体）
-- 展开卡面板：标题牌 + Close + 分隔线 + 独立滚动；友链两列网格（参考站形式）
-- 触发兜底分发器（3D 平面竞争）+ 展开卡实心分层 + 线性/变速过渡 + 飞向中心动画
-
-## 登录/注册（Stella 式沉浸设计）
-
-参考公开仓库 `anker147/Stella-Esports-System` 的登录页形制，保留本站配色（--blue / --accent）：
-
-- 全屏沉浸 KV 背景（picsum 雪景图集随机，blur + 深色遮罩，离线静默回落）+ 左侧品牌宣传区：
-  蓝紫渐变 logo「B」+ 品牌名 + 大标题 + 描述 + 三项勾选胶囊（热度周榜/盲盒祝福/隐私脱敏）+ 页脚版权
-- 右侧深灰亚克力登录卡（glass blur + 圆角 22px）：标题 + 滑动双 tab（账号登录/注册账号，
-  `data-active` 驱动指示块）+ 图标输入框（focus 上浮蓝光晕 + 密码眼睛）+ 记住账号 + 渐变主按钮 + 协议勾选
-- 双 tab 卡高平滑切换 + 用户协议勾选拦截（《用户协议》弹窗）；内置账号 `admin` 免手机号校验
-- 底部独立声明条；入场动画（品牌左侧滑入 / 卡片升起 / 胶囊弹性 / 文字模糊浮现）；reduced-motion 降级；窄屏折叠品牌区
-- ≤900px 左右改上下堆叠，≤520px 全屏铺满并隐藏功能卡
-
-## 已实现功能（F1–F10 → 交互测试要点）
-
-| 功能 | 前端表现 | 测试方式 |
-|---|---|---|
-| F1 注册 | 手机号正则/已注册/弱密码/两次不一致字段级定位；随机网名 + 8 选 1 emoji + 8 位展示 ID | 登录页注册 tab 输入 10 位手机号 → 固定文案，不发请求 |
-| F3 登录/退出 | 2001 密码错误、连续 5 次锁定 15 分钟（2002）、退出后令牌失效重放 401 | 演示面板换号；连续错 5 次密码 |
-| F5 无刷新提交 | 编辑器提交：防重锁 → scrollY 不动 → 新卡页内高亮 1800ms → 清空/复位/昵称保留 | 编辑器提交后观察页内预览高亮 |
-| F6 隐私控制 | 三项独立开关；列表接口只返回掩码（王*/abc***@qq.com/138****5678）；明文仅 API-08 | 编辑资料页掩码预览 + 开关联动榜单卡 |
-| F7 树状评论 | 二级回复 + @引用（展示 ID 为准）、已编辑标记、删一级评论级联删子树、owner 校验 5002 | 详情页评论/回复/编辑/删除 |
-| F8 点赞 | 四态状态机 + 幂等键（350ms 内双击复用 → 最终 +1 不抖动）；未登录 401 引导弹窗 | 快速双击红心看计数 |
-| F9 盲盒 | 随机抽他人公开留言；匿名回复显示"热心同学"，服务端留痕、前端绝不返回真实身份 | 首页右下"抽取今日盲盒" |
-| F10 安检门 | 敏感词（加微信/代考/办证/刷单）→ 4001"请文明发言"；发留言 10 秒滑窗 >3 次 → 4002 剩余秒数 | 编辑器输入"代考"；连续快速发 4 条 |
-| 全部留言 | 导航岛 tag 岛内视图（`#allView`），列表卡片复用首页「我的留言」同款丰富榜卡 `renderCard`（头像/热度/折线/历史最高，rank=null 不显示排名）；全站公开帖按发布时间倒序 + 搜索，零新接口、零新表 | 点导航岛「全部留言」tag 或首页工具栏入口 |
-| GM 管理 | 概览/封禁解封/禁言/角色/改资料/重置密码/隐藏删除内容/审计/设置；内置账号保护、最少管理员、会话吊销、全程审计 | `admin/admin` 登录后点导航岛第六项「管理员」tag，页内软切到 GM 视图 |
-| 四态 | 骨架 shimmer ≤300ms / 空态（含下一步动作）/ 错误重试 / 无权限引导 | 期次切到"第 21 期"看空态；演示面板"模拟网络失败" |
-
-**测试钩子**（PRD 7.2）：`window.__boardTest = { navCount, scrollYAt(t), highlightRemovedAt, skeletonAt(), dropdownState() }`。
-
-## 与 PRD 的实现取舍（v1 原型说明）
-
-- **纯前端 Mock**：`js/mock/api.js` 模拟全部 12 个接口与错误码，接入 JSP/Servlet 后端时替换为 fetch 薄适配层，页面零改动。密码为演示明文（真实系统 PBKDF2 加盐）。
-- **文案目录以 JS 内嵌**（file:// 双击可用）；接后端时按 ADR-003 抽为 `ui-text.json?v=N` + fetch，键结构不变。
-- **发布语义迁移**：原 P-03 独立发布页与首页内嵌表单区统一并入 `edit.html` 帖子编辑器（新建/编辑双模式，post.html 保留重定向）；原 `post.js`/`publishForm.js` 移除。
-- **个人中心拆分**：`zone.html`（个人主页展示）+ `profile.html`（编辑资料页：头像/昵称/签名/隐私开关/掩码预览）。
-- **限流范围**：按 PRD F10 仅对"发留言"限流；评论/回复/盲盒回复仅做敏感词过滤。
-- **500 字计数 UI**：编辑器按富文本「可见文字」实时计数（标签不计入），超限标红。
-- **GM 权限模型**：`users.role/status/mute_until` + `messages.hidden/comments.hidden` + `admin_actions` 审计表（基础 10 张 + 审计 1 张，共 11 张）；接口契约见 `docs/API接口文档.md` §6、表结构见 `docs/数据库表结构文档.md` §6。
-- **F5 高亮视觉**：新卡页内预览高亮（1800ms 渐隐），满足"主色高亮"语义。
-- **数据语义红线**：无任何视频站字段与"第 128 期/术力口"语义；期号为自有周榜期次（第 21~24 期）。
-- 接口扩展：`updatePrivacy / updateNickname / getZone / getMessage` 为 mock 层补充（前端闭环需要）。
+- **零构建**：前端无 npm / 无打包器，浏览器直接运行；脚本加载顺序固定，`window.HMB` 为全局命名空间。
+- **后端权威**：热度 / 排名由前端计算展示，后端不存 `heat` / `rank`；缺失的历史字段显示 `--` 或 0，不推算。
+- **敏感词**：词库与脱敏常量保留在 `js/mock/seed.js`，展示层 `U.maskSensitive()` 过滤，编辑页与 GM 保留原文。
+- **动画**：统一 `--ease-std` / `--t-*` 令牌，页面切换 / 表单逐条入场 / 悬浮按钮逐层飞入，`prefers-reduced-motion` 降级。

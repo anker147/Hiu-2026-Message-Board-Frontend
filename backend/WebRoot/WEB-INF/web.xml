@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.5" 
+	xmlns="http://java.sun.com/xml/ns/javaee" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+	http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+
+	<!-- =================================================================
+	     这里分成两块：
+	     第一块是你原来“项目管理”的 5 个 servlet（我没动，还能用）
+	     第二块是新加的“留言板” 12 个 servlet
+	     每一个 <servlet> 都要配一个同名的 <servlet-mapping>，
+	     否则浏览器访问 /项目名/LoginServlet 会报 404
+	     ================================================================= -->
+
+	<!-- ==================== 零、安全防御过滤器（2026-11-19 新增） ====================
+	     作用：在请求进入 Servlet 之前做安检（敏感词 + 10 秒防刷）。
+	     注意：web.xml 2.5 对元素顺序有严格要求，
+	     <filter> 必须写在 <servlet> 前面，否则 Tomcat 启动会报 schema 校验错误。 -->
+	<filter>
+		<filter-name>SafetyFilter</filter-name>
+		<filter-class>filter.SafetyFilter</filter-class>
+	</filter>
+	<!-- 只拦截“发留言”和“发评论”这两个地址，其它请求完全不受影响 -->
+	<filter-mapping>
+		<filter-name>SafetyFilter</filter-name>
+		<url-pattern>/AddMessageServlet</url-pattern>
+	</filter-mapping>
+	<filter-mapping>
+		<filter-name>SafetyFilter</filter-name>
+		<url-pattern>/AddCommentServlet</url-pattern>
+	</filter-mapping>
+
+	<!-- ==================== 一、原有：项目管理 ==================== -->
+	<servlet>
+		<display-name>新增项目信息的servlet</display-name>
+		<servlet-name>AddProjectServlet</servlet-name>
+		<servlet-class>servlet.AddProjectServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<description>查询项目信息的servlet</description>
+		<display-name>查询项目信息的servlet</display-name>
+		<servlet-name>QueryProjectServlet</servlet-name>
+		<servlet-class>servlet.QueryProjectServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<description>删除项目信息的servlet</description>
+		<display-name>删除项目信息的servlet</display-name>
+		<servlet-name>DeleteProjectServlet</servlet-name>
+		<servlet-class>servlet.DeleteProjectServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<description>根据id查询项目信息的servlet</description>
+		<display-name>根据id查询项目信息的servlet</display-name>
+		<servlet-name>queryProjectByIdServlet</servlet-name>
+		<servlet-class>servlet.QueryProjectByIdServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<description>修改项目信息的servlet</description>
+		<display-name>修改项目信息的servlet</display-name>
+		<servlet-name>UpdateProjectServlet</servlet-name>
+		<servlet-class>servlet.UpdateProjectServlet</servlet-class>
+	</servlet>
+
+	<!-- ==================== 二、新增：留言板 ==================== -->
+
+	<!-- 1.注册 -->
+	<servlet>
+		<description>用户注册</description>
+		<servlet-name>RegisterServlet</servlet-name>
+		<servlet-class>servlet.RegisterServlet</servlet-class>
+	</servlet>
+
+	<!-- 2.登录 -->
+	<servlet>
+		<description>用户登录</description>
+		<servlet-name>LoginServlet</servlet-name>
+		<servlet-class>servlet.LoginServlet</servlet-class>
+	</servlet>
+
+	<!-- 3.退出登录 -->
+	<servlet>
+		<description>退出登录</description>
+		<servlet-name>LogoutServlet</servlet-name>
+		<servlet-class>servlet.LogoutServlet</servlet-class>
+	</servlet>
+
+	<!-- 4.查询留言列表（留言板首页） -->
+	<servlet>
+		<description>查询全部留言</description>
+		<servlet-name>QueryMessageServlet</servlet-name>
+		<servlet-class>servlet.QueryMessageServlet</servlet-class>
+	</servlet>
+
+	<!-- 5.发布留言 -->
+	<servlet>
+		<description>发布留言</description>
+		<servlet-name>AddMessageServlet</servlet-name>
+		<servlet-class>servlet.AddMessageServlet</servlet-class>
+	</servlet>
+
+	<!-- 6.点“修改内容”后，查出这条留言并进入修改页 -->
+	<servlet>
+		<description>根据id查询一条留言，用于修改</description>
+		<servlet-name>QueryMessageByIdServlet</servlet-name>
+		<servlet-class>servlet.QueryMessageByIdServlet</servlet-class>
+	</servlet>
+
+	<!-- 7.保存修改后的留言 -->
+	<servlet>
+		<description>保存修改的留言</description>
+		<servlet-name>UpdateMessageServlet</servlet-name>
+		<servlet-class>servlet.UpdateMessageServlet</servlet-class>
+	</servlet>
+
+	<!-- 8.取消推送 / 重新推送 -->
+	<servlet>
+		<description>取消推送或重新推送留言</description>
+		<servlet-name>CancelPushServlet</servlet-name>
+		<servlet-class>servlet.CancelPushServlet</servlet-class>
+	</servlet>
+
+	<!-- 9.删除留言 -->
+	<servlet>
+		<description>删除留言</description>
+		<servlet-name>DeleteMessageServlet</servlet-name>
+		<servlet-class>servlet.DeleteMessageServlet</servlet-class>
+	</servlet>
+
+	<!-- 10.点赞 / 取消点赞 -->
+	<servlet>
+		<description>点赞与取消点赞</description>
+		<servlet-name>LikeServlet</servlet-name>
+		<servlet-class>servlet.LikeServlet</servlet-class>
+	</servlet>
+
+	<!-- 11.发表评论 / 回复别人 -->
+	<servlet>
+		<description>发表评论或回复</description>
+		<servlet-name>AddCommentServlet</servlet-name>
+		<servlet-class>servlet.AddCommentServlet</servlet-class>
+	</servlet>
+
+	<!-- 12.更换头像 -->
+	<servlet>
+		<description>更换头像</description>
+		<servlet-name>UpdateAvatarServlet</servlet-name>
+		<servlet-class>servlet.UpdateAvatarServlet</servlet-class>
+	</servlet>
+
+	<!-- ==================== 三、访问路径映射 ==================== -->
+	<servlet-mapping>
+		<servlet-name>AddProjectServlet</servlet-name>
+		<url-pattern>/AddProjectServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>QueryProjectServlet</servlet-name>
+		<url-pattern>/QueryProjectServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>DeleteProjectServlet</servlet-name>
+		<url-pattern>/DeleteProjectServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>queryProjectByIdServlet</servlet-name>
+		<url-pattern>/queryProjectByIdServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>UpdateProjectServlet</servlet-name>
+		<url-pattern>/UpdateProjectServlet</url-pattern>
+	</servlet-mapping>
+
+	<!-- 留言板的 12 个路径，名字和 JSP 里的 form action 一一对应 -->
+	<servlet-mapping>
+		<servlet-name>RegisterServlet</servlet-name>
+		<url-pattern>/RegisterServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>LoginServlet</servlet-name>
+		<url-pattern>/LoginServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>LogoutServlet</servlet-name>
+		<url-pattern>/LogoutServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>QueryMessageServlet</servlet-name>
+		<url-pattern>/QueryMessageServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>AddMessageServlet</servlet-name>
+		<url-pattern>/AddMessageServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>QueryMessageByIdServlet</servlet-name>
+		<url-pattern>/QueryMessageByIdServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>UpdateMessageServlet</servlet-name>
+		<url-pattern>/UpdateMessageServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>CancelPushServlet</servlet-name>
+		<url-pattern>/CancelPushServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>DeleteMessageServlet</servlet-name>
+		<url-pattern>/DeleteMessageServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>LikeServlet</servlet-name>
+		<url-pattern>/LikeServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>AddCommentServlet</servlet-name>
+		<url-pattern>/AddCommentServlet</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>UpdateAvatarServlet</servlet-name>
+		<url-pattern>/UpdateAvatarServlet</url-pattern>
+	</servlet-mapping>
+
+	<!-- ========== 2026-11-19 新增：评论的点赞 / 修改 / 删除 ========== -->
+	<servlet>
+		<servlet-name>LikeCommentServlet</servlet-name>
+		<servlet-class>servlet.LikeCommentServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>LikeCommentServlet</servlet-name>
+		<url-pattern>/LikeCommentServlet</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>UpdateCommentServlet</servlet-name>
+		<servlet-class>servlet.UpdateCommentServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UpdateCommentServlet</servlet-name>
+		<url-pattern>/UpdateCommentServlet</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>DeleteCommentServlet</servlet-name>
+		<servlet-class>servlet.DeleteCommentServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>DeleteCommentServlet</servlet-name>
+		<url-pattern>/DeleteCommentServlet</url-pattern>
+	</servlet-mapping>
+
+	<!-- ========== 2026-11-19 新增：盲盒留言（随机抽一条别人的留言，返回 JSON） ========== -->
+	<servlet>
+		<servlet-name>RandomMessageServlet</servlet-name>
+		<servlet-class>servlet.RandomMessageServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>RandomMessageServlet</servlet-name>
+		<url-pattern>/RandomMessageServlet</url-pattern>
+	</servlet-mapping>
+
+	<!-- =================================================================
+	     2026-11-25 新增：前端契约版 REST API（/api/*）与跨域支持
+	     ================================================================
+	     1. CorsFilter：给 /api/* 响应补 CORS 头，并短路 OPTIONS 预检。
+	        队友的前端是独立跑的（跨源），浏览器必须靠这些响应头放行。
+	     2. ApiServlet：一个分发器接管全部 /api/* 路径（REST 路由），
+	        内部再按 请求方法 + pathInfo 分发到 api 包的各业务类。
+	     注意：web.xml 2.5 要求 <filter> 在 <servlet> 之前，保持顺序！
+	     ================================================================= -->
+	<filter>
+		<filter-name>CorsFilter</filter-name>
+		<filter-class>filter.CorsFilter</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>CorsFilter</filter-name>
+		<url-pattern>/api/*</url-pattern>
+	</filter-mapping>
+
+	<servlet>
+		<description>前端契约版 REST API 统一分发器</description>
+		<servlet-name>ApiServlet</servlet-name>
+		<servlet-class>servlet.ApiServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ApiServlet</servlet-name>
+		<url-pattern>/api/*</url-pattern>
+	</servlet-mapping>
+
+	<!-- 打开项目根路径时默认进入 index.jsp（它会判断登录状态再跳转） -->
+	<welcome-file-list>
+		<welcome-file>index.jsp</welcome-file>
+	</welcome-file-list>
+</web-app>
