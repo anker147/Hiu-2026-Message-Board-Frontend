@@ -720,7 +720,6 @@
     api.getSession().then(function (resp) {
       session = resp.data;
       C.renderTopbar(document.getElementById("topbar"), null, session);
-      HMB.util.renderDebugPanel();
 
       if (mode === "new") { applyMode(); mountEditor(); return; }
 

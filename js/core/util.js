@@ -847,134 +847,6 @@
     } catch (e) { /* noop */ }
   });
 
-  /* ---------------- 演示控制面板（交互测试辅助） ---------------- */
-
-  function renderDebugPanel() {
-    var fab = el("button", "debug-fab");
-    fab.type = "button";
-    fab.setAttribute("data-text-title", "debug.title");
-    fab.textContent = "⚙";
-
-    var panel = el("div", "debug-panel");
-
-    var title = el("h4");
-    title.setAttribute("data-text", "debug.title");
-    panel.appendChild(title);
-
-    var sec1 = el("div", "dbg-sec");
-    sec1.setAttribute("data-text", "debug.identity");
-    panel.appendChild(sec1);
-    var row1 = el("div", "dbg-row");
-    var accounts = [
-      { name: "小满", phone: "13800000001" },
-      { name: "阿泽", phone: "13800000002" },
-      { name: "橘子汽水", phone: "13800000003" },
-      { name: "树树", phone: "13800000005" },
-      { name: "晚风", phone: "13800000006" }
-    ];
-    accounts.forEach(function (a) {
-      var b = el("button", "dbg-btn", "登录：" + a.name);
-      b.type = "button";
-      b.addEventListener("click", function () {
-        window.HMB.api.login({ phone: a.phone, password: "abc12345" }).then(function () {
-          window.location.reload();
-        });
-      });
-      row1.appendChild(b);
-    });
-    var logoutBtn = el("button", "dbg-btn", "退出（访客）");
-    logoutBtn.type = "button";
-    logoutBtn.addEventListener("click", function () {
-      window.HMB.api.logout({ csrf: (HMB.session && HMB.session.csrf) || "x" }).then(function () {
-        window.location.reload();
-      });
-    });
-    row1.appendChild(logoutBtn);
-    panel.appendChild(row1);
-
-    var secNav = el("div", "dbg-sec", "页面导览");
-    panel.appendChild(secNav);
-    var navRow = el("div", "dbg-row");
-    [
-      ["首页榜单", "index.html"],
-      ["发布留言", "edit.html?mode=new"],
-      ["详情/评论", "detail.html"],
-      ["登录", "login.html"],
-      ["个人中心", "profile.html"],
-      ["关于", "index.html?tab=about"]
-    ].forEach(function (p) {
-      var a = el("a", "dbg-btn", p[0]);
-      a.href = p[1];
-      navRow.appendChild(a);
-    });
-    panel.appendChild(navRow);
-
-    var sec2 = el("div", "dbg-sec");
-    sec2.setAttribute("data-text", "debug.data");
-    panel.appendChild(sec2);
-    var row2 = el("div", "dbg-row");
-
-    var resetBtn = el("button", "dbg-btn");
-    resetBtn.type = "button";
-    resetBtn.setAttribute("data-text", "debug.reset");
-    resetBtn.addEventListener("click", function () {
-      window.HMB.db.reset();
-      toast(t("debug.resetDone"), "success");
-      setTimeout(function () { window.location.reload(); }, 600);
-    });
-    row2.appendChild(resetBtn);
-
-    var expireBtn = el("button", "dbg-btn");
-    expireBtn.type = "button";
-    expireBtn.setAttribute("data-text", "debug.expire");
-    expireBtn.addEventListener("click", function () {
-      var done = window.HMB.api._debug.expireSession();
-      toast(done ? t("debug.expiredDone") : t("common.ok"), done ? "success" : "");
-      if (done) setTimeout(function () { window.location.reload(); }, 600);
-    });
-    row2.appendChild(expireBtn);
-
-    var netBtn = el("button", "dbg-btn");
-    netBtn.type = "button";
-    netBtn.setAttribute("data-text", "debug.netFail");
-    netBtn.addEventListener("click", function () {
-      var s = window.HMB.db.getSettings();
-      s.simulateNetFail = !s.simulateNetFail;
-      window.HMB.db.saveSettings(s);
-      netBtn.classList.toggle("is-on", s.simulateNetFail);
-      toast(s.simulateNetFail ? "模拟网络失败：开启" : "模拟网络失败：关闭");
-    });
-    row2.appendChild(netBtn);
-    if (window.HMB.db.getSettings().simulateNetFail) netBtn.classList.add("is-on");
-    panel.appendChild(row2);
-
-    var rateNote = el("div", "dbg-note");
-    function refreshRate() {
-      var d = window.HMB.api && window.HMB.api._debug;
-      // 真实后端适配层由服务端限流，未提供本地 rateCount；此时显示 0
-      var n = (d && typeof d.rateCount === "function") ? d.rateCount() : 0;
-      rateNote.textContent = t("debug.rateWindow", { n: n });
-    }
-    refreshRate();
-    setInterval(refreshRate, 1500);
-    panel.appendChild(rateNote);
-
-    var note1 = el("div", "dbg-note");
-    note1.setAttribute("data-text", "debug.sensitive");
-    panel.appendChild(note1);
-    var note2 = el("div", "dbg-note");
-    note2.setAttribute("data-text", "debug.lockout");
-    panel.appendChild(note2);
-    var note3 = el("div", "dbg-note");
-    note3.setAttribute("data-text", "debug.accounts");
-    panel.appendChild(note3);
-
-    fab.addEventListener("click", function () { panel.classList.toggle("is-open"); });
-    document.body.appendChild(fab);
-    document.body.appendChild(panel);
-    HMB.i18n.apply(panel);
-  }
-
   /* ---------------- 汇出 ---------------- */
 
   /* 表单逐条飞入重放：给容器的直接子元素按序写 --i，remove→reflow→add 重播
@@ -1026,8 +898,7 @@
     closeAllDropdowns: closeAllDropdowns,
     openModal: openModal,
     toast: toast,
-    replayFormEnter: replayFormEnter,
-    renderDebugPanel: renderDebugPanel
+    replayFormEnter: replayFormEnter
   };
   HMB.hooks = hooks;
 

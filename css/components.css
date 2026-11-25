@@ -454,35 +454,6 @@ textarea.field-input { height: auto; min-height: 96px; padding: 12px 14px; resiz
 }
 .identity-menu.is-open { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
 
-/* ---------- 演示控制面板 ---------- */
-.debug-fab {
-  position: fixed; left: 16px; bottom: 16px; z-index: 300;
-  width: 40px; height: 40px; border-radius: 50%;
-  background: var(--ink); color: #fff; font-size: 17px;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0.55; transition: opacity 120ms ease, transform 120ms ease;
-}
-.debug-fab:hover { opacity: 1; transform: scale(1.05); }
-.debug-panel {
-  position: fixed; left: 16px; bottom: 64px; z-index: 300;
-  width: 300px; max-height: 70vh; overflow-y: auto;
-  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-  box-shadow: var(--shadow-pop); padding: 16px;
-  display: none;
-}
-.debug-panel.is-open { display: block; }
-.debug-panel h4 { font-size: 13px; font-weight: 800; margin-bottom: 10px; color: var(--ink); }
-.debug-panel .dbg-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.debug-panel .dbg-btn {
-  height: 30px; padding: 0 12px; border-radius: 6px; font-size: 12px;
-  background: #F1F5F9; color: var(--ink-2); font-weight: 600;
-  transition: background-color 100ms ease;
-}
-.debug-panel .dbg-btn:hover { background: var(--blue-soft); color: var(--blue); }
-.debug-panel .dbg-btn.is-on { background: var(--warning-soft); color: var(--warning); }
-.debug-panel .dbg-note { font-size: 11px; color: var(--ink-3); line-height: 1.7; }
-.debug-panel .dbg-sec { font-size: 11px; color: var(--ink-3); font-weight: 700; margin: 10px 0 6px; }
-
 /* ---------- 榜单卡新元素响应式（窄屏隐藏折线图与上周排名卡，保留分数+胶囊） ---------- */
 @media (max-width: 900px) {
   .card-spark { display: none; }

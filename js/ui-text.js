@@ -16,7 +16,7 @@
 (function (window) {
   "use strict";
 
-  var VERSION = 27; // v27：新增自定义话题文案；演示数据已清空
+  var VERSION = 28; // v28：移除演示控制面板（调试面板）相关文案
 
   window.UI_TEXT = {
     /* —— 通用 —— */
@@ -604,20 +604,6 @@
     "about.linksTitle": "友情链接",
     "about.linksBody": "项目与参考来源（答辩可追溯）：",
     "about.linksNote": "参考设计形制，不引入其他站点的业务数据",
-
-    /* —— 演示控制面板 —— */
-    "debug.title": "演示控制",
-    "debug.identity": "切换身份",
-    "debug.data": "数据与状态",
-    "debug.reset": "重置演示数据",
-    "debug.expire": "强制会话过期",
-    "debug.netFail": "模拟网络失败",
-    "debug.rateWindow": "限流窗口：{n}/3 次",
-    "debug.sensitive": "敏感词测试：留言中包含「加微信 / 代考 / 办证 / 刷单」",
-    "debug.lockout": "登录锁定测试：连续输错密码 5 次触发 2002",
-    "debug.accounts": "演示账号：13800000001~06，密码 abc12345",
-    "debug.resetDone": "演示数据已重置",
-    "debug.expiredDone": "会话已过期（模拟 30 分钟超时）",
 
     /* —— 全部留言（所有公开帖子的搜索页） —— */
     "common.allMessages": "全部留言",

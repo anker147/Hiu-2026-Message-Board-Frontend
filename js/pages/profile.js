@@ -36,7 +36,6 @@
         return;
       }
 
-      HMB.util.renderDebugPanel();
       loadProfile();
       loadMine();
 
